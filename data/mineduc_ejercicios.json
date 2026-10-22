@@ -1,0 +1,263 @@
+[
+  {
+    "libro_titulo": "Matemáticas 1G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_1G_compressed.pdf",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 14,
+    "seccion_unidad": "Unidad 1: Posiciones y relaciones en el espacio",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Observa la ilustración del aula. Encierra en un círculo azul el objeto que está ARRIBA de la mesa y con un triángulo rojo el que está DEBAJO de la silla.",
+    "instrucciones_docente": "El docente pide a los alumnos que comparen con objetos reales de su pupitre antes de escribir en su libro."
+  },
+  {
+    "libro_titulo": "Matemáticas 1G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_1G_compressed.pdf",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 28,
+    "seccion_unidad": "Unidad 2: Conteo y números hasta 10",
+    "tipo_recurso": "evaluacion_cierre",
+    "enunciado_ejercicio": "Cuenta cuántos elotes hay en cada canasta y escribe el número correspondiente en el cuadro en blanco (del 1 al 10).",
+    "instrucciones_docente": "Ítem evaluativo de cierre semanal para verificar la correspondencia cantidad-número."
+  },
+  {
+    "libro_titulo": "Matemáticas 2G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_2G_compressed.pdf",
+    "grado_especifico": 2,
+    "grados_aplicables": [
+      2
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 32,
+    "seccion_unidad": "Unidad 2: Decenas y centenas en el sistema decimal",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Escribe cuántas decenas y unidades tiene cada número: a) 45 = __ decenas y __ unidades. b) 78 = __ decenas y __ unidades. c) 92 = __ decenas y __ unidades.",
+    "instrucciones_docente": "Trabajo autónomo mientras el maestro atiende en pizarra a los alumnos de 3.º grado."
+  },
+  {
+    "libro_titulo": "Matemáticas 2G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_2G_compressed.pdf",
+    "grado_especifico": 2,
+    "grados_aplicables": [
+      2
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 48,
+    "seccion_unidad": "Unidad 3: Sumas sin llevar",
+    "tipo_recurso": "evaluacion_cierre",
+    "enunciado_ejercicio": "Doña Rosa recogió 34 naranjas por la mañana y 23 por la tarde. ¿Cuántas naranjas recogió en total? Plantea la suma vertical y calcula el resultado.",
+    "instrucciones_docente": "Problema contextual de evaluación de viernes para verificar adición sin reagrupación."
+  },
+  {
+    "libro_titulo": "Matemáticas 3G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_3G_compressed.pdf",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 54,
+    "seccion_unidad": "Unidad 3: Tablas de multiplicar",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Calcula los siguientes productos usando arreglos rectangulares: a) 4 x 6 = __  b) 5 x 7 = __  c) 3 x 8 = __  d) 5 x 9 = __",
+    "instrucciones_docente": "Apoyarse en semillas o piedrecitas si el estudiante presenta dudas conceptuales."
+  },
+  {
+    "libro_titulo": "Matemáticas 3G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_3G_compressed.pdf",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 72,
+    "seccion_unidad": "Unidad 4: Fracciones y repartos",
+    "tipo_recurso": "evaluacion_cierre",
+    "enunciado_ejercicio": "Pinta la fracción que se indica en cada círculo: a) 1/2  b) 1/4  c) 3/4. ¿Cuál de las tres fracciones representa una mayor cantidad de la unidad?",
+    "instrucciones_docente": "Reactivo para el test del viernes que mide el indicador de fracciones básicas."
+  },
+  {
+    "libro_titulo": "Guía para la enseñanza de Matemáticas Segundo Ciclo",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4,
+      5,
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 22,
+    "seccion_unidad": "Orientaciones Metodológicas 4.º Grado - Números grandes",
+    "tipo_recurso": "guia_docente_ejemplo",
+    "enunciado_ejercicio": "Ejemplo de Pizarra: Escribir en la tabla de valor posicional la cantidad de habitantes del municipio: 145,280. Guiar la lectura en voz alta: \"Ciento cuarenta y cinco mil doscientos ochenta\".",
+    "instrucciones_docente": "Atención directa del maestro en pizarra durante el bloque de 8:00 a 8:45 hrs."
+  },
+  {
+    "libro_titulo": "Guía para la enseñanza de Matemáticas Segundo Ciclo",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      4,
+      5,
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 68,
+    "seccion_unidad": "Orientaciones Metodológicas 5.º Grado - Fracciones heterogéneas",
+    "tipo_recurso": "guia_docente_ejemplo",
+    "enunciado_ejercicio": "Ejemplo guiado: Para sumar 1/2 + 1/4, primero encontramos el mínimo común múltiplo de 2 y 4 (MCM = 4). Convertimos 1/2 en 2/4. Sumamos 2/4 + 1/4 = 3/4.",
+    "instrucciones_docente": "Usar tiras de papel dobladas para demostrar visualmente la equivalencia."
+  },
+  {
+    "libro_titulo": "Guía para la enseñanza de Matemáticas Segundo Ciclo",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      4,
+      5,
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 115,
+    "seccion_unidad": "Orientaciones Metodológicas 6.º Grado - Regla de tres y porcentajes",
+    "tipo_recurso": "guia_docente_ejemplo",
+    "enunciado_ejercicio": "Problema modelo: Si un quintal de café cuesta Q 850.00, ¿cuánto costarán 4 quintales? Establecer la proporción directa en la pizarra: 1 / 850 = 4 / x.",
+    "instrucciones_docente": "Fomentar que los alumnos de 6.º formulen problemas similares basados en los cultivos de la comunidad."
+  },
+  {
+    "libro_titulo": "Matemáticas 4G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_4G_compressed.pdf",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 38,
+    "seccion_unidad": "Unidad 2: Descomposición posicional",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Descompón aditivamente los siguientes números: a) 354,210 = 300,000 + 50,000 + 4,000 + 200 + 10. b) 608,405 = __ + __ + __. c) 920,014 = __ + __ + __.",
+    "instrucciones_docente": "Trabajo autónomo individual en su cuaderno mientras se atiende a 5.º y 6.º."
+  },
+  {
+    "libro_titulo": "Matemáticas 4G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_4G_compressed.pdf",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 52,
+    "seccion_unidad": "Unidad 3: Evaluación de números grandes",
+    "tipo_recurso": "evaluacion_cierre",
+    "enunciado_ejercicio": "Ordena de menor a mayor los siguientes registros de cosecha: 450,200 kg; 405,200 kg; 452,000 kg; 400,990 kg.",
+    "instrucciones_docente": "Ítem evaluativo de fin de semana para prueba del viernes."
+  },
+  {
+    "libro_titulo": "Matemáticas 5G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_5G_compressed.pdf",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 44,
+    "seccion_unidad": "Unidad 2: Suma y resta de fracciones heterogéneas",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Resuelve las siguientes operaciones y simplifica el resultado: a) 2/3 + 1/6 = __  b) 3/4 - 1/2 = __  c) 4/5 + 2/10 = __",
+    "instrucciones_docente": "Trabajo en parejas con ayuda mutua entre estudiantes del mismo grado."
+  },
+  {
+    "libro_titulo": "Matemáticas 6G",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_6G_compressed.pdf",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 62,
+    "seccion_unidad": "Unidad 3: Cálculo de porcentajes",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Calcula los siguientes porcentajes: a) El 15% de Q 400.00  b) El 25% de Q 1,200.00  c) El 12% (IVA) de un artículo que cuesta Q 85.00.",
+    "instrucciones_docente": "Resolver en el cuaderno mostrando el planteamiento y la operación."
+  },
+  {
+    "libro_titulo": "Mi libro de lecturas 2do grado",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_2do_grado_compressed.pdf",
+    "grado_especifico": 2,
+    "grados_aplicables": [
+      2
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 18,
+    "seccion_unidad": "Lectura: \"El colibrí y la flor del campo\"",
+    "tipo_recurso": "lectura_autonoma_casa",
+    "enunciado_ejercicio": "Leer la lectura \"El colibrí y la flor del campo\" con un adulto en casa (15 min). Responder oralmente a las 3 preguntas al final de la página.",
+    "instrucciones_docente": "Sugerencia de tarea autónoma para la casa conforme al programa Leamos Juntos del MINEDUC."
+  },
+  {
+    "libro_titulo": "Mi libro de lecturas 4to grado",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_4to_grado_compressed.pdf",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 26,
+    "seccion_unidad": "Lectura: \"Leyendas de nuestra tierra\"",
+    "tipo_recurso": "lectura_autonoma_casa",
+    "enunciado_ejercicio": "Lectura comprensiva de la página 26 en el hogar. Anotar en el cuaderno 3 palabras nuevas y buscar su significado con la familia.",
+    "instrucciones_docente": "Refuerzo de vocabulario y hábito lector autónomo."
+  },
+  {
+    "libro_titulo": "Medio Social y Natural 3ro",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/medio_social_y_natural_3ro_compressed.pdf",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Medio Social y Natural",
+    "numero_pagina": 42,
+    "seccion_unidad": "Unidad 2: Ecosistemas y recursos naturales",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Dibuja en tu cuaderno una fuente de agua de tu comunidad y escribe 2 acciones que tú y tu familia pueden realizar para no contaminarla.",
+    "instrucciones_docente": "Actividad contextualizada a la realidad rural de la aldea."
+  },
+  {
+    "libro_titulo": "Ciencias Naturales y Tecnología 5to",
+    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/ciencias_naturales_y_tecnologia_5to_compressed.pdf",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Naturales y Tecnología",
+    "numero_pagina": 58,
+    "seccion_unidad": "Unidad 3: Cadenas y redes tróficas",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Organiza los siguientes seres vivos en una cadena alimenticia señalando productor, consumidor primario y secundario: Águila, Maíz, Ratón de campo, Serpiente.",
+    "instrucciones_docente": "Actividad de aplicación de conceptos de ecología."
+  }
+]

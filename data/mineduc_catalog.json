@@ -1,0 +1,325 @@
+[
+  {
+    "id": 4,
+    "materia": "Leo y escribo paso 1",
+    "grado": "Primer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 1,
+    "enlace_relativo": "/tmp-libros/leo_y_escribo_paso_1_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/leo_y_escribo_paso_1_compressed.pdf"
+  },
+  {
+    "id": 5,
+    "materia": "Leo y escribo paso 2",
+    "grado": "Primer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 1,
+    "enlace_relativo": "/tmp-libros/leo_y_escribo_paso_2_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/leo_y_escribo_paso_2_compressed.pdf"
+  },
+  {
+    "id": 6,
+    "materia": "Mi libro de lecturas",
+    "grado": "Primer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 1,
+    "enlace_relativo": "/tmp-libros/mi_libro_de_lecturas_1er_grado_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_1er_grado_compressed.pdf"
+  },
+  {
+    "id": 7,
+    "materia": "Matemáticas",
+    "grado": "Primer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 1,
+    "enlace_relativo": "/tmp-libros/matematicas_1G_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/matematicas_1G_compressed.pdf"
+  },
+  {
+    "id": 8,
+    "materia": "Guía para la enseñanza de Matemáticas",
+    "grado": "Segundo Ciclo",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": null,
+    "enlace_relativo": "/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf"
+  },
+  {
+    "id": 9,
+    "materia": "Comunicación y Lenguaje",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": "/tmp-libros/comunicacion_y_lenguaje_2do_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/comunicacion_y_lenguaje_2do_compressed.pdf"
+  },
+  {
+    "id": 10,
+    "materia": "Mi libro de lecturas",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": "/tmp-libros/mi_libro_de_lecturas_2do_grado_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_2do_grado_compressed.pdf"
+  },
+  {
+    "id": 11,
+    "materia": "Matemáticas",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": "/tmp-libros/matematicas_2G_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/matematicas_2G_compressed.pdf"
+  },
+  {
+    "id": 53,
+    "materia": "Material Recortable Matemáticas",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": "/tmp-libros/Material_manipulable_G2.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/Material_manipulable_G2.pdf"
+  },
+  {
+    "id": 12,
+    "materia": "Medio Social y Natural",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": "/tmp-libros/medio_social_y_natural_2do_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/medio_social_y_natural_2do_compressed.pdf"
+  },
+  {
+    "id": 13,
+    "materia": "Comunicación y Lenguaje",
+    "grado": "Tercer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 3,
+    "enlace_relativo": "/tmp-libros/comunicacion_y_lenguaje_3ro_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/comunicacion_y_lenguaje_3ro_compressed.pdf"
+  },
+  {
+    "id": 14,
+    "materia": "Mi libro de lecturas",
+    "grado": "Tercer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 3,
+    "enlace_relativo": "/tmp-libros/mi_libro_de_lecturas_3er_grado_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_3er_grado_compressed.pdf"
+  },
+  {
+    "id": 15,
+    "materia": "Matemáticas",
+    "grado": "Tercer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 3,
+    "enlace_relativo": "/tmp-libros/matematicas_3G_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/matematicas_3G_compressed.pdf"
+  },
+  {
+    "id": 54,
+    "materia": "Material Recortable Matemáticas",
+    "grado": "Tercer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 3,
+    "enlace_relativo": "/tmp-libros/Material_manipulable_G3.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/Material_manipulable_G3.pdf"
+  },
+  {
+    "id": 16,
+    "materia": "Medio Social y Natural",
+    "grado": "Tercer Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 3,
+    "enlace_relativo": "/tmp-libros/medio_social_y_natural_3ro_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/medio_social_y_natural_3ro_compressed.pdf"
+  },
+  {
+    "id": 17,
+    "materia": "Ciencias Naturales y Tecnología",
+    "grado": "Cuarto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 4,
+    "enlace_relativo": "/tmp-libros/ciencias_naturales_y_tecnologia_4to_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/ciencias_naturales_y_tecnologia_4to_compressed.pdf"
+  },
+  {
+    "id": 18,
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "grado": "Cuarto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 4,
+    "enlace_relativo": "/tmp-libros/ciencias_sociales_4to_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/ciencias_sociales_4to_compressed.pdf"
+  },
+  {
+    "id": 19,
+    "materia": "Comunicación y Lenguaje",
+    "grado": "Cuarto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 4,
+    "enlace_relativo": "/tmp-libros/comunicacion_y_lenguaje_4do_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/comunicacion_y_lenguaje_4do_compressed.pdf"
+  },
+  {
+    "id": 20,
+    "materia": "Mi libro de lecturas",
+    "grado": "Cuarto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 4,
+    "enlace_relativo": "/tmp-libros/mi_libro_de_lecturas_4to_grado_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_4to_grado_compressed.pdf"
+  },
+  {
+    "id": 21,
+    "materia": "Matemáticas",
+    "grado": "Cuarto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 4,
+    "enlace_relativo": "/tmp-libros/matematicas_4G_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/matematicas_4G_compressed.pdf"
+  },
+  {
+    "id": 55,
+    "materia": "Material Recortable Matemáticas",
+    "grado": "Cuarto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 4,
+    "enlace_relativo": "/tmp-libros/Material_manipulable_G4.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/Material_manipulable_G4.pdf"
+  },
+  {
+    "id": 22,
+    "materia": "Ciencias Naturales y Tecnología",
+    "grado": "Quinto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 5,
+    "enlace_relativo": "/tmp-libros/ciencias_naturales_y_tecnologia_5to_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/ciencias_naturales_y_tecnologia_5to_compressed.pdf"
+  },
+  {
+    "id": 23,
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "grado": "Quinto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 5,
+    "enlace_relativo": "/tmp-libros/ciencias_sociales_5to_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/ciencias_sociales_5to_compressed.pdf"
+  },
+  {
+    "id": 24,
+    "materia": "Comunicación y Lenguaje",
+    "grado": "Quinto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 5,
+    "enlace_relativo": "/tmp-libros/comunicacion_y_lenguaje_5do_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/comunicacion_y_lenguaje_5do_compressed.pdf"
+  },
+  {
+    "id": 25,
+    "materia": "Mi libro de lecturas",
+    "grado": "Quinto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 5,
+    "enlace_relativo": "/tmp-libros/mi_libro_de_lecturas_5to_grado_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_5to_grado_compressed.pdf"
+  },
+  {
+    "id": 26,
+    "materia": "Matemáticas",
+    "grado": "Quinto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 5,
+    "enlace_relativo": "/tmp-libros/matematicas_5G_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/matematicas_5G_compressed.pdf"
+  },
+  {
+    "id": 56,
+    "materia": "Material Recortable Matemáticas",
+    "grado": "Quinto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 5,
+    "enlace_relativo": "/tmp-libros/Material_manipulable_G5.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/Material_manipulable_G5.pdf"
+  },
+  {
+    "id": 27,
+    "materia": "Ciencias Naturales y Tecnología",
+    "grado": "Sexto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 6,
+    "enlace_relativo": "/tmp-libros/ciencias_naturales_y_tecnologia_6to_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/ciencias_naturales_y_tecnologia_6to_compressed.pdf"
+  },
+  {
+    "id": 28,
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "grado": "Sexto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 6,
+    "enlace_relativo": "/tmp-libros/ciencias_sociales_6to_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/ciencias_sociales_6to_compressed.pdf"
+  },
+  {
+    "id": 29,
+    "materia": "Comunicación y Lenguaje",
+    "grado": "Sexto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 6,
+    "enlace_relativo": "/tmp-libros/comunicacion_y_lenguaje_6do_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/comunicacion_y_lenguaje_6do_compressed.pdf"
+  },
+  {
+    "id": 30,
+    "materia": "Mi libro de lecturas",
+    "grado": "Sexto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 6,
+    "enlace_relativo": "/tmp-libros/mi_libro_de_lecturas_6to_grado_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_6to_grado_compressed.pdf"
+  },
+  {
+    "id": 31,
+    "materia": "Matemáticas",
+    "grado": "Sexto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 6,
+    "enlace_relativo": "/tmp-libros/matematicas_6G_compressed.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/matematicas_6G_compressed.pdf"
+  },
+  {
+    "id": 57,
+    "materia": "Material Recortable Matemáticas",
+    "grado": "Sexto Grado",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": 6,
+    "enlace_relativo": "/tmp-libros/Material_manipulable_G6.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/Material_manipulable_G6.pdf"
+  },
+  {
+    "id": 122,
+    "materia": "Formación Ciudadana",
+    "ciclo": "segundo_ciclo",
+    "grado_numero": null,
+    "enlace_relativo": "/tmp-libros/GUÍA DIDÁCTICA SUGERENCIAS PARA CELEBRAR LAS FIESTAS PATRIAS.pdf",
+    "url_descarga": "https://www.mineduc.edu.gt/tmp-libros/GUÍA DIDÁCTICA SUGERENCIAS PARA CELEBRAR LAS FIESTAS PATRIAS.pdf"
+  },
+  {
+    "id": 98,
+    "materia": "Comunicación y Lenguaje: Tejiendo el Lenguaje",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": "",
+    "url_descarga": null
+  },
+  {
+    "id": 99,
+    "materia": "Comunicación y Lenguaje: Jugando con Sonidos y Palabras",
+    "grado": "Segundo Grado",
+    "ciclo": "primer_ciclo",
+    "grado_numero": 2,
+    "enlace_relativo": null,
+    "url_descarga": null
+  }
+]
