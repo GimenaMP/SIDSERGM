@@ -10,11 +10,9 @@ import {
   EyeOff, 
   Lock, 
   Mail, 
-  Sparkles, 
   AlertCircle, 
   CheckCircle2, 
-  ArrowRight,
-  UserCheck
+  ArrowRight
 } from 'lucide-react';
 
 export type UserRole = 'profesor' | 'director' | 'admin';
@@ -30,13 +28,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   
-  // Mascot state
-  const [focusedField, setFocusedField] = useState<'none' | 'email' | 'password'>('none');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Trigger celebration confetti
+  // Confetti celebration
   const launchCelebration = () => {
     confetti({
       particleCount: 80,
@@ -56,7 +52,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setTimeout(() => {
       setIsLoading(false);
 
-      // Verificación de caso de prueba: Usuario Desactivado
+      // Verificación de caso de prueba: Usuario Desactivado (CU-01 / RF-09)
       if (email.toLowerCase().includes('inactivo') || email.toLowerCase().includes('desactivado')) {
         setErrorMessage(
           'Su cuenta se encuentra temporalmente DESACTIVADA por la Dirección o Administración Escolar. Comuníquese con la dirección de su centro educativo para reactivar su acceso.'
@@ -113,82 +109,45 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto relative z-10 px-4">
+    <div className="w-full max-w-md mx-auto relative z-10 pt-16 sm:pt-20">
+      {/* 
+        GIF animado de SIDSER superpuesto justo encima del cuadro de inicio de sesión
+        Las patitas y el borde inferior del GIF descansan directamente sobre la tarjeta blanca
+      */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-30 w-[320px] sm:w-[410px] md:w-[460px] pointer-events-none drop-shadow-xl flex justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/assets/sidser-logo-animated.gif"
+          alt="SIDSER Personajes Animados"
+          className="w-full h-auto object-contain"
+        />
+      </div>
+
       {/* Tarjeta de Inicio de Sesión Educativa */}
-      <div className="card-educational rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-slate-200 relative overflow-hidden">
+      <div className="card-educational rounded-3xl pt-24 sm:pt-28 pb-6 px-6 sm:px-8 shadow-2xl border-2 border-slate-200/90 relative overflow-hidden">
         
-        {/* Adorno superior simulando cinta adhesiva o post-it */}
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-200/90 border border-amber-300 w-28 h-6 rotate-1 rounded shadow-sm flex items-center justify-center">
-          <span className="text-[10px] font-black tracking-widest text-amber-800 uppercase">SIDSER 2026</span>
-        </div>
-
-        {/* Ventana de Mascota Reaccionaria */}
-        <div className="flex flex-col items-center justify-center mb-6 pt-2">
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-b from-sky-50 to-indigo-50 border-3 border-dashed border-sky-300 p-2 shadow-inner flex items-center justify-center overflow-hidden transition-all duration-300">
-            {focusedField === 'email' ? (
-              <div className="flex flex-col items-center animate-fadeIn">
-                <video
-                  src="/assets/8.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : focusedField === 'password' ? (
-              <div className="flex flex-col items-center animate-fadeIn">
-                <video
-                  src="/assets/9.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <video
-                  src="/assets/9.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            )}
-
-            {/* Burbuja de estado de la mascota */}
-            <div className="absolute bottom-1 bg-white/95 text-[10px] font-bold text-slate-700 px-2 py-0.5 rounded-full border border-slate-300 shadow-sm">
-              {focusedField === 'email'
-                ? '🔍 Verificando usuario...'
-                : focusedField === 'password'
-                ? '🤫 Protegiendo clave...'
-                : '📖 ¡Listo para aprender!'}
-            </div>
-          </div>
-          <h2 className="text-xl font-extrabold text-slate-800 mt-2 tracking-tight text-center">
+        {/* Título y Subtítulo de Acceso */}
+        <div className="flex flex-col items-center justify-center mb-5 text-center">
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">
             Acceso a Plataforma SIDSER
           </h2>
-          <p className="text-xs text-slate-500 text-center font-medium">
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             Sistema Multigrado Primaria • CNB & MINEDUC
           </p>
         </div>
 
         {/* Selector de Rol Educativo */}
         <div className="mb-5">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 text-center">
-            Selecciona tu rol educativo
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 text-center">
+            SELECCIONA TU ROL EDUCATIVO
           </label>
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200">
             <button
               type="button"
               onClick={() => handleQuickFill('profesor')}
               className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all font-bold text-xs ${
                 role === 'profesor'
-                  ? 'bg-rose-500 text-white shadow-md transform scale-[1.02]'
+                  ? 'bg-[#FF5A5F] text-white shadow-md transform scale-[1.02]'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
@@ -262,10 +221,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setFocusedField('email')}
-                onBlur={() => setFocusedField('none')}
-                placeholder="ej. profesor@sidser.edu.gt"
-                className="w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 rounded-2xl text-sm font-medium text-slate-800 transition-all outline-none"
+                placeholder="profesor@sidser.edu.gt"
+                className="w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 focus:border-[#FF5A5F] focus:ring-2 focus:ring-rose-100 rounded-2xl text-sm font-medium text-slate-800 transition-all outline-none"
               />
             </div>
           </div>
@@ -293,10 +250,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField('none')}
                 placeholder="••••••••••••"
-                className="w-full pl-10 pr-10 py-2.5 bg-white border-2 border-slate-200 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-2xl text-sm font-medium text-slate-800 transition-all outline-none font-mono"
+                className="w-full pl-10 pr-10 py-2.5 bg-white border-2 border-slate-200 focus:border-[#FF5A5F] focus:ring-2 focus:ring-rose-100 rounded-2xl text-sm font-medium text-slate-800 transition-all outline-none font-mono"
               />
               <button
                 type="button"
@@ -315,12 +270,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-400"
+                className="w-4 h-4 text-[#FF5A5F] border-slate-300 rounded focus:ring-rose-400"
               />
               <span className="text-xs text-slate-600 font-medium">Recordar en este equipo escolar</span>
             </label>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              ⚡ Offline-Ready
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center space-x-1">
+              <span>⚡</span> <span>Offline-Ready</span>
             </span>
           </div>
 
@@ -328,9 +283,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-3.5 px-4 rounded-2xl font-extrabold text-sm text-white shadow-lg btn-educational flex items-center justify-center space-x-2 transition-all ${
+            className={`w-full py-3.5 px-4 rounded-2xl font-black text-sm text-white shadow-lg btn-educational flex items-center justify-center space-x-2 transition-all ${
               role === 'profesor'
-                ? 'bg-rose-500 hover:bg-rose-600 active:bg-rose-700 shadow-rose-200'
+                ? 'bg-[#FF5A5F] hover:bg-[#F43F5E] active:bg-rose-700 shadow-rose-200'
                 : role === 'director'
                 ? 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-200'
                 : 'bg-teal-600 hover:bg-teal-700 active:bg-teal-800 shadow-teal-200'
@@ -352,10 +307,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
         {/* Sección de pruebas rápidas / Demo Directo */}
         <div className="mt-6 pt-4 border-t border-dashed border-slate-200">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-2">
-            Accesos Rápidos de Prueba (Demo)
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center mb-2">
+            ACCESOS RÁPIDOS DE PRUEBA (DEMO)
           </p>
-          <div className="flex flex-wrap gap-1.5 justify-center">
+          <div className="flex flex-wrap gap-1.5 justify-center mb-1.5">
             <button
               type="button"
               onClick={() => handleQuickFill('profesor')}
@@ -377,10 +332,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
             >
               ⚙️ Administrador
             </button>
+          </div>
+          <div className="flex justify-center">
             <button
               type="button"
               onClick={() => handleQuickFill('profesor', true)}
-              className="text-[11px] bg-slate-100 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-2.5 py-1 rounded-xl transition-all"
+              className="text-[11px] bg-slate-100 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-3 py-1 rounded-xl transition-all"
               title="Prueba el bloqueo de usuarios desactivados según RF-09 y CU-01"
             >
               ⚠️ Profe Desactivado

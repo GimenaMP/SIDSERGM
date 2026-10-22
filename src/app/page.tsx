@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { MouseCursorTrail } from '../components/login/MouseCursorTrail';
 import { SchoolDoodles } from '../components/login/SchoolDoodles';
-import { SidserLetterStage } from '../components/login/SidserLetterStage';
 import { LoginForm, UserRole } from '../components/login/LoginForm';
 import { 
   LogOut, 
@@ -11,10 +10,7 @@ import {
   BookOpen, 
   CheckSquare, 
   GraduationCap, 
-  School, 
-  ShieldCheck,
-  Sparkles,
-  ArrowRight
+  Sparkles
 } from 'lucide-react';
 
 interface ActiveSession {
@@ -41,44 +37,18 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col justify-between py-6 px-4 md:px-8 overflow-hidden">
+    <main className="relative min-h-screen flex flex-col justify-center items-center py-8 px-4 md:px-8 overflow-hidden">
       {/* 1. Estela y cursor animado del ratoncito escolar */}
       <MouseCursorTrail />
 
-      {/* 2. Doodles y papelería escolar de fondo */}
+      {/* 2. Doodles y papelería escolar de fondo (clip superior, regla inferior) */}
       <SchoolDoodles />
 
-      {/* Encabezado o Barra Superior */}
-      <header className="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between py-2">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-xl bg-amber-400 border-2 border-amber-500 shadow-sm flex items-center justify-center font-black text-amber-950 text-base">
-            S
-          </div>
-          <span className="font-extrabold text-slate-800 tracking-tight text-base sm:text-lg">
-            Plataforma SIDSER
-          </span>
-          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 hidden sm:inline-block">
-            Ciclo Escolar 2026
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-3 text-xs font-semibold text-slate-600">
-          <span className="hidden md:inline">Guatemala • MINEDUC</span>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-          <span className="text-emerald-700 font-bold">En línea / Cache Offline</span>
-        </div>
-      </header>
-
       {/* Contenido Principal */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center py-4">
+      <div className="relative z-10 w-full flex flex-col items-center justify-center">
         {!session ? (
-          <>
-            {/* 3. Escenario interactivo de las letras S-I-D-S-E-R */}
-            <SidserLetterStage />
-
-            {/* 4. Tarjeta del Formulario de Inicio de Sesión */}
-            <LoginForm onLoginSuccess={handleLoginSuccess} />
-          </>
+          /* Formulario de Login con el GIF de SIDSER superpuesto encima */
+          <LoginForm onLoginSuccess={handleLoginSuccess} />
         ) : (
           /* Pantalla de Bienvenida tras Iniciar Sesión Exitosamente */
           <div className="w-full max-w-xl mx-auto card-educational rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-slate-200 animate-fadeIn text-center">
@@ -167,11 +137,6 @@ export default function LoginPage() {
           </div>
         )}
       </div>
-
-      {/* Pie de página */}
-      <footer className="relative z-10 w-full max-w-5xl mx-auto pt-4 text-center text-xs text-slate-400 font-medium">
-        © 2026 Plataforma SIDSER • Diseñado con orgullo para la educación rural de Guatemala
-      </footer>
     </main>
   );
 }
