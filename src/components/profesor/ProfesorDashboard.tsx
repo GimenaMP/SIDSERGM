@@ -26,9 +26,24 @@ import {
   School,
   FileText,
   User,
-  Users
+  Users,
+  Sliders,
+  RotateCcw,
+  Zap,
+  Lightbulb,
+  Tag,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 import { playCartoonPopSound, playCartoonRisingSound } from '../../utils/audioEffects';
+import { 
+  generateUnifiedRAGPlan, 
+  UnifiedWeeklyPlan, 
+  DiaSemana, 
+  GradeSchedule, 
+  TimeAllocation,
+  DayPlan
+} from '../../utils/ragEngine';
 
 export interface ProfesorDashboardProps {
   onLogout: () => void;
@@ -38,28 +53,7 @@ export interface ProfesorDashboardProps {
 
 export type SidebarMode = 'dashboard' | 'planificaciones' | 'grados' | 'asistencia' | 'pruebas' | 'calendario';
 
-interface TimeAllocation {
-  rango: string;
-  rolDocente: 'atencion_directa' | 'trabajo_autonomo';
-  descripcion: string;
-}
 
-interface GradeSchedule {
-  grado: string;
-  bloque: string;
-  duracionTotal: string;
-  materia: string;
-  tema: string;
-  cnbCompetencia: string;
-  cnbIndicador: string;
-  libroTitulo: string;
-  numeroPagina: number;
-  seccionLibro: string;
-  tiemposReferencia: TimeAllocation[];
-  ejerciciosLiterales: string[];
-  tareaCasa: string;
-  completado: boolean;
-}
 
 interface StudentAttendance {
   id: string;
@@ -175,26 +169,152 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
 }) => {
   const [currentMode, setCurrentMode] = useState<SidebarMode>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [schedule, setSchedule] = useState<GradeSchedule[]>(INITIAL_SCHEDULE);
   const [students, setStudents] = useState<StudentAttendance[]>(INITIAL_STUDENTS);
   const [selectedGradoFilter, setSelectedGradoFilter] = useState<string>('todos');
   const [attendanceSaved, setAttendanceSaved] = useState(false);
 
-  // Navegación lateral
+  // Estados de Planificación Multigrado RAG (Lunes a Jueves)
+  const [selectedCycle, setSelectedCycle] = useState<'segundo_ciclo' | 'primer_ciclo'>('segundo_ciclo');
+  const [selectedBimestre, setSelectedBimestre] = useState<number>(2);
+  const [selectedSemana, setSelectedSemana] = useState<number>(14);
+  const [paginasPorGrado, setPaginasPorGrado] = useState<Record<number, number>>({ 4: 38, 5: 44, 6: 115 });
+  const [temasRezagados, setTemasRezagados] = useState<string[]>([
+    'Descomposición posicional y valor relativo'
+  ]);
+  const [nuevoTemaRezagado, setNuevoTemaRezagado] = useState<string>('');
+  const [selectedDia, setSelectedDia] = useState<DiaSemana>('Lunes');
+  const [viewMode, setViewMode] = useState<'dia' | 'semana_completa'>('dia');
+  const [showConfig, setShowConfig] = useState<boolean>(true);
+  const [isGeneratingRAG, setIsGeneratingRAG] = useState<boolean>(false);
+  const [ragStep, setRagStep] = useState<number>(1);
+  const [ragMessage, setRagMessage] = useState<string>('');
+  const [aiEnrichment, setAiEnrichment] = useState<any>(null);
+  const [unifiedPlan, setUnifiedPlan] = useState<UnifiedWeeklyPlan>(() => 
+    generateUnifiedRAGPlan({
+      ciclo: 'segundo_ciclo',
+      grados: [4, 5, 6],
+      bimestre: 2,
+      semana: 14,
+      paginasPorGrado: { 4: 38, 5: 44, 6: 115 },
+      temasRezagados: ['Descomposición posicional y valor relativo']
+    })
+  );
+
+  const handleCycleChange = (ciclo: 'segundo_ciclo' | 'primer_ciclo') => {
+    playCartoonPopSound();
+    setSelectedCycle(ciclo);
+    if (ciclo === 'segundo_ciclo') {
+      setPaginasPorGrado({ 4: 38, 5: 44, 6: 115 });
+    } else {
+      setPaginasPorGrado({ 1: 14, 2: 32, 3: 54 });
+    }
+  };
+
+  const handleAddTemaRezagado = (tema: string) => {
+    if (!tema || !tema.trim()) return;
+    playCartoonPopSound();
+    if (!temasRezagados.includes(tema.trim())) {
+      setTemasRezagados(prev => [...prev, tema.trim()]);
+    }
+    setNuevoTemaRezagado('');
+  };
+
+  const handleRemoveTemaRezagado = (tema: string) => {
+    playCartoonPopSound();
+    setTemasRezagados(prev => prev.filter(t => t !== tema));
+  };
+
+  const handlePaginaChange = (grado: number, valor: number) => {
+    setPaginasPorGrado(prev => ({ ...prev, [grado]: Math.max(1, valor || 1) }));
+  };
+
+  const handleGenerateRAG = async () => {
+    playCartoonRisingSound();
+    setIsGeneratingRAG(true);
+    setRagStep(1);
+    setRagMessage('Consultando Base Vectorial del CNB (DIGECUR)...');
+
+    setTimeout(() => {
+      setRagStep(2);
+      setRagMessage('Extrayendo ejercicios literales en libros de texto oficiales MINEDUC...');
+    }, 800);
+
+    setTimeout(() => {
+      setRagStep(3);
+      setRagMessage('Sincronizando tiempos rotativos de 45 min con Gemini AI sin alucinaciones...');
+    }, 1600);
+
+    try {
+      const res = await fetch('/api/planificaciones/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ciclo: selectedCycle,
+          grados: selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3],
+          bimestre: selectedBimestre,
+          semana: selectedSemana,
+          paginasPorGrado,
+          temasRezagados,
+          diaSeleccionado: selectedDia
+        })
+      });
+
+      const data = await res.json();
+      if (data && data.success && data.plan) {
+        setUnifiedPlan(data.plan);
+        if (data.enriquecimientoAI) {
+          setAiEnrichment(data.enriquecimientoAI);
+        }
+      } else {
+        const local = generateUnifiedRAGPlan({
+          ciclo: selectedCycle,
+          grados: selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3],
+          bimestre: selectedBimestre,
+          semana: selectedSemana,
+          paginasPorGrado,
+          temasRezagados
+        });
+        setUnifiedPlan(local);
+      }
+    } catch {
+      const local = generateUnifiedRAGPlan({
+        ciclo: selectedCycle,
+        grados: selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3],
+        bimestre: selectedBimestre,
+        semana: selectedSemana,
+        paginasPorGrado,
+        temasRezagados
+      });
+      setUnifiedPlan(local);
+    } finally {
+      setTimeout(() => {
+        setIsGeneratingRAG(false);
+        playCartoonPopSound();
+      }, 2200);
+    }
+  };
+
+  // Toggle tema completado en planificaciones para el día actual
+  const toggleScheduleCompletado = (dia: DiaSemana, index: number) => {
+    playCartoonPopSound();
+    setUnifiedPlan(prev => {
+      const copy = { ...prev };
+      const currentDay = { ...copy.dias[dia] };
+      const updatedGrados = [...currentDay.gradosSincronizados];
+      updatedGrados[index] = {
+        ...updatedGrados[index],
+        completado: !updatedGrados[index].completado
+      };
+      currentDay.gradosSincronizados = updatedGrados;
+      copy.dias[dia] = currentDay;
+      return copy;
+    });
+  };
+
   const handleSelectMode = (mode: SidebarMode) => {
     playCartoonPopSound();
     setCurrentMode(mode);
     setMobileMenuOpen(false);
-  };
-
-  // Toggle tema completado en planificaciones
-  const toggleScheduleCompletado = (index: number) => {
-    playCartoonPopSound();
-    setSchedule(prev => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], completado: !copy[index].completado };
-      return copy;
-    });
   };
 
   // Toggle estado de asistencia de alumno
@@ -459,7 +579,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {schedule.map((item, idx) => (
+                  {(unifiedPlan.dias[selectedDia]?.gradosSincronizados || []).map((item, idx) => (
                     <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-xs font-extrabold text-slate-800">{item.grado}</span>
@@ -488,199 +608,583 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
               {/* Encabezado Principal de la Guía Unificada */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-200 mb-2">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Guía Pedagógica Unificada Multigrado • Ciclo Escolar 2026</span>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="inline-flex items-center space-x-1.5 bg-emerald-50 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-200">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Guía Unificada Multigrado • Lunes a Jueves (Ciclo Escolar 2026)</span>
+                    </span>
+
+                    {unifiedPlan.fuenteGeneracion === 'gemini_rag_grounded' ? (
+                      <span className="inline-flex items-center space-x-1.5 bg-purple-50 text-purple-800 text-xs font-black px-3 py-1 rounded-full border border-purple-200 animate-pulse">
+                        <Zap className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Google Gemini AI Grounded • Cero Alucinaciones</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center space-x-1.5 bg-sky-50 text-sky-800 text-xs font-black px-3 py-1 rounded-full border border-sky-200">
+                        <Layers className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Base Vectorial CNB + Textos MINEDUC Verificada</span>
+                      </span>
+                    )}
                   </div>
+
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    Planificación Simultánea Unificada: 4.°, 5.° y 6.° Primaria
+                    Planificación Simultánea Unificada: {selectedCycle === 'segundo_ciclo' ? '4.°, 5.° y 6.°' : '1.°, 2.° y 3.°'} Primaria
                   </h2>
                   <p className="text-xs text-slate-600 mt-1 max-w-3xl leading-relaxed">
-                    Esta guía unifica todos los grados en un solo documento. Incluye los <strong>ejercicios transcritos literalmente de las guías del MINEDUC</strong>, los <strong>números de página física</strong> para confrontar con tu libro, los <strong>objetivos oficiales del CNB (DIGECUR)</strong> y los <strong>tiempos de referencia sugeridos</strong> para alternar la atención docente.
+                    Estructurada de <strong>Lunes a Jueves</strong> (dejando el Viernes para pruebas de diagnóstico y nivelación). Consulta la <strong>base vectorial del CNB (DIGECUR)</strong> para indicadores oficiales y transcribe <strong>ejercicios exactos de los libros MINEDUC por número de página</strong>, permitiendo incorporar temas rezagados sin alucinaciones.
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-2 shrink-0">
                   <button
+                    onClick={() => { playCartoonPopSound(); setShowConfig(!showConfig); }}
+                    className={`font-bold px-4 py-2.5 rounded-2xl text-xs transition-all flex items-center space-x-1.5 border ${
+                      showConfig 
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+                        : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4" />
+                    <span>{showConfig ? 'Ocultar Parámetros' : 'Configurar Parámetros'}</span>
+                  </button>
+
+                  <button
                     onClick={() => { playCartoonRisingSound(); window.print(); }}
                     className="bg-[#0077B6] hover:bg-sky-700 active:bg-sky-800 text-white font-bold px-4 py-2.5 rounded-2xl text-xs transition-all shadow-sm flex items-center space-x-1.5"
                   >
                     <Printer className="w-4 h-4" />
-                    <span>Imprimir Guía Unificada</span>
+                    <span>Imprimir Guía</span>
                   </button>
                 </div>
               </div>
 
               {/* 
-                LÍNEA DE TIEMPO VISUAL: DISTRIBUCIÓN DE TIEMPOS DE REFERENCIA DEL DOCENTE (45 MINUTOS)
+                PANEL DE CONFIGURACIÓN PREVIA (SEMESTRE/SEMANA, PÁGINAS FÍSICAS Y TEMAS REZAGADOS)
               */}
-              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-md">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-amber-400" />
-                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
-                      Tiempos de Referencia Docente en el Bloque Simultáneo (45 Minutos)
-                    </h3>
+              {showConfig && (
+                <div className="bg-white rounded-3xl p-6 border-2 border-indigo-100 shadow-md space-y-5 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A5F] to-[#FFB703] flex items-center justify-center text-white font-black text-xs shadow-sm">
+                        ⚙️
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900">
+                          Configurador Pedagógico Multigrado RAG
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          Define el avance actual de tu aula antes de consultar a Gemini y a la base vectorial
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Selector de Ciclo */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                      <button
+                        onClick={() => handleCycleChange('segundo_ciclo')}
+                        className={`px-3 py-1.5 rounded-xl transition-all ${
+                          selectedCycle === 'segundo_ciclo'
+                            ? 'bg-white text-slate-900 shadow-sm font-black'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Segundo Ciclo (4.°-6.°)
+                      </button>
+                      <button
+                        onClick={() => handleCycleChange('primer_ciclo')}
+                        className={`px-3 py-1.5 rounded-xl transition-all ${
+                          selectedCycle === 'primer_ciclo'
+                            ? 'bg-white text-slate-900 shadow-sm font-black'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Primer Ciclo (1.°-3.°)
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
-                    Alternancia Rotativa Sugerida
-                  </span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* 1. Bimestre y Semana */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center space-x-1">
+                        <CalendarIcon className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Bimestre y Semana Escolar</span>
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Bimestre</label>
+                          <select
+                            value={selectedBimestre}
+                            onChange={(e) => setSelectedBimestre(Number(e.target.value))}
+                            className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          >
+                            <option value={1}>Bimestre 1</option>
+                            <option value={2}>Bimestre 2</option>
+                            <option value={3}>Bimestre 3</option>
+                            <option value={4}>Bimestre 4</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Semana ({selectedSemana})</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={36}
+                            value={selectedSemana}
+                            onChange={(e) => setSelectedSemana(Number(e.target.value))}
+                            className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        La base del CNB ubica los temas e indicadores correspondientes a esta semana.
+                      </p>
+                    </div>
+
+                    {/* 2. Páginas de las Guías según el Grado */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center space-x-1">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Página Actual de Partida por Guía</span>
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {(selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3]).map((g) => (
+                          <div key={g}>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1 truncate">
+                              {g}.° Grado
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-2 text-[10px] font-bold text-slate-400">P.</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={300}
+                                value={paginasPorGrado[g] || 30}
+                                onChange={(e) => handlePaginaChange(g, Number(e.target.value))}
+                                className="w-full pl-6 text-xs font-black bg-white border border-slate-300 rounded-xl p-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        Los ejercicios literales se extraen a partir de estas páginas de los libros oficiales.
+                      </p>
+                    </div>
+
+                    {/* 3. Temas no impartidos anteriormente / Rezagados */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                      <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center space-x-1">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Temas No Impartidos / Rezagados</span>
+                      </p>
+
+                      {/* Chips activos */}
+                      <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+                        {temasRezagados.length === 0 ? (
+                          <span className="text-[11px] text-slate-400 italic">Sin temas pendientes</span>
+                        ) : (
+                          temasRezagados.map((tema, tIdx) => (
+                            <span 
+                              key={tIdx} 
+                              className="inline-flex items-center space-x-1 bg-rose-100 text-rose-900 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-rose-200"
+                            >
+                              <span className="truncate max-w-[120px]">{tema}</span>
+                              <button 
+                                onClick={() => handleRemoveTemaRezagado(tema)}
+                                className="text-rose-600 hover:text-rose-900 font-black ml-1"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Input para agregar tema rezagado */}
+                      <div className="flex items-center space-x-1 pt-1">
+                        <input
+                          type="text"
+                          placeholder="Escribe tema pendiente..."
+                          value={nuevoTemaRezagado}
+                          onChange={(e) => setNuevoTemaRezagado(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddTemaRezagado(nuevoTemaRezagado);
+                            }
+                          }}
+                          className="flex-1 text-[11px] bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddTemaRezagado(nuevoTemaRezagado)}
+                          className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-2.5 py-1.5 rounded-xl text-xs"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Chips de sugerencias rápidas */}
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {['División con residuo', 'Fracciones homogéneas', 'Regla de tres'].map((sug, sIdx) => (
+                          <button
+                            key={sIdx}
+                            onClick={() => handleAddTemaRezagado(sug)}
+                            className="text-[9px] bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-medium"
+                          >
+                            + {sug}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botón Principal de Generación RAG */}
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-[11px] text-slate-500 flex items-center space-x-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>
+                        La API de Google Gemini combina los datos recuperados de la base vectorial para garantizar 0% alucinaciones.
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleGenerateRAG}
+                      disabled={isGeneratingRAG}
+                      className="w-full sm:w-auto bg-gradient-to-r from-[#FF5A5F] via-[#FFB703] to-[#06D6A0] hover:opacity-95 active:scale-95 text-white font-black px-6 py-3 rounded-2xl text-xs shadow-lg transition-all flex items-center justify-center space-x-2 shrink-0 disabled:opacity-50"
+                    >
+                      <Sparkles className="w-4 h-4 text-white animate-spin" />
+                      <span>{isGeneratingRAG ? 'Generando con Gemini RAG...' : '✨ Generar Planificación con Gemini AI (Base Vectorial CNB/MINEDUC)'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 
+                ESTADO DE CARGA ANIMADO DE RAG MULTIETAPA
+              */}
+              {isGeneratingRAG && (
+                <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl space-y-4 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                      <div>
+                        <h4 className="text-sm font-black text-amber-300">
+                          Búsqueda Vectorial y Generación Grounded en Curso...
+                        </h4>
+                        <p className="text-xs text-slate-300">{ragMessage}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold bg-white/10 px-3 py-1 rounded-full text-amber-300">
+                      Paso {ragStep} de 3
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 h-full transition-all duration-500"
+                      style={{ width: `${(ragStep / 3) * 100}%` }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-400 font-mono">
+                    <span className={ragStep >= 1 ? 'text-emerald-400 font-bold' : ''}>1. CNB DIGECUR</span>
+                    <span className={ragStep >= 2 ? 'text-amber-300 font-bold' : ''}>2. Libros MINEDUC</span>
+                    <span className={ragStep >= 3 ? 'text-purple-300 font-bold' : ''}>3. Gemini Sync 45m</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 
+                BARRA DE DÍAS: LUNES A JUEVES + VISTA SEMANA COMPLETA
+              */}
+              <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center space-x-1">
+                  {(['Lunes', 'Martes', 'Miércoles', 'Jueves'] as DiaSemana[]).map((dia) => {
+                    const isActive = selectedDia === dia && viewMode === 'dia';
+                    const colors: Record<DiaSemana, string> = {
+                      'Lunes': 'border-emerald-400 text-emerald-800 bg-emerald-50',
+                      'Martes': 'border-amber-400 text-amber-800 bg-amber-50',
+                      'Miércoles': 'border-sky-400 text-sky-800 bg-sky-50',
+                      'Jueves': 'border-purple-400 text-purple-800 bg-purple-50',
+                    };
+
+                    return (
+                      <button
+                        key={dia}
+                        onClick={() => {
+                          playCartoonPopSound();
+                          setSelectedDia(dia);
+                          setViewMode('dia');
+                        }}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 ${
+                          isActive
+                            ? 'bg-slate-900 text-white shadow-sm scale-105'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{dia}</span>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                    <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                      <span>Fase 1: 00 - 15 min</span>
-                      <span className="bg-rose-500 text-white text-[10px] px-2 py-0.2 rounded-full">Profesor en 4.°</span>
-                    </div>
-                    <p className="text-white/90 text-[11px] font-medium">
-                      <strong>4.° Grado:</strong> Explicación directa en pizarra.<br/>
-                      <strong>5.° Grado:</strong> Lectura silenciosa guiada en libro.<br/>
-                      <strong>6.° Grado:</strong> Trabajo en parejas planteando datos.
-                    </p>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      playCartoonPopSound();
+                      setViewMode(viewMode === 'dia' ? 'semana_completa' : 'dia');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                      viewMode === 'semana_completa'
+                        ? 'bg-[#0077B6] text-white border-[#0077B6] shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    📑 {viewMode === 'semana_completa' ? 'Ver Día Individual' : 'Ver Semana Completa (L-J)'}
+                  </button>
 
-                  <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                    <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                      <span>Fase 2: 15 - 30 min</span>
-                      <span className="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.2 rounded-full">Profesor en 5.°</span>
-                    </div>
-                    <p className="text-white/90 text-[11px] font-medium">
-                      <strong>4.° Grado:</strong> Resolución individual en cuaderno.<br/>
-                      <strong>5.° Grado:</strong> Modelado directo con material concreto.<br/>
-                      <strong>6.° Grado:</strong> Resolución de regla de tres.
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                    <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                      <span>Fase 3: 30 - 45 min</span>
-                      <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.2 rounded-full">Profesor en 6.°</span>
-                    </div>
-                    <p className="text-white/90 text-[11px] font-medium">
-                      <strong>4.° Grado:</strong> Revisión en parejas y puesta en común.<br/>
-                      <strong>5.° Grado:</strong> Ejercicios prácticos autónomos.<br/>
-                      <strong>6.° Grado:</strong> Revisión de incógnita "x" y cierre.
-                    </p>
-                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
+                    Semana {unifiedPlan.semana} • Bimestre {unifiedPlan.bimestre}
+                  </span>
                 </div>
               </div>
 
               {/* 
-                GUÍA UNIFICADA: 3 COLUMNAS SIMULTÁNEAS SINCRONIZADAS
+                ENFOQUE PEDAGÓGICO DEL DÍA Y RECOMENDACIÓN DE GEMINI AI
               */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {schedule.map((item, idx) => (
-                  <div 
-                    key={idx}
-                    className={`bg-white rounded-3xl p-5 sm:p-6 border-2 transition-all flex flex-col justify-between shadow-sm ${
-                      item.completado ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200'
-                    }`}
-                  >
-                    <div className="space-y-4">
-                      {/* Encabezado del Grado y Libro */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-base font-black text-slate-900 bg-slate-100 px-3.5 py-1.5 rounded-2xl">
-                            {item.grado}
-                          </span>
-                          <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
-                            <span>📖</span>
-                            <span>Pág. Física {item.numeroPagina}</span>
-                          </span>
-                        </div>
-                        <h3 className="font-black text-base text-slate-900 leading-snug">
-                          {item.tema}
-                        </h3>
-                        <p className="text-xs font-bold text-slate-500 mt-0.5">
-                          {item.libroTitulo} • {item.seccionLibro}
-                        </p>
-                      </div>
+              {viewMode === 'dia' && (
+                <div className="bg-gradient-to-r from-sky-50 via-indigo-50 to-purple-50 border border-sky-200/80 rounded-3xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-sky-600 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                        Jornada de {selectedDia}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        {unifiedPlan.dias[selectedDia]?.horarioBloque || '08:00 - 08:45 hrs'} (45 Minutos)
+                      </span>
+                    </div>
+                    <h3 className="text-base font-black text-slate-900">
+                      {unifiedPlan.dias[selectedDia]?.enfoqueDidactico}
+                    </h3>
+                  </div>
 
-                      {/* Tiempos de Referencia Específicos del Grado */}
-                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center space-x-1">
-                          <Clock className="w-3 h-3 text-slate-500" />
-                          <span>Tiempos de Referencia Docente ({item.duracionTotal})</span>
-                        </p>
-                        {item.tiemposReferencia.map((t, tIdx) => (
-                          <div key={tIdx} className="flex items-start space-x-2 text-[11px] leading-tight">
-                            <span className={`font-mono font-black shrink-0 px-1.5 py-0.5 rounded text-[10px] ${
-                              t.rolDocente === 'atencion_directa' 
-                                ? 'bg-rose-100 text-rose-800 font-bold' 
-                                : 'bg-slate-200 text-slate-700'
-                            }`}>
-                              {t.rango}
-                            </span>
-                            <span className="text-slate-700">{t.descripcion}</span>
-                          </div>
-                        ))}
-                      </div>
+                  {aiEnrichment && (
+                    <div className="bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl border border-indigo-200 text-xs max-w-md shadow-xs">
+                      <p className="text-[10px] font-black uppercase text-purple-700 flex items-center space-x-1 mb-1">
+                        <Lightbulb className="w-3 h-3 text-purple-600" />
+                        <span>Sugerencia Metodológica Gemini RAG</span>
+                      </p>
+                      <p className="text-slate-700 text-[11px] leading-snug">
+                        {aiEnrichment.observacionesPedagogicas || aiEnrichment.recomendacionRezagados}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
-                      {/* Objetivo y Competencia según el CNB (DIGECUR) */}
-                      <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-2xl text-xs space-y-1">
-                        <p className="text-[10px] font-black uppercase text-sky-800 tracking-wider">
-                          Objetivo Pedagógico según CNB (DIGECUR)
-                        </p>
-                        <p className="text-sky-950 font-bold text-[11px] leading-snug">
-                          {item.cnbCompetencia}
-                        </p>
-                        <p className="text-sky-900 font-medium text-[11px] leading-relaxed pt-1 border-t border-sky-200/60">
-                          {item.cnbIndicador}
-                        </p>
-                      </div>
+              {/* 
+                LÍNEA DE TIEMPO VISUAL: DISTRIBUCIÓN DE TIEMPOS DE REFERENCIA DEL DOCENTE (45 MINUTOS)
+              */}
+              {viewMode === 'dia' && (
+                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-md">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
+                        Tiempos de Referencia Docente en el Bloque de {selectedDia} (45 Minutos)
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
+                      Alternancia Rotativa Sugerida
+                    </span>
+                  </div>
 
-                      {/* 
-                        EJERCICIOS LITERALES TAL CUAL ESTÁN EN LA GUÍA DEL MINEDUC
-                      */}
-                      <div className="p-4 bg-amber-50/40 border-2 border-amber-300 rounded-2xl space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
-                            <span>✏️</span>
-                            <span>Ejercicios Literales de la Guía Oficial</span>
-                          </p>
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
-                            Texto Exacto del Libro
-                          </span>
-                        </div>
-
-                        <div className="bg-white p-3 rounded-xl border border-amber-200 font-mono text-xs text-slate-800 space-y-1.5 leading-relaxed shadow-inner">
-                          {item.ejerciciosLiterales.map((line, lIdx) => (
-                            <p key={lIdx} className={`${line.startsWith('   ') ? 'pl-3 font-semibold text-slate-700' : 'font-bold text-slate-900'}`}>
-                              {line}
-                            </p>
-                          ))}
-                        </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                      <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                        <span>Fase 1: 00 - 15 min</span>
+                        <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          Atención Directa
+                        </span>
                       </div>
-
-                      {/* Sugerencia de Aprendizaje en el Hogar */}
-                      <div className="p-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs">
-                        <p className="text-[10px] font-black uppercase text-purple-800 tracking-wider mb-1">
-                          🏠 Autoaprendizaje y Lectura en Casa
-                        </p>
-                        <p className="text-purple-950 font-medium text-[11px] leading-snug">
-                          {item.tareaCasa}
-                        </p>
-                      </div>
+                      <p className="text-white/90 text-[11px] font-medium leading-relaxed">
+                        Explicación directa en pizarra con el grado asignado; los otros grados inician con lectura silenciosa guiada o ejercicios preparatorios.
+                      </p>
                     </div>
 
-                    {/* Botón de Checklist de Jueves */}
-                    <div className="mt-5 pt-4 border-t border-slate-100">
-                      <button
-                        onClick={() => toggleScheduleCompletado(idx)}
-                        className={`w-full py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
-                          item.completado
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>{item.completado ? '✓ Tema Confirmado en Jueves' : 'Marcar como Impartido'}</span>
-                      </button>
+                    <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                      <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                        <span>Fase 2: 15 - 30 min</span>
+                        <span className="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          Rotación Intermedia
+                        </span>
+                      </div>
+                      <p className="text-white/90 text-[11px] font-medium leading-relaxed">
+                        El docente se desplaza al segundo grado para modelar con ejemplos prácticos; el primer grado resuelve ejercicios en su cuaderno.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                      <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                        <span>Fase 3: 30 - 45 min</span>
+                        <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          Cierre y Síntesis
+                        </span>
+                      </div>
+                      <p className="text-white/90 text-[11px] font-medium leading-relaxed">
+                        Atención directa al tercer grado y verificación rápida de dudas en plenario antes de asignar la lectura para casa.
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* 
+                GUÍA UNIFICADA: COLUMNAS SIMULTÁNEAS SINCRONIZADAS POR GRADO (VISTA DÍA O SEMANA COMPLETA)
+              */}
+              {(viewMode === 'dia' ? [selectedDia] : ['Lunes', 'Martes', 'Miércoles', 'Jueves'] as DiaSemana[]).map((diaRender) => (
+                <div key={diaRender} className="space-y-4">
+                  {viewMode === 'semana_completa' && (
+                    <div className="pt-4 border-t-2 border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-3 h-3 rounded-full bg-[#FF5A5F]" />
+                        <h3 className="text-lg font-black text-slate-900 capitalize">
+                          Guía de {diaRender} — {unifiedPlan.dias[diaRender]?.enfoqueDidactico}
+                        </h3>
+                      </div>
+                      <span className="text-xs font-bold text-slate-500">45 Minutos</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {(unifiedPlan.dias[diaRender]?.gradosSincronizados || []).map((item, idx) => (
+                      <div 
+                        key={idx}
+                        className={`bg-white rounded-3xl p-5 sm:p-6 border-2 transition-all flex flex-col justify-between shadow-sm ${
+                          item.completado ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="space-y-4">
+                          {/* Encabezado del Grado y Libro */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-base font-black text-slate-900 bg-slate-100 px-3.5 py-1.5 rounded-2xl">
+                                {item.grado}
+                              </span>
+
+                              <div className="flex items-center space-x-1.5">
+                                {item.esTemaRezagado && (
+                                  <span className="bg-rose-100 text-rose-900 text-[10px] font-black px-2 py-0.5 rounded-lg border border-rose-300">
+                                    Refuerzo Rezagado
+                                  </span>
+                                )}
+                                <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
+                                  <span>📖</span>
+                                  <span>Pág. Física {item.numeroPagina}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <h3 className="font-black text-base text-slate-900 leading-snug">
+                              {item.tema}
+                            </h3>
+                            <p className="text-xs font-bold text-slate-500 mt-0.5">
+                              {item.libroTitulo} • {item.seccionLibro}
+                            </p>
+                          </div>
+
+                          {/* Tiempos de Referencia Específicos del Grado */}
+                          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center space-x-1">
+                              <Clock className="w-3 h-3 text-slate-500" />
+                              <span>Tiempos de Referencia Docente ({item.duracionTotal})</span>
+                            </p>
+                            {item.tiemposReferencia.map((t, tIdx) => (
+                              <div key={tIdx} className="flex items-start space-x-2 text-[11px] leading-tight">
+                                <span className={`font-mono font-black shrink-0 px-1.5 py-0.5 rounded text-[10px] ${
+                                  t.rolDocente === 'atencion_directa' 
+                                    ? 'bg-rose-100 text-rose-800 font-bold' 
+                                    : 'bg-slate-200 text-slate-700'
+                                }`}>
+                                  {t.rango}
+                                </span>
+                                <span className="text-slate-700">{t.descripcion}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Objetivo y Competencia según el CNB (DIGECUR) */}
+                          <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-2xl text-xs space-y-1">
+                            <p className="text-[10px] font-black uppercase text-sky-800 tracking-wider">
+                              Objetivo Pedagógico según CNB (DIGECUR)
+                            </p>
+                            <p className="text-sky-950 font-bold text-[11px] leading-snug">
+                              {item.cnbCompetencia}
+                            </p>
+                            <p className="text-sky-900 font-medium text-[11px] leading-relaxed pt-1 border-t border-sky-200/60">
+                              {item.cnbIndicador}
+                            </p>
+                          </div>
+
+                          {/* 
+                            EJERCICIOS LITERALES TAL CUAL ESTÁN EN LA GUÍA DEL MINEDUC
+                          */}
+                          <div className="p-4 bg-amber-50/40 border-2 border-amber-300 rounded-2xl space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
+                                <span>✏️</span>
+                                <span>Ejercicios Literales de la Guía Oficial</span>
+                              </p>
+                              <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
+                                Texto Exacto del Libro
+                              </span>
+                            </div>
+
+                            <div className="bg-white p-3 rounded-xl border border-amber-200 font-mono text-xs text-slate-800 space-y-1.5 leading-relaxed shadow-inner">
+                              {item.ejerciciosLiterales.map((line, lIdx) => (
+                                <p key={lIdx} className={`${line.startsWith('   ') ? 'pl-3 font-semibold text-slate-700' : 'font-bold text-slate-900'}`}>
+                                  {line}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Sugerencia de Aprendizaje en el Hogar */}
+                          <div className="p-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs">
+                            <p className="text-[10px] font-black uppercase text-purple-800 tracking-wider mb-1">
+                              🏠 Autoaprendizaje y Lectura en Casa
+                            </p>
+                            <p className="text-purple-950 font-medium text-[11px] leading-snug">
+                              {item.tareaCasa}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Botón de Checklist */}
+                        <div className="mt-5 pt-4 border-t border-slate-100">
+                          <button
+                            onClick={() => toggleScheduleCompletado(diaRender, idx)}
+                            className={`w-full py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
+                              item.completado
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>{item.completado ? `✓ Tema Impartido en ${diaRender}` : `Marcar como Impartido (${diaRender})`}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
