@@ -109,12 +109,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto relative z-10 pt-16 sm:pt-20">
+    <div className="w-full max-w-[390px] sm:max-w-[400px] mx-auto relative z-10 mt-36 sm:mt-40">
       {/* 
-        GIF animado de SIDSER superpuesto justo encima del cuadro de inicio de sesión
-        Las patitas y el borde inferior del GIF descansan directamente sobre la tarjeta blanca
+        GIF animado de SIDSER superpuesto con la posición exacta de la maqueta:
+        - El GIF es más ancho que la tarjeta y sobresale a ambos lados.
+        - El borde superior de la tarjeta blanca pasa por detrás del cuerpo de los personajes.
+        - La pestaña inferior de la pieza 'D' cuelga justo arriba de 'Acceso a'.
+        - Las patitas y tenis del personaje 'e' descansan al lado derecho del título 'Acceso a Plataforma SIDSER'.
       */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-30 w-[320px] sm:w-[410px] md:w-[460px] pointer-events-none drop-shadow-xl flex justify-center">
+      <div className="absolute -top-[215px] sm:-top-[230px] left-1/2 -translate-x-1/2 z-30 w-[490px] sm:w-[530px] pointer-events-none drop-shadow-xl flex justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/assets/sidser-logo-animated.gif"
@@ -124,14 +127,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       </div>
 
       {/* Tarjeta de Inicio de Sesión Educativa */}
-      <div className="card-educational rounded-3xl pt-24 sm:pt-28 pb-6 px-6 sm:px-8 shadow-2xl border-2 border-slate-200/90 relative overflow-hidden">
+      <div className="card-educational rounded-[32px] pt-[58px] sm:pt-[64px] pb-6 px-6 sm:px-7 shadow-2xl border-2 border-slate-200/90 relative overflow-visible">
         
         {/* Título y Subtítulo de Acceso */}
-        <div className="flex flex-col items-center justify-center mb-5 text-center">
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">
+        <div className="flex flex-col items-center justify-center mb-4 text-center">
+          <h2 className="text-[17px] sm:text-[18px] font-black text-slate-800 tracking-tight leading-tight">
             Acceso a Plataforma SIDSER
           </h2>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
             Sistema Multigrado Primaria • CNB & MINEDUC
           </p>
         </div>

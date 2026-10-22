@@ -37,7 +37,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col justify-center items-center py-8 px-4 md:px-8 overflow-hidden">
+    <main className="relative min-h-screen flex flex-col justify-center items-center py-12 px-4 md:px-8 overflow-x-hidden">
       {/* 1. Estela y cursor animado del ratoncito escolar */}
       <MouseCursorTrail />
 
