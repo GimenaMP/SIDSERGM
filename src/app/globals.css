@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-family-display: 'Comic Neue', 'Fredoka', 'Quicksand', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: #0f172a;
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(to right, rgba(203, 213, 225, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(203, 213, 225, 0.45) 1px, transparent 1px);
+  background-size: 28px 28px;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Margen rojo de cuaderno escolar */
+.notebook-margin {
+  position: fixed;
+  top: 0;
+  left: 60px;
+  bottom: 0;
+  width: 2px;
+  background-color: rgba(239, 68, 68, 0.3);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (max-width: 768px) {
+  .notebook-margin {
+    left: 24px;
+  }
+}
+
+/* Efecto sombra suave y bordes redondeados tipo tarjeta educativa */
+.card-educational {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 
+    0 10px 25px -5px rgba(15, 23, 42, 0.08),
+    0 8px 10px -6px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+}
+
+/* Estilo de botón interactivo con feedback háptico táctil */
+.btn-educational {
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.15s ease;
+}
+
+.btn-educational:hover {
+  transform: translateY(-2px);
+}
+
+.btn-educational:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Línea punteada de recorrido del ratoncito */
+.trail-path {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 50;
+}
