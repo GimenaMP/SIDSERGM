@@ -124,7 +124,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
       {/* 
         1. BARRA SUPERIOR ESTILO CANVA (Limpia, colorida, con búsqueda y perfil)
       */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
         {/* Logo y Aula Multigrado */}
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF5A5F] to-[#FFB703] flex items-center justify-center text-white font-black text-xl shadow-md transform hover:rotate-6 transition-transform">
@@ -161,7 +161,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
         <div className="flex items-center space-x-3">
           <button 
             onClick={() => { playCartoonRisingSound(); setShowPrintModal(true); }}
-            className="hidden sm:flex items-center space-x-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all transform active:scale-95 shadow-xs"
+            className="hidden sm:flex items-center space-x-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all transform active:scale-95 shadow-sm"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Imprimir Plan Semanal</span>
@@ -311,7 +311,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
         {activeTab === 'planificacion' && (
           <div className="space-y-6 animate-fadeIn">
             {/* Aviso inteligente de asuetos oficiales MINEDUC */}
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 flex items-start space-x-3 shadow-xs">
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 flex items-start space-x-3 shadow-sm">
               <span className="text-2xl">📅</span>
               <div className="flex-1 text-xs">
                 <p className="font-extrabold text-amber-900">
@@ -331,7 +331,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
 
             {/* Selector de grados de la clase multigrado */}
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center space-x-1.5 bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center space-x-1.5 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
                 <span className="text-xs font-bold text-slate-400 px-3">Filtrar Grado:</span>
                 {['todos', '4.° Primaria', '5.° Primaria', '6.° Primaria'].map((grado) => (
                   <button
@@ -339,7 +339,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                     onClick={() => { playCartoonPopSound(); setSelectedGrado(grado); }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
                       selectedGrado === grado
-                        ? 'bg-slate-900 text-white shadow-xs'
+                        ? 'bg-slate-900 text-white shadow-sm'
                         : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -437,7 +437,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                       onClick={() => toggleCompletado(index)}
                       className={`w-full py-2.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
                         item.completado
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                     >
@@ -641,7 +641,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                 { title: 'Matemáticas 5.° Primaria', ciclo: '1.° y 2.° Semestre', paginas: '192 págs', color: 'from-emerald-400 to-teal-500' },
                 { title: 'Matemáticas 6.° Primaria', ciclo: '1.° y 2.° Semestre', paginas: '204 págs', color: 'from-purple-400 to-pink-500' },
               ].map((book, i) => (
-                <div key={i} className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div key={i} className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                   <div>
                     <div className={`w-full h-32 rounded-2xl bg-gradient-to-tr ${book.color} flex items-center justify-center text-white p-4 text-center font-black text-sm shadow-inner`}>
                       {book.title}
@@ -681,7 +681,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                 </div>
                 <button 
                   onClick={() => alert('Formulario de nuevo estudiante o carga desde archivo SIRVEM')}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-2xl text-xs transition-colors shadow-xs"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-2xl text-xs transition-colors shadow-sm"
                 >
                   + Agregar Estudiante
                 </button>
@@ -712,7 +712,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
 
       {/* MODAL DE IMPRESIÓN PARA EL PROFESOR */}
       {showPrintModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-scaleUp">
             <h3 className="text-lg font-black text-slate-900 mb-2">Imprimir Planificación Semanal</h3>
             <p className="text-xs text-slate-600 leading-relaxed mb-4">
@@ -744,7 +744,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                   setShowPrintModal(false);
                   window.print();
                 }}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
               >
                 Imprimir Documento
               </button>

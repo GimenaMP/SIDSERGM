@@ -24,7 +24,7 @@ export const WelcomeHolaOverlay: React.FC<WelcomeHolaOverlayProps> = ({
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex flex-col justify-between items-center bg-[#FAFCFD] select-none transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+      className={`fixed inset-0 z-50 flex flex-col justify-between items-center bg-[#FAFCFD] select-none transition-all duration-700 ease-spring ${
         isExiting ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100 scale-100'
       }`}
     >

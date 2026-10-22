@@ -52,6 +52,10 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'scale(0.85)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         }
+      },
+      transitionTimingFunction: {
+        'spring': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        'bounce-elastic': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
       }
     },
   },

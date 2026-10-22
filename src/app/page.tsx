@@ -63,7 +63,7 @@ export default function LoginPage() {
         ) : (
           /* Pantalla de Bienvenida tras Iniciar Sesión Exitosamente */
           <div className="w-full max-w-xl mx-auto card-educational rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-slate-200 animate-fadeIn text-center">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-100 border-3 border-emerald-400 flex items-center justify-center mb-4 shadow-inner">
+            <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-100 border-[3px] border-emerald-400 flex items-center justify-center mb-4 shadow-inner">
               <GraduationCap className="w-10 h-10 text-emerald-600" />
             </div>
 
