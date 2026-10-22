@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // 2. Intentar refinamiento pedagógico con Google Gemini con timeout de 6 segundos
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+      const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
       let model = null;
 
       for (const mName of candidateModels) {
