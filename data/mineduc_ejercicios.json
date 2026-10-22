@@ -1,7 +1,6 @@
 [
   {
-    "libro_titulo": "Matemáticas 1G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_1G_compressed.pdf",
+    "libro_titulo": "Matemáticas 1G — MINEDUC (Edición Oficial)",
     "grado_especifico": 1,
     "grados_aplicables": [
       1
@@ -9,14 +8,13 @@
     "ciclo": "primer_ciclo",
     "materia": "Matemáticas",
     "numero_pagina": 14,
-    "seccion_unidad": "Unidad 1: Posiciones y relaciones en el espacio",
+    "seccion_unidad": "Unidad 1: Posiciones y relaciones espaciales",
     "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Observa la ilustración del aula. Encierra en un círculo azul el objeto que está ARRIBA de la mesa y con un triángulo rojo el que está DEBAJO de la silla.",
-    "instrucciones_docente": "El docente pide a los alumnos que comparen con objetos reales de su pupitre antes de escribir en su libro."
+    "enunciado_ejercicio": "Observa la ilustración del aula. Encierra en un círculo azul el objeto que está ARRIBA de la mesa y con un triángulo rojo el que está DEBAJO de la silla. Dibuja una pelota CERCA del niño.",
+    "instrucciones_docente": "El docente guía a los estudiantes utilizando objetos reales de su pupitre antes de trabajar en la guía."
   },
   {
-    "libro_titulo": "Matemáticas 1G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_1G_compressed.pdf",
+    "libro_titulo": "Matemáticas 1G — MINEDUC (Edición Oficial)",
     "grado_especifico": 1,
     "grados_aplicables": [
       1
@@ -24,14 +22,55 @@
     "ciclo": "primer_ciclo",
     "materia": "Matemáticas",
     "numero_pagina": 28,
-    "seccion_unidad": "Unidad 2: Conteo y números hasta 10",
-    "tipo_recurso": "evaluacion_cierre",
-    "enunciado_ejercicio": "Cuenta cuántos elotes hay en cada canasta y escribe el número correspondiente en el cuadro en blanco (del 1 al 10).",
-    "instrucciones_docente": "Ítem evaluativo de cierre semanal para verificar la correspondencia cantidad-número."
+    "seccion_unidad": "Unidad 2: Conteo y cardinalidad del 1 al 10",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Cuenta cuántos elotes hay en cada canasto y escribe el numeral correspondiente: Canasta A: 4 elotes | Canasta B: 7 elotes | Canasta C: 9 elotes. Dibuja 6 frijolitos en el plato vacío.",
+    "instrucciones_docente": "Trabajo manipulativo con semillas de maíz o frijol para afianzar correspondencia uno a uno."
   },
   {
-    "libro_titulo": "Matemáticas 2G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_2G_compressed.pdf",
+    "libro_titulo": "Comunicación y Lenguaje 1G — MINEDUC",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 20,
+    "seccion_unidad": "Unidad 1: Escuchamos y expresamos con respeto",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Escucha el relato de la maestra \"El pajarito madrugador\". Dibuja en tu cuaderno al personaje principal y repite en voz alta las 3 palabras que riman del cuento: flor, sol y color.",
+    "instrucciones_docente": "Desarrollo de la conciencia fonológica y escucha activa en el círculo matutino."
+  },
+  {
+    "libro_titulo": "Medio Social y Natural 1G — MINEDUC",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Medio Social y Natural",
+    "numero_pagina": 18,
+    "seccion_unidad": "Unidad 1: Mi cuerpo, sentidos y hábitos de salud",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Señala en el dibujo los 5 órganos de los sentidos: ojos (vista), orejas (oído), nariz (olfato), lengua (gusto) y manos (tacto). Marca con una estrella los alimentos saludables de la comunidad.",
+    "instrucciones_docente": "Dinámica corporal con canciones infantiles y verificación de lavado de manos."
+  },
+  {
+    "libro_titulo": "Formación Ciudadana 1G — MINEDUC",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Formación Ciudadana",
+    "numero_pagina": 12,
+    "seccion_unidad": "Unidad 1: Normas de convivencia y respeto en el aula",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Dibuja en tu cuaderno dos acuerdos de convivencia para convivir felices: 1) Compartir los lápices y crayones, 2) Levantar la mano para hablar.",
+    "instrucciones_docente": "Construcción comunitaria del cartel de acuerdos del aula multigrado."
+  },
+  {
+    "libro_titulo": "Matemáticas 2G — MINEDUC (Edición Oficial)",
     "grado_especifico": 2,
     "grados_aplicables": [
       2
@@ -41,12 +80,11 @@
     "numero_pagina": 32,
     "seccion_unidad": "Unidad 2: Decenas y centenas en el sistema decimal",
     "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Escribe cuántas decenas y unidades tiene cada número: a) 45 = __ decenas y __ unidades. b) 78 = __ decenas y __ unidades. c) 92 = __ decenas y __ unidades.",
-    "instrucciones_docente": "Trabajo autónomo mientras el maestro atiende en pizarra a los alumnos de 3.º grado."
+    "enunciado_ejercicio": "Descompón los siguientes números en decenas (D) y unidades (U): a) 45 = 4D + 5U = 40 + 5. b) 78 = __D + __U. c) 92 = __D + __U. Representa el número 63 con cuadritos y barras de decenas.",
+    "instrucciones_docente": "Trabajo autónomo con tarjetas de valor posicional mientras el maestro atiende a 1.º o 3.º."
   },
   {
-    "libro_titulo": "Matemáticas 2G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_2G_compressed.pdf",
+    "libro_titulo": "Matemáticas 2G — MINEDUC (Edición Oficial)",
     "grado_especifico": 2,
     "grados_aplicables": [
       2
@@ -54,155 +92,13 @@
     "ciclo": "primer_ciclo",
     "materia": "Matemáticas",
     "numero_pagina": 48,
-    "seccion_unidad": "Unidad 3: Sumas sin llevar",
-    "tipo_recurso": "evaluacion_cierre",
-    "enunciado_ejercicio": "Doña Rosa recogió 34 naranjas por la mañana y 23 por la tarde. ¿Cuántas naranjas recogió en total? Plantea la suma vertical y calcula el resultado.",
-    "instrucciones_docente": "Problema contextual de evaluación de viernes para verificar adición sin reagrupación."
-  },
-  {
-    "libro_titulo": "Matemáticas 3G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_3G_compressed.pdf",
-    "grado_especifico": 3,
-    "grados_aplicables": [
-      3
-    ],
-    "ciclo": "primer_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 54,
-    "seccion_unidad": "Unidad 3: Tablas de multiplicar",
+    "seccion_unidad": "Unidad 3: Adición vertical sin reagrupación",
     "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Calcula los siguientes productos usando arreglos rectangulares: a) 4 x 6 = __  b) 5 x 7 = __  c) 3 x 8 = __  d) 5 x 9 = __",
-    "instrucciones_docente": "Apoyarse en semillas o piedrecitas si el estudiante presenta dudas conceptuales."
+    "enunciado_ejercicio": "Resuelve las sumas verticales en tu cuaderno: a) 34 + 23 = __ | b) 52 + 36 = __ | c) Problema: Doña Rosa recogió 34 naranjas por la mañana y 23 por la tarde. ¿Cuántas naranjas cosechó en total?",
+    "instrucciones_docente": "Alinear correctamente unidades bajo unidades y decenas bajo decenas."
   },
   {
-    "libro_titulo": "Matemáticas 3G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_3G_compressed.pdf",
-    "grado_especifico": 3,
-    "grados_aplicables": [
-      3
-    ],
-    "ciclo": "primer_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 72,
-    "seccion_unidad": "Unidad 4: Fracciones y repartos",
-    "tipo_recurso": "evaluacion_cierre",
-    "enunciado_ejercicio": "Pinta la fracción que se indica en cada círculo: a) 1/2  b) 1/4  c) 3/4. ¿Cuál de las tres fracciones representa una mayor cantidad de la unidad?",
-    "instrucciones_docente": "Reactivo para el test del viernes que mide el indicador de fracciones básicas."
-  },
-  {
-    "libro_titulo": "Guía para la enseñanza de Matemáticas Segundo Ciclo",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
-    "grado_especifico": 4,
-    "grados_aplicables": [
-      4,
-      5,
-      6
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 22,
-    "seccion_unidad": "Orientaciones Metodológicas 4.º Grado - Números grandes",
-    "tipo_recurso": "guia_docente_ejemplo",
-    "enunciado_ejercicio": "Ejemplo de Pizarra: Escribir en la tabla de valor posicional la cantidad de habitantes del municipio: 145,280. Guiar la lectura en voz alta: \"Ciento cuarenta y cinco mil doscientos ochenta\".",
-    "instrucciones_docente": "Atención directa del maestro en pizarra durante el bloque de 8:00 a 8:45 hrs."
-  },
-  {
-    "libro_titulo": "Guía para la enseñanza de Matemáticas Segundo Ciclo",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
-    "grado_especifico": 5,
-    "grados_aplicables": [
-      4,
-      5,
-      6
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 68,
-    "seccion_unidad": "Orientaciones Metodológicas 5.º Grado - Fracciones heterogéneas",
-    "tipo_recurso": "guia_docente_ejemplo",
-    "enunciado_ejercicio": "Ejemplo guiado: Para sumar 1/2 + 1/4, primero encontramos el mínimo común múltiplo de 2 y 4 (MCM = 4). Convertimos 1/2 en 2/4. Sumamos 2/4 + 1/4 = 3/4.",
-    "instrucciones_docente": "Usar tiras de papel dobladas para demostrar visualmente la equivalencia."
-  },
-  {
-    "libro_titulo": "Guía para la enseñanza de Matemáticas Segundo Ciclo",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/guia_metodologica_matematicas_compressed.pdf",
-    "grado_especifico": 6,
-    "grados_aplicables": [
-      4,
-      5,
-      6
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 115,
-    "seccion_unidad": "Orientaciones Metodológicas 6.º Grado - Regla de tres y porcentajes",
-    "tipo_recurso": "guia_docente_ejemplo",
-    "enunciado_ejercicio": "Problema modelo: Si un quintal de café cuesta Q 850.00, ¿cuánto costarán 4 quintales? Establecer la proporción directa en la pizarra: 1 / 850 = 4 / x.",
-    "instrucciones_docente": "Fomentar que los alumnos de 6.º formulen problemas similares basados en los cultivos de la comunidad."
-  },
-  {
-    "libro_titulo": "Matemáticas 4G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_4G_compressed.pdf",
-    "grado_especifico": 4,
-    "grados_aplicables": [
-      4
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 38,
-    "seccion_unidad": "Unidad 2: Descomposición posicional",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Descompón aditivamente los siguientes números: a) 354,210 = 300,000 + 50,000 + 4,000 + 200 + 10. b) 608,405 = __ + __ + __. c) 920,014 = __ + __ + __.",
-    "instrucciones_docente": "Trabajo autónomo individual en su cuaderno mientras se atiende a 5.º y 6.º."
-  },
-  {
-    "libro_titulo": "Matemáticas 4G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_4G_compressed.pdf",
-    "grado_especifico": 4,
-    "grados_aplicables": [
-      4
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 52,
-    "seccion_unidad": "Unidad 3: Evaluación de números grandes",
-    "tipo_recurso": "evaluacion_cierre",
-    "enunciado_ejercicio": "Ordena de menor a mayor los siguientes registros de cosecha: 450,200 kg; 405,200 kg; 452,000 kg; 400,990 kg.",
-    "instrucciones_docente": "Ítem evaluativo de fin de semana para prueba del viernes."
-  },
-  {
-    "libro_titulo": "Matemáticas 5G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_5G_compressed.pdf",
-    "grado_especifico": 5,
-    "grados_aplicables": [
-      5
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 44,
-    "seccion_unidad": "Unidad 2: Suma y resta de fracciones heterogéneas",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Resuelve las siguientes operaciones y simplifica el resultado: a) 2/3 + 1/6 = __  b) 3/4 - 1/2 = __  c) 4/5 + 2/10 = __",
-    "instrucciones_docente": "Trabajo en parejas con ayuda mutua entre estudiantes del mismo grado."
-  },
-  {
-    "libro_titulo": "Matemáticas 6G",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/matematicas_6G_compressed.pdf",
-    "grado_especifico": 6,
-    "grados_aplicables": [
-      6
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Matemáticas",
-    "numero_pagina": 62,
-    "seccion_unidad": "Unidad 3: Cálculo de porcentajes",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Calcula los siguientes porcentajes: a) El 15% de Q 400.00  b) El 25% de Q 1,200.00  c) El 12% (IVA) de un artículo que cuesta Q 85.00.",
-    "instrucciones_docente": "Resolver en el cuaderno mostrando el planteamiento y la operación."
-  },
-  {
-    "libro_titulo": "Mi libro de lecturas 2do grado",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_2do_grado_compressed.pdf",
+    "libro_titulo": "Mi libro de lecturas 2do grado — MINEDUC",
     "grado_especifico": 2,
     "grados_aplicables": [
       2
@@ -211,155 +107,12 @@
     "materia": "Comunicación y Lenguaje",
     "numero_pagina": 18,
     "seccion_unidad": "Lectura: \"El colibrí y la flor del campo\"",
-    "tipo_recurso": "lectura_autonoma_casa",
-    "enunciado_ejercicio": "Leer la lectura \"El colibrí y la flor del campo\" con un adulto en casa (15 min). Responder oralmente a las 3 preguntas al final de la página.",
-    "instrucciones_docente": "Sugerencia de tarea autónoma para la casa conforme al programa Leamos Juntos del MINEDUC."
-  },
-  {
-    "libro_titulo": "Mi libro de lecturas 4to grado",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/mi_libro_de_lecturas_4to_grado_compressed.pdf",
-    "grado_especifico": 4,
-    "grados_aplicables": [
-      4
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Comunicación y Lenguaje",
-    "numero_pagina": 26,
-    "seccion_unidad": "Lectura: \"Leyendas de nuestra tierra\"",
-    "tipo_recurso": "lectura_autonoma_casa",
-    "enunciado_ejercicio": "Lectura comprensiva de la página 26 en el hogar. Anotar en el cuaderno 3 palabras nuevas y buscar su significado con la familia.",
-    "instrucciones_docente": "Refuerzo de vocabulario y hábito lector autónomo."
-  },
-  {
-    "libro_titulo": "Medio Social y Natural 3ro",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/medio_social_y_natural_3ro_compressed.pdf",
-    "grado_especifico": 3,
-    "grados_aplicables": [
-      3
-    ],
-    "ciclo": "primer_ciclo",
-    "materia": "Medio Social y Natural",
-    "numero_pagina": 42,
-    "seccion_unidad": "Unidad 2: Ecosistemas y recursos naturales",
     "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Dibuja en tu cuaderno una fuente de agua de tu comunidad y escribe 2 acciones que tú y tu familia pueden realizar para no contaminarla.",
-    "instrucciones_docente": "Actividad contextualizada a la realidad rural de la aldea."
+    "enunciado_ejercicio": "Lee con fluidez la lectura \"El colibrí y la flor del campo\" (Pág. 18). Responde en tu cuaderno: 1) ¿De qué color eran las plumas del colibrí? 2) ¿Qué mensaje le dio la flor? 3) Escribe 2 oraciones con tus propias palabras.",
+    "instrucciones_docente": "Lectura guiada en voz alta con pausas para preguntas de comprensión literal e inferencial."
   },
   {
-    "libro_titulo": "Ciencias Naturales y Tecnología 5to",
-    "libro_url": "https://www.mineduc.edu.gt/tmp-libros/ciencias_naturales_y_tecnologia_5to_compressed.pdf",
-    "grado_especifico": 5,
-    "grados_aplicables": [
-      5
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Ciencias Naturales y Tecnología",
-    "numero_pagina": 58,
-    "seccion_unidad": "Unidad 3: Cadenas y redes tróficas",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Organiza los siguientes seres vivos en una cadena alimenticia señalando productor, consumidor primario y secundario: Águila, Maíz, Ratón de campo, Serpiente.",
-    "instrucciones_docente": "Actividad de aplicación de conceptos de ecología."
-  },
-  {
-    "libro_titulo": "Comunicación y Lenguaje 1.° Primaria",
-    "grado_especifico": 1,
-    "grados_aplicables": [
-      1
-    ],
-    "ciclo": "primer_ciclo",
-    "materia": "Comunicación y Lenguaje",
-    "numero_pagina": 20,
-    "seccion_unidad": "Unidad 1: Escuchamos y dialogamos",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Dibuja en tu cuaderno tres cosas que haces para escuchar con atención a tu maestra y a tus compañeros cuando hablan en clase.",
-    "instrucciones_docente": "El docente modela el turno de palabra en el círculo de inicio."
-  },
-  {
-    "libro_titulo": "Comunicación y Lenguaje 3.° Primaria",
-    "grado_especifico": 3,
-    "grados_aplicables": [
-      3
-    ],
-    "ciclo": "primer_ciclo",
-    "materia": "Comunicación y Lenguaje",
-    "numero_pagina": 34,
-    "seccion_unidad": "Unidad 2: La oración y sus partes",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Subraya con color azul el sujeto y con color rojo el predicado en las siguientes oraciones: a) Los agricultores cultivan maíz en la parcela. b) Doña Carmen hornea pan dulce los domingos. c) Los niños juegan pelota en el recreo.",
-    "instrucciones_docente": "Trabajo autónomo mientras el maestro atiende en pizarra a los alumnos de 4.° grado."
-  },
-  {
-    "libro_titulo": "Comunicación y Lenguaje 5.° Primaria",
-    "grado_especifico": 5,
-    "grados_aplicables": [
-      5
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Comunicación y Lenguaje",
-    "numero_pagina": 48,
-    "seccion_unidad": "Unidad 3: Párrafos expositivos",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Redacta en tu cuaderno un párrafo expositivo de 5 líneas sobre la importancia de cuidar las fuentes de agua en nuestra comunidad. Subraya la idea principal y encierra en un recuadro dos conectores lógicos usados.",
-    "instrucciones_docente": "Revisión y retroalimentación entre pares de 5.° y 6.°."
-  },
-  {
-    "libro_titulo": "Comunicación y Lenguaje 6.° Primaria",
-    "grado_especifico": 6,
-    "grados_aplicables": [
-      6
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Comunicación y Lenguaje",
-    "numero_pagina": 56,
-    "seccion_unidad": "Unidad 3: Informes escolares y ensayos breves",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Elabora un esquema de ensayo con tres partes: 1) Tesis (postura sobre el reciclaje escolar), 2) Dos argumentos fundamentados con datos, 3) Conclusión propositiva.",
-    "instrucciones_docente": "Preparación para el proyecto interdisciplinario del jueves."
-  },
-  {
-    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 4.°",
-    "grado_especifico": 4,
-    "grados_aplicables": [
-      4
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Ciencias Sociales y Formación Ciudadana",
-    "numero_pagina": 36,
-    "seccion_unidad": "Unidad 2: Geografía y relieve de Guatemala",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "En el mapa mudo de Guatemala, ubica y colorea la Sierra Madre y los volcanes Tajumulco, Fuego y Pacaya. Escribe el nombre de tu departamento.",
-    "instrucciones_docente": "Trabajo en parejas con mapa comunal o atlas escolar."
-  },
-  {
-    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 6.°",
-    "grado_especifico": 6,
-    "grados_aplicables": [
-      6
-    ],
-    "ciclo": "segundo_ciclo",
-    "materia": "Ciencias Sociales y Formación Ciudadana",
-    "numero_pagina": 45,
-    "seccion_unidad": "Unidad 2: Derechos Humanos y Convivencia Democrática",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Analiza el siguiente caso: Dos estudiantes discuten por el turno de usar la cancha. Plantea 3 pasos basados en el diálogo y la mediación escolar para resolver el conflicto sin violencia.",
-    "instrucciones_docente": "Plenaria de cierre con el docente y el resto de los grados."
-  },
-  {
-    "libro_titulo": "Medio Social y Natural 1.° Primaria",
-    "grado_especifico": 1,
-    "grados_aplicables": [
-      1
-    ],
-    "ciclo": "primer_ciclo",
-    "materia": "Medio Social y Natural",
-    "numero_pagina": 18,
-    "seccion_unidad": "Unidad 1: Mi cuerpo y mi salud",
-    "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Colorea las partes del cuerpo humano en el dibujo (cabeza, tronco, brazos y piernas). Marca con una estrella las acciones de higiene que realizas todos los días antes de entrar a la escuela.",
-    "instrucciones_docente": "Dinámica de movimiento corporal con canciones infantiles."
-  },
-  {
-    "libro_titulo": "Medio Social y Natural 2.° Primaria",
+    "libro_titulo": "Medio Social y Natural 2G — MINEDUC",
     "grado_especifico": 2,
     "grados_aplicables": [
       2
@@ -367,9 +120,303 @@
     "ciclo": "primer_ciclo",
     "materia": "Medio Social y Natural",
     "numero_pagina": 26,
-    "seccion_unidad": "Unidad 2: Plantas y animales de la comunidad",
+    "seccion_unidad": "Unidad 2: Animales y plantas de nuestra comunidad",
     "tipo_recurso": "ejercicio_estudiante",
-    "enunciado_ejercicio": "Clasifica en una tabla de dos columnas los animales de tu aldea en: Domésticos (viven con las personas) y Silvestres (viven en el bosque o campo). Dibuja tu favorito.",
-    "instrucciones_docente": "Socialización grupal mostrando sus dibujos."
+    "enunciado_ejercicio": "Clasifica en una tabla de dos columnas los seres vivos de tu aldea: Columna A: Animales domésticos (gallina, perro, vaca) | Columna B: Animales silvestres (ardilla, armadillo, zopilote). Dibuja el hábitat de uno de ellos.",
+    "instrucciones_docente": "Fomentar la observación del entorno rural inmediato."
+  },
+  {
+    "libro_titulo": "Formación Ciudadana 2G — MINEDUC",
+    "grado_especifico": 2,
+    "grados_aplicables": [
+      2
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Formación Ciudadana",
+    "numero_pagina": 22,
+    "seccion_unidad": "Unidad 2: La familia y el trabajo cooperativo en la escuela",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Escribe 3 tareas que realizas en tu hogar para apoyar a tu familia. Explica cómo ayudas a tus compañeros cuando trabajan en equipos de dos o tres integrantes.",
+    "instrucciones_docente": "Promoción de la solidaridad y empatía entre estudiantes de diferentes edades."
+  },
+  {
+    "libro_titulo": "Matemáticas 3G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 54,
+    "seccion_unidad": "Unidad 3: Multiplicación como suma repetida y arreglos rectangulares",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Calcula los siguientes productos usando arreglos rectangulares de puntos o semillas: a) 4 x 6 = __ (4 filas de 6 semillas) | b) 5 x 7 = __ | c) 3 x 8 = __ | d) Problema: Si un manojo de rábanos cuesta Q 4.00, ¿cuánto cuestan 6 manojos?",
+    "instrucciones_docente": "Modelado inicial del concepto geométrico de la multiplicación en el pizarrón."
+  },
+  {
+    "libro_titulo": "Matemáticas 3G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 72,
+    "seccion_unidad": "Unidad 4: Fracciones elementales y reparto equitativo",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Dibuja tres círculos iguales: a) Colorea 1/2 (la mitad) | b) Colorea 1/4 (la cuarta parte) | c) Colorea 3/4. Responde: ¿Cuál fracción representa una porción más grande de la tortilla?",
+    "instrucciones_docente": "Uso de dobleces de hojas de papel o figuras de foamy para comprobar equivalencias."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 3G — MINEDUC",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 34,
+    "seccion_unidad": "Unidad 2: La oración simple: Sujeto y Predicado",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Copia las siguientes oraciones en tu cuaderno. Subraya el SUJETO con color azul y el PREDICADO con color rojo: 1) Los agricultores cosechan maíz amarillo. 2) La niña alegre canta en el recreo. 3) Don Tomás vende frutas frescas en la aldea.",
+    "instrucciones_docente": "Identificar quién realiza la acción (sujeto) y qué se dice de él (predicado)."
+  },
+  {
+    "libro_titulo": "Medio Social y Natural 3G — MINEDUC",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Medio Social y Natural",
+    "numero_pagina": 42,
+    "seccion_unidad": "Unidad 2: Fuentes de agua y protección de cuencas en la aldea",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Dibuja en tu cuaderno una fuente de agua de tu comunidad (nacimiento, río o pozo). Escribe 3 acciones prácticas para conservarla limpia: 1) No tirar basura plástica, 2) Reforestar con árboles nativos en la orilla, 3) Cuidar el agua en el hogar.",
+    "instrucciones_docente": "Vincular el aprendizaje a la preservación del recurso hídrico en la comunidad."
+  },
+  {
+    "libro_titulo": "Formación Ciudadana 3G — MINEDUC",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Formación Ciudadana",
+    "numero_pagina": 28,
+    "seccion_unidad": "Unidad 2: Pueblos de Guatemala y riqueza intercultural",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Escribe en tu cuaderno el nombre de los 4 Pueblos de Guatemala: Maya, Garífuna, Xinka y Ladino. Describe una costumbre tradicional de tu comunidad y cómo fomenta la convivencia pacífica.",
+    "instrucciones_docente": "Valoración de la diversidad cultural y el respeto mutuo."
+  },
+  {
+    "libro_titulo": "Matemáticas 4G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 22,
+    "seccion_unidad": "Unidad 1: Sistema decimal hasta centenas de millar",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Escribe en la tabla de valor posicional (CM, DM, UM, C, D, U) los siguientes registros de cosecha comunitaria: a) 145,280 kg | b) 308,095 kg | c) 520,400 kg. Escribe con letras cómo se lee cada cantidad formalmente.",
+    "instrucciones_docente": "Atención directa en pizarra modelando la lectura formal en grupos de tres dígitos."
+  },
+  {
+    "libro_titulo": "Matemáticas 4G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 38,
+    "seccion_unidad": "Unidad 2: Descomposición aditiva y posicional",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Descompón aditivamente los números: a) 354,210 = 300,000 + 50,000 + 4,000 + 200 + 10. b) 608,405 = __ + __ + __. c) 920,014 = __ + __ + __. Resuelve: ¿Cuál es el valor relativo del dígito 5 en 354,210?",
+    "instrucciones_docente": "Trabajo autónomo individual en cuaderno mientras el maestro atiende a 5.º y 6.º."
+  },
+  {
+    "libro_titulo": "Mi libro de lecturas 4to grado — MINEDUC",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 26,
+    "seccion_unidad": "Lectura: \"Leyendas y tradiciones de nuestra tierra\"",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Lee con atención la leyenda de la página 26. En tu cuaderno: 1) Identifica la idea principal del texto. 2) Escribe dos ideas secundarias que apoyan la historia. 3) Anota el significado de 3 palabras desconocidas usando el contexto.",
+    "instrucciones_docente": "Aplicación de técnicas de subrayado y comprensión lectora inferencial."
+  },
+  {
+    "libro_titulo": "Ciencias Naturales y Tecnología 4G — MINEDUC",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Naturales y Tecnología",
+    "numero_pagina": 32,
+    "seccion_unidad": "Unidad 2: El sistema digestivo y la nutrición escolar",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Dibuja el recorrido de los alimentos a través del sistema digestivo: Boca -> Esófago -> Estómago -> Intestinos. Escribe qué función cumple la masticación y por qué debemos consumir agua potable hervida o clorada.",
+    "instrucciones_docente": "Relacionar los órganos del cuerpo humano con la dieta balanceada del huerto escolar."
+  },
+  {
+    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 4G — MINEDUC",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "numero_pagina": 36,
+    "seccion_unidad": "Unidad 2: Geografía física, cordilleras y volcanes de Guatemala",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "En el mapa de Guatemala ubica: 1) La Sierra Madre, 2) Los volcanes Tajumulco, Fuego y Pacaya, 3) El lago Atitlán y el lago de Izabal. Escribe el nombre de los departamentos vecinos al tuyo.",
+    "instrucciones_docente": "Manejo del mapa mudo geográfico y orientación cardinal."
+  },
+  {
+    "libro_titulo": "Matemáticas 5G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 44,
+    "seccion_unidad": "Unidad 2: Adición y sustracción de fracciones heterogéneas",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Calcula el MCM de los denominadores y resuelve simplificando al máximo: a) 2/3 + 1/6 = __ (MCM = 6) -> 4/6 + 1/6 = 5/6. b) 3/4 - 1/2 = __ | c) 4/5 + 2/10 = __. Problema: Una familia usó 2/8 de quintal de maíz el lunes y 3/8 el martes. ¿Cuánto maíz consumió en total?",
+    "instrucciones_docente": "Modelado en pizarra del mínimo común múltiplo para homogenizar denominadores."
+  },
+  {
+    "libro_titulo": "Matemáticas 5G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 68,
+    "seccion_unidad": "Unidad 3: Multiplicación de fracciones y problemas de medidas",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Calcula los productos de fracciones: a) 3/4 x 2/5 = __ | b) 5/6 x 3/10 = __. Simplifica cada fracción resultante. Problema: Si Don Carlos tiene 12 cuerdas de terreno y sembró 2/3 de frijol, ¿cuántas cuerdas sembró?",
+    "instrucciones_docente": "Trabajo en parejas con ayuda mutua entre estudiantes de quinto grado."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 5G — MINEDUC",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 48,
+    "seccion_unidad": "Unidad 3: El párrafo expositivo y conectores lógicos",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Redacta un texto expositivo de dos párrafos (5 líneas cada uno) sobre la importancia de sembrar árboles en las laderas de la comunidad. Emplea correctamente dos conectores de causa y efecto: \"por lo tanto\", \"debido a que\".",
+    "instrucciones_docente": "Revisión de ortografía, concordancia gramatical y uso de puntos y comas."
+  },
+  {
+    "libro_titulo": "Ciencias Naturales y Tecnología 5G — MINEDUC",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Naturales y Tecnología",
+    "numero_pagina": 58,
+    "seccion_unidad": "Unidad 3: Cadenas y redes tróficas en el ecosistema",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Organiza los siguientes organismos en una cadena alimenticia indicando quién es productor, consumidor primario, consumidor secundario y descomponedor: Maíz, Ratón de campo, Serpiente cascabel, Halcón, Hongos del suelo. Explica qué sucedería si desaparece el maíz.",
+    "instrucciones_docente": "Análisis del equilibrio ecológico y protección de la fauna silvestre comunitaria."
+  },
+  {
+    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 5G — MINEDUC",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "numero_pagina": 40,
+    "seccion_unidad": "Unidad 2: Civilización Maya: Agricultura, ciencia y calendario",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Investiga y anota en tu cuaderno 3 aportes de la civilización maya vigentes hoy: 1) El cultivo del maíz en milpa asociada con frijol y ayote, 2) El sistema de numeración vigesimal y uso del cero, 3) El conocimiento astronómico de las estaciones.",
+    "instrucciones_docente": "Reflexión sobre el valor de la identidad histórica y los saberes ancestrales."
+  },
+  {
+    "libro_titulo": "Matemáticas 6G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 62,
+    "seccion_unidad": "Unidad 3: Tanto por ciento (%) y aplicaciones comerciales",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Calcula los siguientes porcentajes aplicados a transacciones locales: a) El 15% de Q 400.00 | b) El 25% de Q 1,200.00 | c) El 12% de IVA de una compra de fertilizante de Q 650.00. Problema: En la tienda de Don Juan ofrecen 10% de descuento en sacos de café de Q 280.00. ¿Cuál es el precio final a pagar?",
+    "instrucciones_docente": "Despeje claro del planteamiento matemático y verificación del resultado en Quetzales (Q)."
+  },
+  {
+    "libro_titulo": "Matemáticas 6G — MINEDUC (Edición Oficial)",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Matemáticas",
+    "numero_pagina": 115,
+    "seccion_unidad": "Unidad 4: Regla de tres simple directa y proporciones",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Plantea la proporción formal (a / b = c / x) y despeja la incógnita: a) Si 2 quintales de abono orgánico cuestan Q 450.00 en la cooperativa, ¿cuánto costarán 6 quintales del mismo abono? b) Si un camión transporta 80 sacos en 2 viajes, ¿cuántos sacos transportará en 5 viajes iguales?",
+    "instrucciones_docente": "Atención directa en pizarra modelando la regla de tres simple y proporciones directas."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 6G — MINEDUC",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 56,
+    "seccion_unidad": "Unidad 3: El informe escolar y estructura del ensayo breve",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Elabora en tu cuaderno el esquema formal para un informe sobre el manejo de desechos sólidos en la escuela: 1) Título claro, 2) Planteamiento del problema (diagnóstico), 3) Dos propuestas viables de reciclaje, 4) Conclusión argumentada.",
+    "instrucciones_docente": "Fomentar la redacción formal, pensamiento crítico y argumentación lógica."
+  },
+  {
+    "libro_titulo": "Ciencias Naturales y Tecnología 6G — MINEDUC",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Naturales y Tecnología",
+    "numero_pagina": 50,
+    "seccion_unidad": "Unidad 2: Pasos del método científico en proyectos escolares",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Diseña un experimento escolar sencillo para comprobar qué tipo de suelo retiene más humedad (arcilloso, arenoso o con abono de hojas): Plantea: 1) Pregunta de investigación, 2) Hipótesis (\"Si agregamos abono orgánico, entonces...\"), 3) Tabla de registro de 3 días.",
+    "instrucciones_docente": "Modelar el registro de variables independientes y dependientes."
+  },
+  {
+    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 6G — MINEDUC",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "numero_pagina": 45,
+    "seccion_unidad": "Unidad 2: Derechos Humanos, Constitución y mediación de conflictos",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Analiza el caso de convivencia: Dos grupos de alumnos disputan el espacio de la cancha durante el recreo. Plantea un protocolo de 3 pasos basado en el diálogo y la mediación escolar pacífica sin agresiones.",
+    "instrucciones_docente": "Plenaria participativa sobre liderazgo estudiantil y cultura de paz en la escuela."
   }
 ]

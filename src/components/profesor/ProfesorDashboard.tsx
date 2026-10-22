@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard,
   CalendarDays, 
@@ -225,6 +225,18 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
       area: 'Todas las Áreas Curriculares (Jornada Integral)'
     })
   );
+
+  // Sincronización reactiva inmediata al cambiar grados, bloque, semana, área o rezagados
+  useEffect(() => {
+    const updated = generateUnifiedRAGPlan({
+      grados: selectedGrados,
+      bimestre: selectedBloque,
+      semana: selectedSemanaBloque,
+      area: selectedArea,
+      temasRezagados
+    });
+    setUnifiedPlan(updated);
+  }, [selectedGrados, selectedBloque, selectedSemanaBloque, selectedArea, temasRezagados]);
 
   const handleToggleGrado = (gradoNum: number) => {
     playCartoonPopSound();
@@ -1645,24 +1657,97 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                         <span className="text-amber-950 font-medium">{unifiedPlan.dias[diaRender]?.fase_inicio_comun}</span>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {(unifiedPlan.dias[diaRender]?.gradosSincronizados || []).map((item, idx) => (
-                          <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="font-black text-slate-900 text-xs">{item.grado}</span>
-                              <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-200">
-                                Pág. {item.numeroPagina}
-                              </span>
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                        {(unifiedPlan.dias[diaRender]?.gradosSincronizados || []).map((item, idx) => {
+                          const matLower = (item.materia || '').toLowerCase();
+                          const badgeColor = matLower.includes('lengua') || matLower.includes('comunic')
+                            ? 'bg-purple-100 text-purple-900 border-purple-200'
+                            : matLower.includes('ciencia') || matLower.includes('medio')
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-200'
+                            : matLower.includes('social') || matLower.includes('ciudad')
+                            ? 'bg-amber-100 text-amber-900 border-amber-200'
+                            : 'bg-blue-100 text-blue-900 border-blue-200';
+
+                          return (
+                            <div key={idx} className="bg-white rounded-3xl p-5 border-2 border-slate-200 shadow-sm space-y-3.5 flex flex-col justify-between">
+                              <div className="space-y-3">
+                                {/* Cabecera de Grado, Materia y Página */}
+                                <div className="flex items-center justify-between flex-wrap gap-1.5 pb-2 border-b border-slate-100">
+                                  <span className="font-black text-slate-900 text-xs bg-slate-100 px-2.5 py-1 rounded-xl">
+                                    {item.grado}
+                                  </span>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border ${badgeColor}`}>
+                                      {item.materia}
+                                    </span>
+                                    <span className="text-[10px] font-black bg-amber-100 text-amber-950 px-2 py-0.5 rounded-lg border border-amber-300">
+                                      Pág. {item.numeroPagina}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Modalidad Pedagógica */}
+                                <div>
+                                  {item.modalidad === 'Atención Directa Docente' ? (
+                                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200 inline-flex items-center space-x-1">
+                                      <span>👨‍🏫</span>
+                                      <span>Atención Directa Docente</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center space-x-1">
+                                      <span>📖</span>
+                                      <span>Trabajo Autónomo con Guía</span>
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Tema y Libro Oficial */}
+                                <div>
+                                  <h4 className="text-xs font-black text-slate-900 leading-snug">
+                                    {item.tema}
+                                  </h4>
+                                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                    {item.libroTitulo}
+                                  </p>
+                                </div>
+
+                                {/* Actividad Pedagógica */}
+                                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-700 leading-snug">
+                                  <strong className="text-slate-900 font-bold block mb-0.5">
+                                    {item.modalidad === 'Atención Directa Docente' ? '👨‍🏫 Rol del Docente:' : '📖 Rol del Estudiante:'}
+                                  </strong>
+                                  {item.modalidad === 'Atención Directa Docente' ? item.actividadDocente : item.actividadEstudiante}
+                                </div>
+
+                                {/* Ejercicios Literales de la Guía Oficial */}
+                                <div className="p-3 bg-amber-50/50 border border-amber-300 rounded-2xl space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
+                                      <span>✏️</span>
+                                      <span>Ejercicios Literales del Libro</span>
+                                    </span>
+                                    <span className="text-[9px] font-bold text-amber-800 bg-amber-200/80 px-1.5 py-0.5 rounded">
+                                      Pág. Física {item.numeroPagina}
+                                    </span>
+                                  </div>
+                                  <div className="bg-white p-2.5 rounded-xl border border-amber-200 font-mono text-[11px] text-slate-800 space-y-1 leading-relaxed shadow-inner max-h-48 overflow-y-auto">
+                                    {item.ejerciciosLiterales?.map((line, lIdx) => (
+                                      <p key={lIdx} className={line.startsWith('   ') ? 'pl-2 text-slate-700 font-semibold' : 'font-bold text-slate-900'}>
+                                        {line}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Tarea en Casa */}
+                              <div className="p-2 bg-purple-50 border border-purple-200 rounded-xl text-[10px] text-purple-950 font-medium">
+                                <strong className="font-bold text-purple-900">🏠 Tarea: </strong>
+                                {item.tareaCasa}
+                              </div>
                             </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 block">
-                              {item.modalidad}
-                            </span>
-                            <p className="text-xs font-bold text-slate-800">{item.tema}</p>
-                            <p className="text-[11px] text-slate-600 leading-snug">
-                              {item.modalidad === 'Atención Directa Docente' ? item.actividadDocente : item.actividadEstudiante}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-xs">

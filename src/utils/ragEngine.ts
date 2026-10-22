@@ -258,25 +258,49 @@ export function searchCNBCorresponding(
   return gradoItems[0];
 }
 
-// Búsqueda de ejercicios oficiales MINEDUC por número de página
+// Búsqueda de ejercicios oficiales MINEDUC por materia y número de página
 export function searchMineducExercises(
   grado: number, 
   paginaDeseada: number, 
-  temaQuery?: string
+  temaQuery?: string,
+  materia?: string
 ): { item: MineducItem; paginaEfectiva: number } {
-  const gradoItems = mineducDatabase.filter(m => m.grado_especifico === grado);
+  let gradoItems = mineducDatabase.filter(m => m.grado_especifico === grado);
+
+  if (materia && materia.trim().length > 0) {
+    const matLower = materia.toLowerCase();
+    const filtered = gradoItems.filter(m => {
+      const itemMat = m.materia.toLowerCase();
+      if (matLower.includes('social') || matLower.includes('ciudad')) {
+        return itemMat.includes('social') || itemMat.includes('ciudad');
+      }
+      if (matLower.includes('ciencia') || matLower.includes('medio') || matLower.includes('natural')) {
+        return itemMat.includes('ciencia') || itemMat.includes('medio') || itemMat.includes('natural');
+      }
+      if (matLower.includes('lengua') || matLower.includes('comunic')) {
+        return itemMat.includes('lengua') || itemMat.includes('comunic');
+      }
+      if (matLower.includes('mate')) {
+        return itemMat.includes('mate');
+      }
+      return itemMat.includes(matLower);
+    });
+    if (filtered.length > 0) {
+      gradoItems = filtered;
+    }
+  }
 
   if (gradoItems.length === 0) {
     return {
       item: {
-        libro_titulo: `Matemáticas ${grado}G — MINEDUC (Edición Oficial)`,
+        libro_titulo: `${materia || 'Matemáticas'} ${grado}G — MINEDUC (Edición Oficial)`,
         grado_especifico: grado,
         ciclo: grado <= 3 ? 'primer_ciclo' : 'segundo_ciclo',
-        materia: 'Matemáticas',
+        materia: materia || 'Matemáticas',
         numero_pagina: paginaDeseada || 30,
         seccion_unidad: `Unidad de Aprendizaje — Grado ${grado}°`,
         tipo_recurso: 'ejercicio_estudiante',
-        enunciado_ejercicio: `Resolver los ejercicios de ejercitación comunitaria y cálculo de la página ${paginaDeseada || 30}.`,
+        enunciado_ejercicio: `Resolver los ejercicios de ejercitación y cálculo de la página ${paginaDeseada || 30}.`,
         instrucciones_docente: 'El docente orienta el procedimiento y verifica el resultado en el cuaderno.'
       },
       paginaEfectiva: paginaDeseada || 30
@@ -321,31 +345,52 @@ export function searchMineducExercises(
 }
 
 // Estructurar enunciados literales del libro MINEDUC
-function formatLiteralExercises(enunciado: string, instrucciones: string, pagina: number, grado: number): string[] {
+function formatLiteralExercises(
+  enunciado: string, 
+  instrucciones: string, 
+  pagina: number, 
+  grado: number,
+  materia?: string,
+  tema?: string
+): string[] {
   const lines: string[] = [];
   lines.push(`1. Ejercicio principal del libro oficial (Pág. ${pagina}):`);
   lines.push(`   ${enunciado}`);
   lines.push(`2. Orientación pedagógica contextual MINEDUC:`);
   lines.push(`   ${instrucciones}`);
-  lines.push(`3. Ejercitación en cuaderno de trabajo:`);
-  if (grado === 4) {
-    lines.push(`   • Ubicar en tabla de posiciones (CM, DM, UM, C, D, U).`);
-    lines.push(`   • Escribir la lectura formal en letras de las cosechas en el cuaderno.`);
-  } else if (grado === 5) {
-    lines.push(`   • Operar paso a paso verificando el común denominador.`);
-    lines.push(`   • Simplificar la fracción resultante a su mínima expresión.`);
-  } else if (grado === 6) {
-    lines.push(`   • Plantear la proporción de regla de tres directa: (a / b = c / x).`);
-    lines.push(`   • Redactar la conclusión económica contextualizada en quetzales.`);
-  } else if (grado === 1) {
-    lines.push(`   • Contar con apoyo de tapitas o semillas de frijol.`);
-    lines.push(`   • Trazar los numerales del 1 al 10 en cuadrícula.`);
-  } else if (grado === 2) {
-    lines.push(`   • Descomponer en decenas y unidades con tarjetas de colores.`);
-    lines.push(`   • Resolver la suma vertical de naranjas sin reagrupación.`);
+  lines.push(`3. Ejercitación guiada en cuaderno de trabajo:`);
+
+  const matLower = (materia || '').toLowerCase();
+  if (matLower.includes('lengua') || matLower.includes('comunic')) {
+    lines.push(`   • Realizar la lectura atenta de la página ${pagina} y subrayar las ideas clave.`);
+    lines.push(`   • Redactar la actividad en el cuaderno cuidando concordancia, ortografía y signos de puntuación.`);
+  } else if (matLower.includes('social') || matLower.includes('ciudad')) {
+    lines.push(`   • Analizar el mapa, hecho histórico o situación de convivencia comunitaria.`);
+    lines.push(`   • Registrar los compromisos cívicos y conclusiones en el cuaderno.`);
+  } else if (matLower.includes('ciencia') || matLower.includes('medio')) {
+    lines.push(`   • Dibujar el esquema o registrar las observaciones del entorno en el cuaderno.`);
+    lines.push(`   • Redactar una breve explicación sobre la conservación de recursos y la salud.`);
   } else {
-    lines.push(`   • Graficar con regla los arreglos rectangulares de multiplicación.`);
-    lines.push(`   • Colorear las partes fraccionarias indicadas en la guía.`);
+    // Matemáticas
+    if (grado === 4) {
+      lines.push(`   • Descomponer los números o cantidades del problema según la tabla posicional (CM, DM, UM, C, D, U).`);
+      lines.push(`   • Escribir con letra y número las cantidades en el cuaderno.`);
+    } else if (grado === 5) {
+      lines.push(`   • Operar paso a paso verificando el procedimiento matemático formal.`);
+      lines.push(`   • Simplificar o justificar el resultado obtenido.`);
+    } else if (grado === 6) {
+      lines.push(`   • Plantear la relación proporcional o fórmula correspondiente al problema.`);
+      lines.push(`   • Redactar la conclusión y respuesta final contextualizada en Quetzales o unidades de medida.`);
+    } else if (grado === 1) {
+      lines.push(`   • Contar con apoyo de tapitas, botones o semillas de frijol.`);
+      lines.push(`   • Trazar los numerales y colorear los elementos en cuadrícula.`);
+    } else if (grado === 2) {
+      lines.push(`   • Descomponer en decenas y unidades con tarjetas o material didáctico.`);
+      lines.push(`   • Resolver las operaciones de forma ordenada en el cuaderno.`);
+    } else {
+      lines.push(`   • Graficar con regla los arreglos o planteamientos de la lección.`);
+      lines.push(`   • Resolver los incisos y comprobar el cálculo.`);
+    }
   }
   return lines;
 }
@@ -354,7 +399,9 @@ function formatLiteralExercises(enunciado: string, instrucciones: string, pagina
 function buildRotationalTimeline(
   dia: DiaSemana, 
   grados: number[], 
-  gradoPrincipal: number
+  gradoPrincipal: number,
+  materia: string = 'Matemáticas',
+  tema: string = 'Contenido CNB'
 ): { 
   tiempos: TimeAllocation[]; 
   modalidad: 'Atención Directa Docente' | 'Trabajo Autónomo con Guía' | 'Trabajo Cooperativo / Práctica'; 
@@ -366,176 +413,119 @@ function buildRotationalTimeline(
   periodo4_actividad: string;
 } {
   const gIndex = grados.indexOf(gradoPrincipal);
+  const matLower = materia.toLowerCase();
 
-  // Período 1 (08:15 - 09:05) vs Período 2 (09:05 - 09:55): INVERSIÓN ESTRICTA DE ROLES
-  if (dia === 'Lunes') {
-    if (gIndex === 0) {
-      return {
-        modalidad: 'Atención Directa Docente',
-        actividadDocente: 'Explicación magistral en el pizarrón: Modelado de lectura posicional y tabla de valores.',
-        actividadEstudiante: 'Toma de notas guiada y participación en el pizarrón respondiendo preguntas del docente.',
-        periodo1_actividad: '08:15 - 09:05 | Atención Directa Docente: Explicación en pizarra de la tabla posicional, modelado paso a paso con preguntas dirigidas.',
-        periodo2_actividad: '09:05 - 09:55 | Trabajo Autónomo con Guía: Resolución individual en cuaderno de los incisos a, b y c del libro de texto.',
-        periodo3_actividad: '10:30 - 11:15 | Aplicación e Indagación: Trabajo en parejas resolviendo la situación contextual del mercado comunal.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Ejercitación complementaria en cuaderno y preparación del resumen.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Modelado paso a paso en pizarra de la descomposición posicional.' },
-          { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo individual con guía: Resolución autónoma de ejercicios en el cuaderno de trabajo.' },
-          { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Aplicación contextual: Trabajo colaborativo en parejas con datos de la comunidad.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica con guía: Consolidación y ejercitación de cierre de la jornada.' },
-        ]
-      };
-    } else if (gIndex === 1) {
-      return {
-        modalidad: 'Trabajo Autónomo con Guía',
-        actividadDocente: 'Supervisión intermedia y modelado en pizarra durante el Período 2.',
-        actividadEstudiante: 'Lectura comprensiva de la guía y resolución autónoma durante el Período 1.',
-        periodo1_actividad: '08:15 - 09:05 | Trabajo Autónomo con Guía: Lectura silenciosa guiada, observación de ilustraciones de reparto y planteamiento inicial en cuaderno.',
-        periodo2_actividad: '09:05 - 09:55 | Atención Directa Docente: El docente rota a este grado. Demostración en pizarra de fracciones homogéneas y aclaración de dudas.',
-        periodo3_actividad: '10:30 - 11:15 | Aplicación e Indagación: Ejercicios prácticos con tiras de papel y medidas tradicionales de granos.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Resolución de problemas de suma de fracciones en cuaderno de estudio.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo con guía: Lectura reflexiva y planteamiento de ejercicios preliminares.' },
-          { rango: '09:05 - 09:55', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Explicación en pizarra de fracciones y simplificación de términos.' },
-          { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Aplicación e indagación: Manipulación de material concreto y fracciones de granos.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica individual con guía: Consolidación de respuestas en cuaderno.' },
-        ]
-      };
-    } else {
-      return {
-        modalidad: 'Trabajo Cooperativo / Práctica',
-        actividadDocente: 'Aclaración de dudas avanzadas sobre proporciones y despeje de regla de tres.',
-        actividadEstudiante: 'Discusión en parejas: Formular la tabla de magnitudes con datos de la guía oficial.',
-        periodo1_actividad: '08:15 - 09:05 | Trabajo Cooperativo / Práctica: Planteamiento en parejas de la tabla de magnitudes (quintales vs quetzales).',
-        periodo2_actividad: '09:05 - 09:55 | Trabajo Autónomo con Guía: Avance en los problemas de regla de tres del libro de texto.',
-        periodo3_actividad: '10:30 - 11:15 | Atención Directa Docente: El maestro profundiza el despeje formal del algoritmo y la regla de tres simple.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Redacción de conclusiones económicas en cuaderno.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo cooperativo en parejas: Organización de datos en tabla proporcional.' },
-          { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo con guía: Resolución de situaciones comerciales del libro.' },
-          { rango: '10:30 - 11:15', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Despeje y resolución de incógnita x en proporciones.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica individual de cierre: Redacción de justificaciones en cuaderno.' },
-        ]
-      };
-    }
-  } else if (dia === 'Martes') {
-    if (gIndex === 1) {
-      return {
-        modalidad: 'Atención Directa Docente',
-        actividadDocente: 'Atención directa en pizarra: Modelado de suma de fracciones y simplificación.',
-        actividadEstudiante: 'Resolución activa en cuaderno con supervisión directa del docente.',
-        periodo1_actividad: '08:15 - 09:05 | Atención Directa Docente: Explicación en pizarra de adición de fracciones homogéneas y simplificación.',
-        periodo2_actividad: '09:05 - 09:55 | Trabajo Autónomo con Guía: Resolución independiente de situaciones de comercio en la guía.',
-        periodo3_actividad: '10:30 - 11:15 | Aplicación e Indagación: Trabajo en parejas midiendo fracciones con medidas locales.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Verificación de ejercicios en cuaderno y autocorrección.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Modelado del algoritmo de suma de fracciones.' },
-          { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo con guía: Resolución de situaciones de reparto en cuaderno.' },
-          { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Aplicación e indagación: Comparación de respuestas en parejas.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica de consolidación: Copiar síntesis en cuaderno.' },
-        ]
-      };
-    } else if (gIndex === 0) {
-      return {
-        modalidad: 'Trabajo Autónomo con Guía',
-        actividadDocente: 'Atención directa en Período 2 para revisión de cuadernos.',
-        actividadEstudiante: 'Resolución individual de ejercicios contextualizados durante el Período 1.',
-        periodo1_actividad: '08:15 - 09:05 | Trabajo Autónomo con Guía: Repaso en cuaderno y resolución de ejercicios contextuales de la guía.',
-        periodo2_actividad: '09:05 - 09:55 | Atención Directa Docente: El docente modela en pizarra la resolución de casos difíciles y sella avances.',
-        periodo3_actividad: '10:30 - 11:15 | Aplicación e Indagación: Elaboración de tabla comparativa con datos del entorno.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Ejercitación complementaria en cuaderno.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo con guía: Resolución de problemas de conteo y valor relativo.' },
-          { rango: '09:05 - 09:55', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Explicación de dudas recurrentes en el pizarrón.' },
-          { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Aplicación práctica: Ejercicios de aplicación en cuaderno.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica de cierre: Completar ejercicios de autoaprendizaje.' },
-        ]
-      };
-    } else {
-      return {
-        modalidad: 'Trabajo Cooperativo / Práctica',
-        actividadDocente: 'Supervisión de planteamientos de regla de tres.',
-        actividadEstudiante: 'Resolución en equipo de situaciones comerciales de compra y venta de café.',
-        periodo1_actividad: '08:15 - 09:05 | Trabajo Autónomo con Guía: Resolución individual de problemas comerciales en el libro.',
-        periodo2_actividad: '09:05 - 09:55 | Trabajo Cooperativo / Práctica: Discusión en parejas y comprobación cruzada de resultados.',
-        periodo3_actividad: '10:30 - 11:15 | Atención Directa Docente: El docente valida modelos matemáticos en pizarra.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Registro de conclusiones en cuaderno.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo: Cálculo individual en cuaderno de trabajo.' },
-          { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo cooperativo: Discusión y verificación de variables en parejas.' },
-          { rango: '10:30 - 11:15', rolDocente: 'atencion_directa', descripcion: 'Atención directa: El maestro retroalimenta el planteamiento formal.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica con guía: Registro de procedimientos en cuaderno.' },
-        ]
-      };
-    }
-  } else if (dia === 'Miércoles') {
-    if (gIndex === (grados.length - 1)) {
-      return {
-        modalidad: 'Atención Directa Docente',
-        actividadDocente: 'Atención directa al grado superior: Despeje y formulación de proporciones compuestas.',
-        actividadEstudiante: 'Construcción del modelo matemático y validación de la solución comunitaria.',
-        periodo1_actividad: '08:15 - 09:05 | Atención Directa Docente: Explicación en pizarra de proporcionalidad directa y cálculo de incógnitas.',
-        periodo2_actividad: '09:05 - 09:55 | Trabajo Autónomo con Guía: Resolución de situaciones de costos y cooperativas en el libro.',
-        periodo3_actividad: '10:30 - 11:15 | Aplicación e Indagación: Modelado de presupuestos familiares en parejas.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Consolidación de ejercicios en cuaderno.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Modelado en pizarra del algoritmo de regla de tres.' },
-          { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo con guía: Ejercicios de aplicación en cuaderno.' },
-          { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Aplicación e indagación: Elaboración de presupuestos en equipo.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica con guía: Verificación de resultados finales.' },
-        ]
-      };
-    } else if (gIndex === 0) {
-      return {
-        modalidad: 'Trabajo Cooperativo / Práctica',
-        actividadDocente: 'Paseo guiado entre mesas observando el trabajo en equipo.',
-        actividadEstudiante: 'Comparación comunitaria de registros de cosecha y elaboración de cartelito en parejas.',
-        periodo1_actividad: '08:15 - 09:05 | Trabajo Autónomo con Guía: Ejercicios de cálculo rápido y valor relativo.',
-        periodo2_actividad: '09:05 - 09:55 | Atención Directa Docente: El maestro revisa procedimientos en pizarra y orienta al grupo.',
-        periodo3_actividad: '10:30 - 11:15 | Trabajo Cooperativo / Práctica: Creación colaborativa de un problema contextual.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Registro formal en el cuaderno de trabajo.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo individual con guía: Resolución de incisos en cuaderno.' },
-          { rango: '09:05 - 09:55', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Revisión y retroalimentación en pizarra.' },
-          { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo cooperativo: Formulación de problemas en parejas.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica con guía: Consolidación en cuaderno.' },
-        ]
-      };
-    } else {
-      return {
-        modalidad: 'Trabajo Autónomo con Guía',
-        actividadDocente: 'Atención intermedia para dudas puntuales.',
-        actividadEstudiante: 'Resolución de problemas de reparto de granos en medidas tradicionales de la región.',
-        periodo1_actividad: '08:15 - 09:05 | Trabajo Autónomo con Guía: Resolución de problemas de suma de fracciones en la guía.',
-        periodo2_actividad: '09:05 - 09:55 | Trabajo Cooperativo / Práctica: Intercambio de cuadernos para coevaluación en parejas.',
-        periodo3_actividad: '10:30 - 11:15 | Atención Directa Docente: El docente aclara dudas de fracciones mixtas e impropias.',
-        periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: Ejercitación final en cuaderno.',
-        tiempos: [
-          { rango: '08:15 - 09:05', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo individual con guía: Resolución de operaciones en cuaderno.' },
-          { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo cooperativo: Coevaluación en parejas.' },
-          { rango: '10:30 - 11:15', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Explicación de dudas complejas.' },
-          { rango: '11:15 - 11:50', rolDocente: 'trabajo_autonomo', descripcion: 'Práctica con guía: Ejercicios de autoaprendizaje.' },
-        ]
-      };
-    }
+  // Textos didácticos coherentes con el área curricular y tema
+  let docDirecta = '';
+  let estDirecta = '';
+  let docAutonomo = '';
+  let estAutonomo = '';
+  let actIndagacion = '';
+
+  if (matLower.includes('lengua') || matLower.includes('comunic')) {
+    docDirecta = `Modelado en pizarra de lectura comprensiva y análisis textual sobre "${tema}".`;
+    estDirecta = `Lectura guiada en voz alta, subrayado de vocabulario y toma de notas en cuaderno.`;
+    docAutonomo = `Supervisión de producción escrita y aclaración de dudas ortográficas individuales.`;
+    estAutonomo = `Lectura silenciosa de la guía oficial MINEDUC y redacción de ejercicios en el cuaderno.`;
+    actIndagacion = `Taller de producción escrita en parejas: Redactar anécdotas o historias de la comunidad.`;
+  } else if (matLower.includes('ciencia') || matLower.includes('medio')) {
+    docDirecta = `Explicación interactiva con ejemplos del entorno natural sobre "${tema}".`;
+    estDirecta = `Observación guiada, dibujo de esquemas científicos y participación oral activa.`;
+    docAutonomo = `Monitoreo de diagramas y verificación de conceptos científicos en los cuadernos.`;
+    estAutonomo = `Elaboración de esquemas y respuesta individual a las preguntas de la guía MINEDUC.`;
+    actIndagacion = `Exploración e indagación: Discusión comunitaria sobre la biodiversidad y la salud en la aldea.`;
+  } else if (matLower.includes('social') || matLower.includes('ciudad')) {
+    docDirecta = `Presentación participativa y diálogo sobre hechos cívicos y geografía: "${tema}".`;
+    estDirecta = `Análisis de situaciones comunitarias y formulación de compromisos de convivencia.`;
+    docAutonomo = `Acompañamiento a los grupos en la interpretación de mapas y normativas ciudadanas.`;
+    estAutonomo = `Lectura reflexiva y resolución autónoma de actividades en la guía MINEDUC.`;
+    actIndagacion = `Plenaria y mediación: Análisis de casos de convivencia pacífica en la escuela y el hogar.`;
   } else {
-    // Jueves: Síntesis semanal, checklist y preparación para la prueba de viernes
-    return {
-      modalidad: 'Atención Directa Docente',
-      actividadDocente: 'Revisión general y plenario de consolidación semanal antes de la prueba diagnóstica de mañana.',
-      actividadEstudiante: 'Autoevaluación con apoyo de la lista de cotejo y resolución de dudas en plenaria.',
-      periodo1_actividad: '08:15 - 09:05 | Atención Directa Docente: Repaso general en pizarra de los conceptos y algoritmos de la semana.',
-      periodo2_actividad: '09:05 - 09:55 | Trabajo Autónomo con Guía: Simulador de prueba individual con ejercicios tipo diagnóstico.',
-      periodo3_actividad: '10:30 - 11:15 | Trabajo Cooperativo / Práctica: Revisión cruzada en parejas guiada por la lista de cotejo.',
-      periodo4_actividad: '11:15 - 11:50 | Práctica Autónoma con Guía: El docente sella cuadernos y resuelve dudas individuales finales.',
-      tiempos: [
-        { rango: '08:15 - 09:05', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Repaso y síntesis de los indicadores de la semana.' },
-        { rango: '09:05 - 09:55', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo autónomo: Resolución individual de simulador de prueba en cuaderno.' },
-        { rango: '10:30 - 11:15', rolDocente: 'trabajo_autonomo', descripcion: 'Revisión en parejas: Verificación con la lista de cotejo.' },
-        { rango: '11:15 - 11:50', rolDocente: 'atencion_directa', descripcion: 'Cierre y firma docente: Verificación final de cuadernos y entrega de guía de repaso.' },
-      ]
-    };
+    // Matemáticas
+    docDirecta = `Modelado paso a paso en el pizarrón del procedimiento matemático para "${tema}".`;
+    estDirecta = `Resolución guiada de ejemplos en pizarra y registro del algoritmo en el cuaderno.`;
+    docAutonomo = `Supervisión de procedimientos y orientación en cálculo individual.`;
+    estAutonomo = `Resolución autónoma de los ejercicios de cálculo y problemas contextuales de la guía MINEDUC.`;
+    actIndagacion = `Resolución en parejas de situaciones comerciales y agrícolas con datos de la comunidad.`;
   }
+
+  // Rotación del Período 1 (08:15 - 09:05) y Período 2 (09:05 - 09:55)
+  // Lunes: gIndex 0 inicia con Directa; Martes: gIndex 1 inicia con Directa; Miércoles: rotación según cantidad de grados
+  let tieneDirectaP1 = false;
+  let tieneDirectaP2 = false;
+  let tieneDirectaP3 = false;
+
+  if (grados.length === 1) {
+    tieneDirectaP1 = true;
+  } else if (dia === 'Lunes') {
+    tieneDirectaP1 = (gIndex === 0);
+    tieneDirectaP2 = (gIndex === 1);
+    tieneDirectaP3 = (gIndex >= 2);
+  } else if (dia === 'Martes') {
+    tieneDirectaP1 = (gIndex === 1);
+    tieneDirectaP2 = (gIndex === 0);
+    tieneDirectaP3 = (gIndex >= 2);
+  } else if (dia === 'Miércoles') {
+    tieneDirectaP1 = (gIndex === (grados.length > 2 ? 2 : 0));
+    tieneDirectaP2 = (gIndex === 1);
+    tieneDirectaP3 = (gIndex === 0);
+  } else {
+    // Jueves: Síntesis semanal rotativa
+    tieneDirectaP1 = (gIndex === 0);
+    tieneDirectaP2 = (gIndex === 1);
+    tieneDirectaP3 = (gIndex >= 2);
+  }
+
+  const modalidad: 'Atención Directa Docente' | 'Trabajo Autónomo con Guía' | 'Trabajo Cooperativo / Práctica' =
+    tieneDirectaP1 ? 'Atención Directa Docente' : (tieneDirectaP2 ? 'Trabajo Autónomo con Guía' : 'Trabajo Cooperativo / Práctica');
+
+  const p1Text = tieneDirectaP1
+    ? `08:15 - 09:05 | Atención Directa Docente: ${docDirecta}`
+    : `08:15 - 09:05 | Trabajo Autónomo con Guía: ${estAutonomo}`;
+
+  const p2Text = tieneDirectaP2
+    ? `09:05 - 09:55 | Atención Directa Docente: El docente rota a este grado. ${docDirecta}`
+    : `09:05 - 09:55 | Trabajo Autónomo con Guía: ${estAutonomo}`;
+
+  const p3Text = tieneDirectaP3
+    ? `10:30 - 11:15 | Atención Directa Docente: El docente modela la profundización de ${tema}.`
+    : `10:30 - 11:15 | Aplicación e Indagación: ${actIndagacion}`;
+
+  const p4Text = `11:15 - 11:50 | Práctica Autónoma con Guía: Ejercitación final en cuaderno, verificación de respuestas y registro de avances.`;
+
+  const tiempos: TimeAllocation[] = [
+    {
+      rango: '08:15 - 09:05',
+      rolDocente: tieneDirectaP1 ? 'atencion_directa' : 'trabajo_autonomo',
+      descripcion: tieneDirectaP1 ? `Atención directa: ${docDirecta}` : `Trabajo autónomo: ${estAutonomo}`
+    },
+    {
+      rango: '09:05 - 09:55',
+      rolDocente: tieneDirectaP2 ? 'atencion_directa' : 'trabajo_autonomo',
+      descripcion: tieneDirectaP2 ? `Atención directa (Inversión de roles): ${docDirecta}` : `Trabajo individual con guía: ${estAutonomo}`
+    },
+    {
+      rango: '10:30 - 11:15',
+      rolDocente: tieneDirectaP3 ? 'atencion_directa' : 'trabajo_autonomo',
+      descripcion: tieneDirectaP3 ? `Atención directa de profundización en ${materia}` : `Aplicación contextual: ${actIndagacion}`
+    },
+    {
+      rango: '11:15 - 11:50',
+      rolDocente: 'trabajo_autonomo',
+      descripcion: 'Práctica individual con guía: Verificación de ejercicios y consolidación de saberes.'
+    }
+  ];
+
+  return {
+    modalidad,
+    actividadDocente: tieneDirectaP1 ? docDirecta : docAutonomo,
+    actividadEstudiante: tieneDirectaP1 ? estDirecta : estAutonomo,
+    periodo1_actividad: p1Text,
+    periodo2_actividad: p2Text,
+    periodo3_actividad: p3Text,
+    periodo4_actividad: p4Text,
+    tiempos
+  };
 }
 
 // Generador de la Guía Pedagógica Unificada con Eje Integrador (Lunes a Jueves + Evaluación de Viernes)
@@ -658,15 +648,17 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
         : areaCurricular;
 
       const cnbInfo = searchCNBCorresponding(g, semana, bimestre, rezagadoMatch, diaMateria);
-      const mineducInfo = searchMineducExercises(g, pagCalculada, rezagadoMatch || cnbInfo.temas_declarativos[0]);
+      const mineducInfo = searchMineducExercises(g, pagCalculada, rezagadoMatch || cnbInfo.temas_declarativos[0], diaMateria);
 
-      const rotacion = buildRotationalTimeline(dia, grados, g);
+      const rotacion = buildRotationalTimeline(dia, grados, g, diaMateria, mineducInfo.item.seccion_unidad);
 
       const ejercicios = formatLiteralExercises(
         mineducInfo.item.enunciado_ejercicio,
         mineducInfo.item.instrucciones_docente,
         mineducInfo.paginaEfectiva,
-        g
+        g,
+        diaMateria,
+        mineducInfo.item.seccion_unidad
       );
 
       let tareaCasa = '';
