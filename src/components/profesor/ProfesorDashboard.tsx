@@ -1081,54 +1081,76 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* LÍNEA DE TIEMPO ROTATIVA DEL DOCENTE EN EL PERIODO (30–40 MINUTOS) */}
-                  <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-md">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-amber-400" />
-                        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
-                          Fase 2: Desarrollo Diferenciado y Rotativo (30 – 40 Minutos)
-                        </h3>
+                  {/* LÍNEA DE TIEMPO ROTATIVA DEL DOCENTE EN EL HORARIO OFICIAL (08:00 A 12:00 - 210 MIN EFECTIVOS) */}
+                  <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                      <div className="flex items-center space-x-2.5">
+                        <Clock className="w-5 h-5 text-amber-400" />
+                        <div>
+                          <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-amber-300">
+                            Jornada Diaria Oficial: 08:00 a 12:00 (210 Minutos Efectivos)
+                          </h3>
+                          <p className="text-[11px] text-slate-300">
+                            Estructura de 2 Bloques con Alternancia Estricta y Receso sin actividades académicas
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
-                        Alternancia Simultánea
+                      <span className="text-[11px] font-bold text-slate-200 bg-white/10 px-3 py-1 rounded-full border border-white/10 self-start sm:self-auto">
+                        🕒 3.5 hrs efectivas de clase
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                        <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                          <span>Bloque 1: 00 - 15 min</span>
+                    {/* Grilla de Franjas Horarias */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                      {/* 1. Periodo 1 */}
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15 space-y-1">
+                        <div className="flex items-center justify-between font-black text-amber-300">
+                          <span>08:15 - 09:05 (50 min)</span>
                           <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
-                            Atención Directa
+                            Período 1
                           </span>
                         </div>
-                        <p className="text-white/90 text-[11px] font-medium leading-relaxed">
-                          El maestro explica y modela en pizarra con el grado asignado; los demás grados inician con lectura silenciosa o resolución autónoma en sus libros físicos.
+                        <p className="text-white/90 text-[11px] font-medium leading-tight">
+                          Rotación Multigrado: Grado principal en <strong>Atención Directa</strong> en pizarra; grados secundarios en <strong>Trabajo Autónomo</strong> con guías.
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                        <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                          <span>Bloque 2: 15 - 30 min</span>
-                          <span className="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                            Rotación Docente
+                      {/* 2. Periodo 2 - Inversion */}
+                      <div className="p-3 rounded-2xl bg-white/10 border border-amber-400/40 space-y-1 ring-1 ring-amber-400/30">
+                        <div className="flex items-center justify-between font-black text-amber-300">
+                          <span>09:05 - 09:55 (50 min)</span>
+                          <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
+                            Período 2 (Inversión)
                           </span>
                         </div>
-                        <p className="text-white/90 text-[11px] font-medium leading-relaxed">
-                          El maestro rota la atención directa al segundo grado; el primer grado consolida ejercicios en su cuaderno y el tercer grado practica en parejas.
+                        <p className="text-white/90 text-[11px] font-medium leading-tight">
+                          Inversión estricta de roles: El maestro rota la <strong>Atención Directa</strong> al segundo grado; el primer grado pasa a <strong>Trabajo Autónomo</strong> en cuaderno.
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                        <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                          <span>Bloque 3: 30 - 45 min</span>
-                          <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                            Supervisión y Cierre
+                      {/* 3. Receso Libre */}
+                      <div className="p-3 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 space-y-1 text-emerald-200">
+                        <div className="flex items-center justify-between font-black text-emerald-300">
+                          <span>10:00 - 10:30 (30 min)</span>
+                          <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
+                            🍎 RECESO
                           </span>
                         </div>
-                        <p className="text-white/90 text-[11px] font-medium leading-relaxed">
-                          Atención al tercer grado, verificación de dudas individuales y revisión de avance antes de pasar a la plenaria comunitaria de cierre.
+                        <p className="text-emerald-100 text-[11px] font-medium leading-tight">
+                          Recreo y refacción escolar. <strong>Estrictamente sin actividades académicas asignadas</strong>.
+                        </p>
+                      </div>
+
+                      {/* 4. Bloque 2 Aplicado */}
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15 space-y-1">
+                        <div className="flex items-center justify-between font-black text-sky-300">
+                          <span>10:30 - 11:50 (80 min)</span>
+                          <span className="bg-sky-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            Períodos 3 y 4
+                          </span>
+                        </div>
+                        <p className="text-white/90 text-[11px] font-medium leading-tight">
+                          Aplicación contextual comunitaria en parejas (Período 3) y consolidación autónoma en cuadernos de estudio (Período 4).
                         </p>
                       </div>
                     </div>
@@ -1162,12 +1184,12 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                               {item.modalidad === 'Atención Directa Docente' ? (
                                 <span className="bg-rose-100 text-rose-900 border border-rose-300 text-xs font-black px-3 py-1 rounded-full inline-flex items-center space-x-1.5">
                                   <span>👨‍🏫</span>
-                                  <span>Atención Directa Docente</span>
+                                  <span>Atención Directa Docente (Período 1)</span>
                                 </span>
                               ) : item.modalidad === 'Trabajo Autónomo con Guía' ? (
                                 <span className="bg-teal-100 text-teal-900 border border-teal-300 text-xs font-black px-3 py-1 rounded-full inline-flex items-center space-x-1.5">
                                   <span>📖</span>
-                                  <span>Trabajo Autónomo con Guía</span>
+                                  <span>Trabajo Autónomo con Guía (Período 1)</span>
                                 </span>
                               ) : (
                                 <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black px-3 py-1 rounded-full inline-flex items-center space-x-1.5">
@@ -1185,14 +1207,41 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                             </p>
                           </div>
 
-                          {/* Actividad Específica del Grado según la Modalidad */}
-                          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                          {/* Cronograma Horario Detallado de la Jornada para este Grado */}
+                          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
                             <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                              {item.modalidad === 'Atención Directa Docente' ? 'Actividad del Maestro en Pizarra:' : 'Actividad del Estudiante en Cuaderno/Libro:'}
+                              Distribución por Períodos (08:00 - 12:00):
                             </p>
-                            <p className="text-slate-800 font-semibold leading-relaxed">
-                              {item.modalidad === 'Atención Directa Docente' ? item.actividadDocente : item.actividadEstudiante}
-                            </p>
+                            
+                            <div className="space-y-1.5 text-[11px]">
+                              {item.periodo1_actividad && (
+                                <div className="p-2 bg-white rounded-xl border border-slate-200 leading-tight">
+                                  <strong className="text-slate-900">Período 1: </strong>
+                                  <span className="text-slate-700">{item.periodo1_actividad}</span>
+                                </div>
+                              )}
+
+                              {item.periodo2_actividad && (
+                                <div className="p-2 bg-amber-50/70 rounded-xl border border-amber-200 leading-tight">
+                                  <strong className="text-amber-950">Período 2 (Inversión): </strong>
+                                  <span className="text-amber-900">{item.periodo2_actividad}</span>
+                                </div>
+                              )}
+
+                              {item.periodo3_actividad && (
+                                <div className="p-2 bg-white rounded-xl border border-slate-200 leading-tight">
+                                  <strong className="text-slate-900">Período 3: </strong>
+                                  <span className="text-slate-700">{item.periodo3_actividad}</span>
+                                </div>
+                              )}
+
+                              {item.periodo4_actividad && (
+                                <div className="p-2 bg-white rounded-xl border border-slate-200 leading-tight">
+                                  <strong className="text-slate-900">Período 4: </strong>
+                                  <span className="text-slate-700">{item.periodo4_actividad}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Objetivo CNB DIGECUR */}
@@ -1213,7 +1262,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                             <div className="flex items-center justify-between">
                               <p className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
                                 <span>✏️</span>
-                                <span>Ejercicios Literales del Libro</span>
+                                <span>Ejercicios Literales Redactados</span>
                               </p>
                               <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
                                 Pág. {item.numeroPagina}
@@ -1292,12 +1341,12 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
               */}
               {selectedDia === 'Viernes' && (
                 <div className="space-y-6 animate-fadeIn">
-                  {/* Banner de Jornada de Evaluación de Viernes */}
-                  <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-indigo-900 text-white rounded-3xl p-6 sm:p-7 shadow-xl">
+                  {/* Banner de Jornada de Evaluación de Viernes con Horario Oficial */}
+                  <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-indigo-900 text-white rounded-3xl p-6 sm:p-7 shadow-xl space-y-4">
                     <div className="max-w-3xl space-y-2">
                       <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-yellow-300">
                         <span>📝</span>
-                        <span>Jornada de Evaluación Formativa y Cuantitativa (Viernes)</span>
+                        <span>Jornada de Evaluación Formativa y Cuantitativa (Viernes) • 08:00 a 12:00</span>
                       </div>
                       <h3 className="text-2xl font-black tracking-tight leading-tight">
                         Evaluación del Alcance de la Competencia por Grado
@@ -1305,6 +1354,45 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                       <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
                         El Viernes se evalúa si cada estudiante alcanzó el <strong>indicador de logro del CNB</strong> trabajado durante la semana bajo el tema generador común. Se genera la <strong>hoja de trabajo individual</strong> y el <strong>instrumento de registro (lista de cotejo con 3 criterios observables)</strong>.
                       </p>
+                    </div>
+
+                    {/* Franjas Horarias del Viernes */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/20 space-y-1">
+                        <div className="flex items-center justify-between font-black text-amber-300">
+                          <span>08:00 - 10:00 (120 min)</span>
+                          <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black">
+                            Bloque 1: Test
+                          </span>
+                        </div>
+                        <p className="text-white/90 text-[11px] font-medium leading-tight">
+                          Aplicación individual y resolución de las hojas de evaluación de cada grado sin interrupciones.
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 space-y-1 text-emerald-200">
+                        <div className="flex items-center justify-between font-black text-emerald-300">
+                          <span>10:00 - 10:30 (30 min)</span>
+                          <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
+                            🍎 RECESO
+                          </span>
+                        </div>
+                        <p className="text-emerald-100 text-[11px] font-medium leading-tight">
+                          Recreo escolar libre de actividades académicas.
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/20 space-y-1">
+                        <div className="flex items-center justify-between font-black text-sky-300">
+                          <span>10:30 - 12:00 (90 min)</span>
+                          <span className="bg-sky-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            Bloque 2: Registro
+                          </span>
+                        </div>
+                        <p className="text-white/90 text-[11px] font-medium leading-tight">
+                          Retroalimentación de respuestas en plenaria y registro docente en la Lista de Cotejo interactiva.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
