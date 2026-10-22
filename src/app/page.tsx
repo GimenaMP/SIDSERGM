@@ -10,8 +10,11 @@ import {
   BookOpen, 
   CheckSquare, 
   GraduationCap, 
-  Sparkles
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
+
+import { useRouter } from 'next/navigation';
 
 interface ActiveSession {
   role: UserRole;
@@ -21,6 +24,7 @@ interface ActiveSession {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [session, setSession] = useState<ActiveSession | null>(null);
 
   const handleLoginSuccess = (role: UserRole, user: any) => {
@@ -30,6 +34,13 @@ export default function LoginPage() {
       nombre: user.nombre,
       escuela: user.escuela,
     });
+
+    // Si el rol es profesor, transición automática tras el confeti
+    if (role === 'profesor') {
+      setTimeout(() => {
+        router.push('/profesor');
+      }, 1000);
+    }
   };
 
   const handleLogout = () => {
@@ -126,6 +137,15 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
+
+            {/* Botón principal de acceso al módulo */}
+            <button
+              onClick={() => router.push('/profesor')}
+              className="w-full mb-3 py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF5A5F] to-[#FFB703] text-white text-xs font-black flex items-center justify-center space-x-2 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <span>Entrar al Módulo de Profesores (Aula Multigrado)</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
 
             <button
               onClick={handleLogout}
