@@ -12,8 +12,11 @@ import {
   Mail, 
   AlertCircle, 
   CheckCircle2, 
-  ArrowRight
+  ArrowRight,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import { playCartoonRisingSound, playCartoonPopSound, toggleSoundState } from '../../utils/audioEffects';
 
 export type UserRole = 'profesor' | 'director' | 'admin';
 
@@ -31,6 +34,45 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
+  const [isRising, setIsRising] = useState(false);
+
+  // Reproducir el sonido ascendente al primer gesto del usuario
+  React.useEffect(() => {
+    let played = false;
+    const triggerFirstSound = () => {
+      if (!played) {
+        played = true;
+        setIsRising(true);
+        playCartoonRisingSound();
+        setTimeout(() => setIsRising(false), 800);
+      }
+      window.removeEventListener('pointerdown', triggerFirstSound);
+      window.removeEventListener('keydown', triggerFirstSound);
+    };
+
+    window.addEventListener('pointerdown', triggerFirstSound, { once: true });
+    window.addEventListener('keydown', triggerFirstSound, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', triggerFirstSound);
+      window.removeEventListener('keydown', triggerFirstSound);
+    };
+  }, []);
+
+  const handleLogoClick = () => {
+    setIsRising(true);
+    playCartoonRisingSound();
+    setTimeout(() => setIsRising(false), 800);
+  };
+
+  const handleToggleSound = () => {
+    const newState = toggleSoundState();
+    setSoundOn(newState);
+    if (newState) {
+      playCartoonPopSound();
+    }
+  };
 
   // Confetti celebration
   const launchCelebration = () => {
@@ -86,6 +128,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   // Demo accounts helper
   const handleQuickFill = (targetRole: UserRole, isInactive: boolean = false) => {
+    playCartoonPopSound();
     setRole(targetRole);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -112,22 +155,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     <div className="w-full max-w-[390px] sm:max-w-[400px] mx-auto relative z-10 mt-36 sm:mt-40">
       {/* 
         GIF animado de SIDSER superpuesto con la posición exacta de la maqueta:
-        - El GIF es más ancho que la tarjeta y sobresale a ambos lados.
-        - El borde superior de la tarjeta blanca pasa por detrás del cuerpo de los personajes.
-        - La pestaña inferior de la pieza 'D' cuelga justo arriba de 'Acceso a'.
-        - Las patitas y tenis del personaje 'e' descansan al lado derecho del título 'Acceso a Plataforma SIDSER'.
+        - Interactivo: al hacer clic reproduce el sonidito ascendente con rebote de resorte
       */}
-      <div className="absolute -top-[215px] sm:-top-[230px] left-1/2 -translate-x-1/2 z-30 w-[490px] sm:w-[530px] pointer-events-none drop-shadow-xl flex justify-center">
+      <div
+        onClick={handleLogoClick}
+        title="¡Haz clic para hacer subir a los personajes de SIDSER!"
+        className={`absolute -top-[215px] sm:-top-[230px] left-1/2 -translate-x-1/2 z-30 w-[490px] sm:w-[530px] cursor-pointer drop-shadow-xl flex justify-center transition-all duration-500 select-none ${
+          isRising ? '-translate-y-3 scale-105' : 'hover:-translate-y-1'
+        }`}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/assets/sidser-logo-animated.gif"
           alt="SIDSER Personajes Animados"
-          className="w-full h-auto object-contain"
+          className="w-full h-auto object-contain pointer-events-none"
         />
       </div>
 
       {/* Tarjeta de Inicio de Sesión Educativa */}
       <div className="card-educational rounded-[32px] pt-[58px] sm:pt-[64px] pb-6 px-6 sm:px-7 shadow-2xl border-2 border-slate-200/90 relative overflow-visible">
+        
+        {/* Botón de audio caricaturesco en esquina superior derecha de la tarjeta */}
+        <button
+          type="button"
+          onClick={handleToggleSound}
+          className="absolute top-4 right-5 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 transition-colors z-20"
+          title={soundOn ? 'Efectos de sonido activados (clic para silenciar)' : 'Sonido silenciado (clic para activar)'}
+        >
+          {soundOn ? <Volume2 className="w-4 h-4 text-emerald-600 animate-pulse" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+        </button>
         
         {/* Título y Subtítulo de Acceso */}
         <div className="flex flex-col items-center justify-center mb-4 text-center">
