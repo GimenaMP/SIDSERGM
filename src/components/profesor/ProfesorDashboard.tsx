@@ -177,14 +177,17 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
   const [selectedGradoFilter, setSelectedGradoFilter] = useState<string>('todos');
   const [attendanceSaved, setAttendanceSaved] = useState(false);
 
-  // Estados de Planificación Multigrado RAG (Lunes a Jueves)
+  // Estados de Planificación Multigrado RAG (Tres datos simples del docente)
+  const [selectedGrados, setSelectedGrados] = useState<number[]>([3, 4]);
+  const [selectedArea, setSelectedArea] = useState<string>('Matemáticas');
+  const [selectedBloque, setSelectedBloque] = useState<number>(1);
+  const [selectedSemanaBloque, setSelectedSemanaBloque] = useState<number>(3);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false);
   const [selectedCycle, setSelectedCycle] = useState<'segundo_ciclo' | 'primer_ciclo'>('segundo_ciclo');
-  const [selectedBimestre, setSelectedBimestre] = useState<number>(2);
-  const [selectedSemana, setSelectedSemana] = useState<number>(14);
-  const [paginasPorGrado, setPaginasPorGrado] = useState<Record<number, number>>({ 4: 38, 5: 44, 6: 115 });
-  const [temasRezagados, setTemasRezagados] = useState<string[]>([
-    'Descomposición posicional y valor relativo'
-  ]);
+  const [selectedBimestre, setSelectedBimestre] = useState<number>(1);
+  const [selectedSemana, setSelectedSemana] = useState<number>(3);
+  const [paginasPorGrado, setPaginasPorGrado] = useState<Record<number, number>>({ 3: 12, 4: 16 });
+  const [temasRezagados, setTemasRezagados] = useState<string[]>([]);
   const [nuevoTemaRezagado, setNuevoTemaRezagado] = useState<string>('');
   const [selectedDia, setSelectedDia] = useState<DiaNavegacion>('Lunes');
   const [viewMode, setViewMode] = useState<'dia' | 'semana_completa'>('dia');
@@ -216,22 +219,37 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
 
   const [unifiedPlan, setUnifiedPlan] = useState<UnifiedWeeklyPlan>(() => 
     generateUnifiedRAGPlan({
-      ciclo: 'segundo_ciclo',
-      grados: [4, 5, 6],
-      bimestre: 2,
-      semana: 14,
-      paginasPorGrado: { 4: 38, 5: 44, 6: 115 },
-      temasRezagados: ['Descomposición posicional y valor relativo']
+      grados: [3, 4],
+      bimestre: 1,
+      semana: 3,
+      area: 'Matemáticas'
     })
   );
+
+  const handleToggleGrado = (gradoNum: number) => {
+    playCartoonPopSound();
+    setSelectedGrados(prev => {
+      if (prev.includes(gradoNum)) {
+        if (prev.length === 1) return prev; // Mantener al menos 1 grado
+        return prev.filter(g => g !== gradoNum);
+      } else {
+        return [...prev, gradoNum].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  const handleSetPresetGrados = (gradosArr: number[]) => {
+    playCartoonPopSound();
+    setSelectedGrados(gradosArr);
+  };
 
   const handleCycleChange = (ciclo: 'segundo_ciclo' | 'primer_ciclo') => {
     playCartoonPopSound();
     setSelectedCycle(ciclo);
     if (ciclo === 'segundo_ciclo') {
-      setPaginasPorGrado({ 4: 38, 5: 44, 6: 115 });
+      setSelectedGrados([4, 5, 6]);
     } else {
-      setPaginasPorGrado({ 1: 14, 2: 32, 3: 54 });
+      setSelectedGrados([1, 2, 3]);
     }
   };
 
@@ -257,30 +275,30 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
     playCartoonRisingSound();
     setIsGeneratingRAG(true);
     setRagStep(1);
-    setRagMessage('Consultando Base Vectorial del CNB (DIGECUR)...');
+    setRagMessage(`Paso 1: Consultando CNB (DIGECUR) para Bloque ${selectedBloque}, Semana ${selectedSemanaBloque}...`);
 
     setTimeout(() => {
       setRagStep(2);
-      setRagMessage('Extrayendo ejercicios literales en libros de texto oficiales MINEDUC...');
-    }, 800);
+      setRagMessage(`Paso 2: Deduciendo ejercicios literales de guías MINEDUC para ${selectedGrados.map(g => `${g}.°`).join(' y ')}...`);
+    }, 700);
 
     setTimeout(() => {
       setRagStep(3);
-      setRagMessage('Sincronizando tiempos rotativos de 45 min con Gemini AI sin alucinaciones...');
-    }, 1600);
+      setRagMessage('Paso 3: Sincronizando alternancia multigrado (08:00 a 12:00) con Gemini 2.5 Flash...');
+    }, 1500);
 
     try {
-      const res = await fetch('/api/planificaciones/generate', {
+      const res = await fetch('/api/planificacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ciclo: selectedCycle,
-          grados: selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3],
-          bimestre: selectedBimestre,
-          semana: selectedSemana,
-          paginasPorGrado,
-          temasRezagados,
-          diaSeleccionado: selectedDia
+          grado1: String(selectedGrados[0]),
+          grado2: String(selectedGrados[1] || selectedGrados[0]),
+          grados: selectedGrados,
+          area: selectedArea,
+          bloque: selectedBloque,
+          semana: selectedSemanaBloque,
+          temasRezagados
         })
       });
 
@@ -292,22 +310,20 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
         }
       } else {
         const local = generateUnifiedRAGPlan({
-          ciclo: selectedCycle,
-          grados: selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3],
-          bimestre: selectedBimestre,
-          semana: selectedSemana,
-          paginasPorGrado,
+          grados: selectedGrados,
+          area: selectedArea,
+          bimestre: selectedBloque,
+          semana: selectedSemanaBloque,
           temasRezagados
         });
         setUnifiedPlan(local);
       }
     } catch {
       const local = generateUnifiedRAGPlan({
-        ciclo: selectedCycle,
-        grados: selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3],
-        bimestre: selectedBimestre,
-        semana: selectedSemana,
-        paginasPorGrado,
+        grados: selectedGrados,
+        area: selectedArea,
+        bimestre: selectedBloque,
+        semana: selectedSemanaBloque,
         temasRezagados
       });
       setUnifiedPlan(local);
@@ -315,7 +331,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
       setTimeout(() => {
         setIsGeneratingRAG(false);
         playCartoonPopSound();
-      }, 2200);
+      }, 2100);
     }
   };
 
@@ -684,188 +700,235 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
               </div>
 
               {/* 
-                PANEL DE CONFIGURACIÓN PREVIA (SEMESTRE/SEMANA, PÁGINAS FÍSICAS Y TEMAS REZAGADOS)
+                PANEL DE CONFIGURACIÓN AUTOMÁTICA (3 DATOS SIMPLES: GRADOS, ÁREA, BLOQUE Y SEMANA)
               */}
               {showConfig && (
                 <div className="bg-white rounded-3xl p-6 border-2 border-indigo-100 shadow-md space-y-5 animate-fadeIn">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
                     <div className="flex items-center space-x-2.5">
                       <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A5F] to-[#FFB703] flex items-center justify-center text-white font-black text-xs shadow-sm">
-                        ⚙️
+                        ⚡
                       </div>
                       <div>
                         <h3 className="text-sm font-black text-slate-900">
-                          Configurador Pedagógico Multigrado RAG
+                          Generador Inteligente CNB + Guías MINEDUC
                         </h3>
                         <p className="text-[11px] text-slate-500">
-                          Define el avance actual de tu aula antes de consultar a Gemini y a la base vectorial
+                          Selecciona únicamente los 3 datos de tu clase; el sistema deduce automáticamente lecciones, páginas y ejercicios
                         </p>
                       </div>
                     </div>
 
-                    {/* Selector de Ciclo */}
-                    <div className="flex items-center bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-                      <button
-                        onClick={() => handleCycleChange('segundo_ciclo')}
-                        className={`px-3 py-1.5 rounded-xl transition-all ${
-                          selectedCycle === 'segundo_ciclo'
-                            ? 'bg-white text-slate-900 shadow-sm font-black'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        Segundo Ciclo (4.°-6.°)
-                      </button>
-                      <button
-                        onClick={() => handleCycleChange('primer_ciclo')}
-                        className={`px-3 py-1.5 rounded-xl transition-all ${
-                          selectedCycle === 'primer_ciclo'
-                            ? 'bg-white text-slate-900 shadow-sm font-black'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        Primer Ciclo (1.°-3.°)
-                      </button>
+                    <div className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full flex items-center space-x-1.5 self-start sm:self-auto">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Cero búsqueda manual de páginas</span>
                     </div>
                   </div>
 
+                  {/* LOS 3 DATOS SIMPLES QUE ELIGE EL DOCENTE */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* 1. Bimestre y Semana */}
+                    {/* 1. DATO 1: GRADOS A ATENDER */}
                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                      <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center space-x-1">
-                        <CalendarIcon className="w-3.5 h-3.5 text-sky-600" />
-                        <span>Bimestre y Semana Escolar</span>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-black uppercase text-slate-700 tracking-wider flex items-center space-x-1">
+                          <GraduationCap className="w-3.5 h-3.5 text-sky-600" />
+                          <span>1. Grados a Atender</span>
+                        </p>
+                        <span className="text-[10px] font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full">
+                          {selectedGrados.map(g => `${g}.°`).join(', ')}
+                        </span>
+                      </div>
+
+                      {/* Chips interactivos de grados */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {[1, 2, 3, 4, 5, 6].map((g) => {
+                          const isSelected = selectedGrados.includes(g);
+                          return (
+                            <button
+                              key={g}
+                              type="button"
+                              onClick={() => handleToggleGrado(g)}
+                              className={`flex-1 min-w-[42px] py-2 rounded-xl text-xs font-black transition-all border ${
+                                isSelected
+                                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm scale-105'
+                                  : 'bg-white text-slate-600 hover:bg-slate-100 border-slate-200'
+                              }`}
+                            >
+                              {g}.°
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Atajos rápidos multiaula */}
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSetPresetGrados([3, 4])}
+                          className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${
+                            selectedGrados.length === 2 && selectedGrados.includes(3) && selectedGrados.includes(4)
+                              ? 'bg-sky-600 text-white border-sky-600'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          3.° y 4.°
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetPresetGrados([4, 5, 6])}
+                          className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${
+                            selectedGrados.length === 3 && selectedGrados.includes(4) && selectedGrados.includes(5) && selectedGrados.includes(6)
+                              ? 'bg-sky-600 text-white border-sky-600'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          4.°, 5.° y 6.°
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetPresetGrados([1, 2])}
+                          className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${
+                            selectedGrados.length === 2 && selectedGrados.includes(1) && selectedGrados.includes(2)
+                              ? 'bg-sky-600 text-white border-sky-600'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          1.° y 2.°
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. DATO 2: ÁREA CURRICULAR */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <p className="text-[11px] font-black uppercase text-slate-700 tracking-wider flex items-center space-x-1">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                        <span>2. Área Curricular</span>
+                      </p>
+
+                      <div className="space-y-1.5">
+                        <select
+                          value={selectedArea}
+                          onChange={(e) => setSelectedArea(e.target.value)}
+                          className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
+                        >
+                          <option value="Matemáticas">📐 Matemáticas (Oficial MINEDUC)</option>
+                          <option value="Medio Social y Natural">🌿 Medio Social y Natural / CCNN</option>
+                          <option value="Comunicación y Lenguaje">📖 Comunicación y Lenguaje (L1)</option>
+                        </select>
+                      </div>
+
+                      <p className="text-[10px] text-slate-500 leading-tight">
+                        Se vinculan los libros de texto y guías pedagógicas oficiales del área seleccionada.
+                      </p>
+                    </div>
+
+                    {/* 3. DATO 3: BLOQUE (BIMESTRE) Y SEMANA */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <p className="text-[11px] font-black uppercase text-slate-700 tracking-wider flex items-center space-x-1">
+                        <CalendarIcon className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>3. Bloque y Semana CNB</span>
                       </p>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Bimestre</label>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Bloque (Unidad)</label>
                           <select
-                            value={selectedBimestre}
-                            onChange={(e) => setSelectedBimestre(Number(e.target.value))}
-                            className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            value={selectedBloque}
+                            onChange={(e) => setSelectedBloque(Number(e.target.value))}
+                            className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           >
-                            <option value={1}>Bimestre 1</option>
-                            <option value={2}>Bimestre 2</option>
-                            <option value={3}>Bimestre 3</option>
-                            <option value={4}>Bimestre 4</option>
+                            <option value={1}>Bloque 1</option>
+                            <option value={2}>Bloque 2</option>
+                            <option value={3}>Bloque 3</option>
+                            <option value={4}>Bloque 4</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Semana ({selectedSemana})</label>
-                          <input
-                            type="number"
-                            min={1}
-                            max={36}
-                            value={selectedSemana}
-                            onChange={(e) => setSelectedSemana(Number(e.target.value))}
-                            className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                          />
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Semana (1 a 9)</label>
+                          <select
+                            value={selectedSemanaBloque}
+                            onChange={(e) => setSelectedSemanaBloque(Number(e.target.value))}
+                            className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          >
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                              <option key={num} value={num}>Semana {num}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
-                      <p className="text-[10px] text-slate-400">
-                        La base del CNB ubica los temas e indicadores correspondientes a esta semana.
+
+                      <p className="text-[10px] text-slate-500 leading-tight">
+                        Cada bloque abarca de 8 a 9 semanas según la malla curricular del CNB.
                       </p>
                     </div>
+                  </div>
 
-                    {/* 2. Páginas de las Guías según el Grado */}
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                      <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center space-x-1">
-                        <BookOpen className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Página Actual de Partida por Guía</span>
-                      </p>
+                  {/* OPCIONES AVANZADAS COLAPSABLES (OPCIONAL: TEMAS REZAGADOS) */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 flex items-center space-x-1"
+                    >
+                      <span>{showAdvancedOptions ? '▾ Ocultar opciones avanzadas' : '▸ Opciones avanzadas (Nivelación de temas rezagados)'}</span>
+                    </button>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        {(selectedCycle === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3]).map((g) => (
-                          <div key={g}>
-                            <label className="text-[10px] font-bold text-slate-500 block mb-1 truncate">
-                              {g}.° Grado
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-2 top-2 text-[10px] font-bold text-slate-400">P.</span>
-                              <input
-                                type="number"
-                                min={1}
-                                max={300}
-                                value={paginasPorGrado[g] || 30}
-                                onChange={(e) => handlePaginaChange(g, Number(e.target.value))}
-                                className="w-full pl-6 text-xs font-black bg-white border border-slate-300 rounded-xl p-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-slate-400">
-                        Los ejercicios literales se extraen a partir de estas páginas de los libros oficiales.
-                      </p>
-                    </div>
+                    {showAdvancedOptions && (
+                      <div className="mt-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 animate-fadeIn">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-black uppercase text-slate-600 flex items-center space-x-1">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Temas Pendientes o Rezagados para Refuerzo</span>
+                          </p>
+                          <span className="text-[10px] text-slate-400">Opcional</span>
+                        </div>
 
-                    {/* 3. Temas no impartidos anteriormente / Rezagados */}
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                      <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center space-x-1">
-                        <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                        <span>Temas No Impartidos / Rezagados</span>
-                      </p>
-
-                      {/* Chips activos */}
-                      <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
-                        {temasRezagados.length === 0 ? (
-                          <span className="text-[11px] text-slate-400 italic">Sin temas pendientes</span>
-                        ) : (
-                          temasRezagados.map((tema, tIdx) => (
-                            <span 
-                              key={tIdx} 
-                              className="inline-flex items-center space-x-1 bg-rose-100 text-rose-900 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-rose-200"
-                            >
-                              <span className="truncate max-w-[120px]">{tema}</span>
-                              <button 
-                                onClick={() => handleRemoveTemaRezagado(tema)}
-                                className="text-rose-600 hover:text-rose-900 font-black ml-1"
+                        <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+                          {temasRezagados.length === 0 ? (
+                            <span className="text-[11px] text-slate-400 italic">Sin temas pendientes (el plan sigue el orden del CNB)</span>
+                          ) : (
+                            temasRezagados.map((tema, tIdx) => (
+                              <span 
+                                key={tIdx} 
+                                className="inline-flex items-center space-x-1 bg-rose-100 text-rose-900 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-rose-200"
                               >
-                                ×
-                              </button>
-                            </span>
-                          ))
-                        )}
-                      </div>
+                                <span className="truncate max-w-[120px]">{tema}</span>
+                                <button 
+                                  onClick={() => handleRemoveTemaRezagado(tema)}
+                                  className="text-rose-600 hover:text-rose-900 font-black ml-1"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          )}
+                        </div>
 
-                      {/* Input para agregar tema rezagado */}
-                      <div className="flex items-center space-x-1 pt-1">
-                        <input
-                          type="text"
-                          placeholder="Escribe tema pendiente..."
-                          value={nuevoTemaRezagado}
-                          onChange={(e) => setNuevoTemaRezagado(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddTemaRezagado(nuevoTemaRezagado);
-                            }
-                          }}
-                          className="flex-1 text-[11px] bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddTemaRezagado(nuevoTemaRezagado)}
-                          className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-2.5 py-1.5 rounded-xl text-xs"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      {/* Chips de sugerencias rápidas */}
-                      <div className="flex flex-wrap gap-1 pt-0.5">
-                        {['División con residuo', 'Fracciones homogéneas', 'Regla de tres'].map((sug, sIdx) => (
+                        <div className="flex items-center space-x-1 pt-1">
+                          <input
+                            type="text"
+                            placeholder="Escribe tema a nivelar si existe retraso..."
+                            value={nuevoTemaRezagado}
+                            onChange={(e) => setNuevoTemaRezagado(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddTemaRezagado(nuevoTemaRezagado);
+                              }
+                            }}
+                            className="flex-1 text-[11px] bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                          />
                           <button
-                            key={sIdx}
-                            onClick={() => handleAddTemaRezagado(sug)}
-                            className="text-[9px] bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-medium"
+                            type="button"
+                            onClick={() => handleAddTemaRezagado(nuevoTemaRezagado)}
+                            className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs"
                           >
-                            + {sug}
+                            +
                           </button>
-                        ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Botón Principal de Generación RAG */}

@@ -143,27 +143,84 @@ function calculateTextSimilarity(query: string, targetText: string): number {
   return matches / Math.sqrt(qTokens.length * tTokens.size);
 }
 
-// Búsqueda curricular en el CNB (DIGECUR)
+// Calculo automatico de pagina oficial del libro MINEDUC segun Bloque (1-4) y Semana (1-9)
+export function getDefaultPageForGrade(grado: number, bimestre: number, semana: number): number {
+  const b = Math.min(Math.max(bimestre || 1, 1), 4);
+  const s = Math.min(Math.max(semana || 1, 1), 9);
+  const isSecondHalf = s > 4;
+
+  switch (grado) {
+    case 1:
+      if (b === 1) return isSecondHalf ? 28 : 14;
+      if (b === 2) return isSecondHalf ? 56 : 42;
+      if (b === 3) return isSecondHalf ? 88 : 70;
+      return isSecondHalf ? 120 : 102;
+    case 2:
+      if (b === 1) return isSecondHalf ? 32 : 18;
+      if (b === 2) return isSecondHalf ? 64 : 48;
+      if (b === 3) return isSecondHalf ? 98 : 80;
+      return isSecondHalf ? 130 : 112;
+    case 3:
+      if (b === 1) return isSecondHalf ? 24 : 12;
+      if (b === 2) return isSecondHalf ? 54 : 36;
+      if (b === 3) return isSecondHalf ? 86 : 68;
+      return isSecondHalf ? 128 : 104;
+    case 4:
+      if (b === 1) return isSecondHalf ? 26 : 16;
+      if (b === 2) return isSecondHalf ? 52 : 38;
+      if (b === 3) return isSecondHalf ? 90 : 72;
+      return isSecondHalf ? 134 : 110;
+    case 5:
+      if (b === 1) return isSecondHalf ? 36 : 20;
+      if (b === 2) return isSecondHalf ? 64 : 44;
+      if (b === 3) return isSecondHalf ? 102 : 82;
+      return isSecondHalf ? 148 : 122;
+    case 6:
+      if (b === 1) return isSecondHalf ? 40 : 22;
+      if (b === 2) return isSecondHalf ? 115 : 58;
+      if (b === 3) return isSecondHalf ? 156 : 132;
+      return isSecondHalf ? 194 : 170;
+    default:
+      return 30 + ((b - 1) * 20) + (s * 2);
+  }
+}
+
+// Búsqueda curricular en el CNB (DIGECUR) con soporte de Área Curricular
 export function searchCNBCorresponding(
   grado: number, 
   semana: number, 
   bimestre: number, 
-  temaRezagado?: string
+  temaRezagado?: string,
+  areaMateria?: string
 ): CNBItem {
-  const gradoItems = cnbDatabase.filter(c => c.grado === grado);
+  let gradoItems = cnbDatabase.filter(c => c.grado === grado);
+
+  if (areaMateria && areaMateria.trim().length > 0) {
+    const areaLower = areaMateria.toLowerCase();
+    const areaFiltered = gradoItems.filter(c => 
+      c.area_materia.toLowerCase().includes(areaLower) ||
+      (areaLower.includes('social') && c.area_materia.toLowerCase().includes('social')) ||
+      (areaLower.includes('ciencia') && c.area_materia.toLowerCase().includes('ciencia')) ||
+      (areaLower.includes('lengua') && c.area_materia.toLowerCase().includes('lengua')) ||
+      (areaLower.includes('mate') && c.area_materia.toLowerCase().includes('mate'))
+    );
+    if (areaFiltered.length > 0) {
+      gradoItems = areaFiltered;
+    }
+  }
 
   if (gradoItems.length === 0) {
     return {
       grado,
       ciclo: grado <= 3 ? 'primer_ciclo' : 'segundo_ciclo',
-      area_materia: 'Matemáticas',
+      area_materia: areaMateria || 'Matemáticas',
       bloque_bimestre: bimestre,
       semana_sugerida: semana,
       competencia_numero: grado,
-      competencia_descripcion: `Aplica conocimientos y habilidades matemáticas en la resolución de problemas de su entorno comunitario (Grado ${grado}°).`,
+      competencia_descripcion: `Aplica conocimientos y habilidades en situaciones de su entorno comunitario (Grado ${grado}°).`,
       indicador_numero: `${grado}.1.1`,
-      indicador_descripcion: `Opera y aplica conceptos matemáticos con precisión según lineamientos del CNB para ${grado}° Primaria.`,
-      temas_declarativos: ['Operaciones básicas', 'Resolución de problemas contextuales'],
+      indicador_descripcion: `Opera y aplica conceptos con precisión según lineamientos del CNB para ${grado}° Primaria.`,
+      temas_declarativos: ['Aprendizajes fundamentales', 'Resolución de problemas contextuales'],
       criterios_evaluacion: 'Resuelve problemas cotidianos con exactitud.'
     };
   }
@@ -473,25 +530,42 @@ function buildRotationalTimeline(
 
 // Generador de la Guía Pedagógica Unificada con Eje Integrador (Lunes a Jueves + Evaluación de Viernes)
 export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyPlan {
-  const ciclo = params.ciclo || 'segundo_ciclo';
+  const ciclo = params.ciclo || (params.grados?.some(g => g <= 3) ? 'primer_ciclo' : 'segundo_ciclo');
   const grados = params.grados || (ciclo === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3]);
-  const bimestre = params.bimestre || 2;
-  const semana = params.semana || 14;
-  const paginasPorGrado = params.paginasPorGrado || (ciclo === 'segundo_ciclo' ? { 4: 38, 5: 44, 6: 115 } : { 1: 14, 2: 32, 3: 54 });
+  const bimestre = Number(params.bimestre || params.bloque || 1);
+  const semana = Number(params.semana || 3);
+  const areaCurricular = params.area_curricular || params.area || 'Matemáticas';
   const temasRezagados = params.temasRezagados || [];
 
-  const temaGenerador = ciclo === 'segundo_ciclo'
-    ? 'Resolución de problemas con operaciones aritméticas, fracciones y proporcionalidad en la economía comunitaria'
-    : 'Nociones espaciales, conteo con material concreto y adición en situaciones de la vida diaria';
+  // Deducción 100% automática de páginas oficiales MINEDUC sin requerir ingreso manual del docente
+  const paginasPorGrado: Record<number, number> = {};
+  for (const g of grados) {
+    paginasPorGrado[g] = params.paginasPorGrado?.[g] || getDefaultPageForGrade(g, bimestre, semana);
+  }
 
-  const descripcionEje = ciclo === 'segundo_ciclo'
-    ? 'Eje Integrador Multigrado: Los grados abordan situaciones de comercio, cosecha agrícola y cooperativas locales, graduando desde la descomposición posicional (4.°), sumas de fracciones de granos (5.°) hasta regla de tres simple para presupuestos (6.°).'
-    : 'Eje Integrador Multigrado: Los grados interactúan con objetos y alimentos del entorno (elotes, naranjas, pupitres) graduando desde relaciones espaciales (1.°), decenas y adición (2.°) hasta multiplicación con arreglos rectangulares (3.°).';
+  let temaGenerador = '';
+  let descripcionEje = '';
+
+  const areaLower = areaCurricular.toLowerCase();
+  if (areaLower.includes('social') || areaLower.includes('ciencia')) {
+    temaGenerador = 'Ecosistemas comunitarios, conservación de recursos naturales y vida saludable';
+    descripcionEje = 'Eje Integrador Multigrado: Los grados exploran los seres vivos y recursos de la comunidad, graduando desde la observación sensorial del entorno (1.°/2.°), ciclos de vida y plantas medicinales (3.°/4.°), hasta relaciones ecológicas y sostenibilidad comunitaria (5.°/6.°).';
+  } else if (areaLower.includes('lengua') || areaLower.includes('comunic')) {
+    temaGenerador = 'Comprensión lectora, narración comunitaria y producción de textos';
+    descripcionEje = 'Eje Integrador Multigrado: Se articulan lecturas sobre historias y saberes de la aldea, graduando desde la expresión oral y descripción (1.°/2.°), estructura de oraciones y párrafos narrativos (3.°/4.°), hasta ensayos breves y argumentación (5.°/6.°).';
+  } else {
+    temaGenerador = ciclo === 'segundo_ciclo'
+      ? 'Resolución de problemas con operaciones aritméticas, fracciones y proporcionalidad en la economía comunitaria'
+      : 'Nociones espaciales, conteo con material concreto y adición en situaciones de la vida diaria';
+    descripcionEje = ciclo === 'segundo_ciclo'
+      ? 'Eje Integrador Multigrado: Los grados abordan situaciones de comercio, cosecha agrícola y cooperativas locales, graduando desde la descomposición posicional (4.°), sumas de fracciones de granos (5.°) hasta regla de tres simple para presupuestos (6.°).'
+      : 'Eje Integrador Multigrado: Los grados interactúan con objetos y alimentos del entorno (elotes, naranjas, pupitres) graduando desde relaciones espaciales (1.°), decenas y adición (2.°) hasta multiplicación con arreglos rectangulares (3.°).';
+  }
 
   // 1. Alineación CNB (DIGECUR)
   const alineacionCNB: Record<string, AlineacionCNBGrado> = {};
   for (const g of grados) {
-    const cnb = searchCNBCorresponding(g, semana, bimestre);
+    const cnb = searchCNBCorresponding(g, semana, bimestre, undefined, areaCurricular);
     alineacionCNB[`${g}.° Primaria`] = {
       grado: `${g}.° Primaria`,
       competencia: `Competencia ${cnb.competencia_numero}: ${cnb.competencia_descripcion}`,
