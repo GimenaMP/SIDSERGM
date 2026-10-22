@@ -37,46 +37,63 @@ export async function POST(req: NextRequest) {
       }
 
       if (model) {
+        // Armar contexto estricto de Grounding según la metodología de Eje Integrador / Tema Generador
         const groundingContext = {
-          bimestre: basePlan.bimestre,
-          semana: basePlan.semana,
-          grados: basePlan.grados,
+          semana: `Semana ${basePlan.semana}`,
+          bimestre: `Bimestre ${basePlan.bimestre}`,
+          area_curricular: basePlan.area_curricular,
+          grados_atendidos: basePlan.grados.map(g => `${g}.° Primaria`),
+          tema_generador_comun: basePlan.tema_generador_comun,
+          descripcion_eje_integrador: basePlan.descripcion_eje_integrador,
+          alineacion_cnb: basePlan.alineacion_cnb,
           temasRezagados: basePlan.temasRezagados,
-          dias: Object.keys(basePlan.dias).map(d => ({
-            dia: d,
-            enfoque: basePlan.dias[d as keyof typeof basePlan.dias].enfoqueDidactico,
-            grados: basePlan.dias[d as keyof typeof basePlan.dias].gradosSincronizados.map(g => ({
-              grado: g.grado,
-              libro: g.libroTitulo,
-              pagina: g.numeroPagina,
-              competenciaCNB: g.cnbCompetencia,
-              indicadorCNB: g.cnbIndicador,
-              tema: g.tema,
-              ejercicios: g.ejerciciosLiterales
-            }))
-          }))
+          dias_plan: Object.keys(basePlan.dias).map(d => {
+            const dp = basePlan.dias[d as keyof typeof basePlan.dias];
+            return {
+              dia: d,
+              fase_inicio_comun: dp.fase_inicio_comun,
+              fase_cierre_comun: dp.fase_cierre_comun,
+              grados: dp.gradosSincronizados.map(g => ({
+                grado: g.grado,
+                modalidad: g.modalidad,
+                actividad_docente: g.actividadDocente,
+                actividad_estudiante: g.actividadEstudiante,
+                libro_titulo: g.libroTitulo,
+                numero_pagina: g.numeroPagina,
+                indicador: g.cnbIndicador,
+                ejercicios: g.ejerciciosLiterales
+              }))
+            };
+          }),
+          evaluacion_viernes: basePlan.evaluacion_viernes
         };
 
         const prompt = `Actúas como el Agente Pedagógico Especialista de la Plataforma SIDSER para Escuelas Primarias Rurales Multigrado de Guatemala.
-Tu objetivo es enriquecer las recomendaciones metodológicas de una planificación simultánea unificada de Lunes a Jueves.
+Tu objetivo es estructurar la planificación pedagógica multigrado bajo la metodología oficial del CNB (DIGECUR): **Eje Integrador / Tema Generador Común** y alternancia de **Atención Directa vs Trabajo Autónomo con Guía**.
 
 REGLAS DE ORO DE CERO ALUCINACIÓN (STRICT GROUNDING):
-1. DEBES CONSERVAR exactamente los libros oficiales del MINEDUC y las páginas físicas indicadas en el contexto. No inventes páginas ni libros diferentes.
-2. DEBES CONSERVAR las competencias e indicadores de logro del CNB (DIGECUR) tal cual fueron recuperados de la base de datos.
-3. Si el profesor indicó temas rezagados (${basePlan.temasRezagados.join(', ') || 'ninguno'}), enfatiza cómo repasarlos durante los primeros 10 minutos sin retrasar el avance del nuevo tema.
-4. Responde con breves sugerencias pedagógicas para la alternancia de 45 minutos.
+1. **Tema Generador Común:** Mantén el tema generador común (${basePlan.tema_generador_comun}) y gradúa la complejidad por grado.
+2. **Conservación de Libros y Páginas:** Conserva exactamente los libros oficiales del MINEDUC y las páginas físicas indicadas en el contexto RAG. No inventes páginas ni libros ficticios.
+3. **Alineación CNB:** Conserva las competencias e indicadores de logro del CNB (DIGECUR) tal cual fueron recuperados.
+4. **Estructura Diaria (Lunes a Jueves):**
+   - Fase de Inicio (10–15 min - Común): Activación motivacional grupal para todos los grados.
+   - Fase de Desarrollo (30–40 min - Diferenciado por Grado y Rotativo): Mientras un grado está en "Atención Directa Docente", los demás están en "Trabajo Autónomo con Guía" o "Trabajo Cooperativo / Práctica".
+   - Fase de Cierre (10 min - Común): Plenaria corta para compartir estrategias.
+5. **Viernes (Evaluación del Alcance de la Competencia):**
+   - Hoja de evaluación individual por grado para verificar el indicador trabajado de lunes a jueves.
+   - Lista de cotejo con 3 criterios evaluables claros.
 
 Contexto Fáctico Recuperado del CNB y MINEDUC:
 ${JSON.stringify(groundingContext, null, 2)}
 
 Devuelve únicamente un objeto JSON con el siguiente formato:
 {
-  "observacionesPedagogicas": "Resumen de la estrategia didáctica para atender simultáneamente los grados",
-  "recomendacionRezagados": "Cómo abordar los temas pendientes sin alterar el ritmo",
-  "tipEvaluacionViernes": "Recomendación para verificar los aprendizajes en la prueba diagnóstica del viernes"
+  "tema_generador_comun": "${basePlan.tema_generador_comun}",
+  "observacionesPedagogicas": "Estrategia didáctica para articular los grados en torno al tema común",
+  "recomendacionRezagados": "Cómo nivelar temas pendientes (${basePlan.temasRezagados.join(', ') || 'ninguno'}) en la fase de inicio o desarrollo",
+  "tipEvaluacionViernes": "Consejo para la aplicación de la lista de cotejo y hoja de trabajo del viernes"
 }`;
 
-        // Timeout de 6 segundos para Gemini
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout de consulta Gemini (usando RAG local)')), 6000)
         );
@@ -85,14 +102,13 @@ Devuelve únicamente un objeto JSON con el siguiente formato:
         const result: any = await Promise.race([geminiPromise, timeoutPromise]);
         const responseText = result.response.text();
 
-        // Limpiar backticks si vienen en markdown
         const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         try {
           const aiEnrichment = JSON.parse(cleanedJson);
           return NextResponse.json({
             success: true,
             fuente: 'gemini_rag_grounded',
-            mensaje: 'Planificación enriquecida con éxito mediante Google Gemini y validada contra la base curricular CNB/MINEDUC.',
+            mensaje: 'Planificación enriquecida con éxito mediante Google Gemini (Metodología de Eje Integrador CNB/MINEDUC).',
             enriquecimientoAI: aiEnrichment,
             plan: {
               ...basePlan,
@@ -100,7 +116,6 @@ Devuelve únicamente un objeto JSON con el siguiente formato:
             }
           });
         } catch {
-          // Si el texto de Gemini no era JSON puro, devolver el plan base con nota
           return NextResponse.json({
             success: true,
             fuente: 'gemini_rag_grounded',
@@ -114,14 +129,14 @@ Devuelve únicamente un objeto JSON con el siguiente formato:
         }
       }
     } catch (geminiError: any) {
-      console.warn('Aviso: Gemini API no disponible en este instante (fallback a RAG Local):', geminiError.message);
+      console.warn('Aviso: Gemini API en fallback a RAG Local:', geminiError.message);
     }
 
     // Fallback fáctico garantizado sin alucinaciones
     return NextResponse.json({
       success: true,
       fuente: 'rag_vectorial_local',
-      mensaje: 'Planificación ensamblada con éxito usando el motor RAG fáctico local (CNB DIGECUR + Textos Oficiales MINEDUC).',
+      mensaje: 'Planificación ensamblada con éxito usando el motor RAG fáctico local (Eje Integrador CNB DIGECUR + Textos Oficiales MINEDUC).',
       plan: basePlan
     });
 

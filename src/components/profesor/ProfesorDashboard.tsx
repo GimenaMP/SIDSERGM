@@ -42,8 +42,12 @@ import {
   DiaSemana, 
   GradeSchedule, 
   TimeAllocation,
-  DayPlan
+  DayPlan,
+  EvaluacionGradoViernes,
+  AlineacionCNBGrado
 } from '../../utils/ragEngine';
+
+export type DiaNavegacion = DiaSemana | 'Viernes';
 
 export interface ProfesorDashboardProps {
   onLogout: () => void;
@@ -182,13 +186,34 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
     'Descomposición posicional y valor relativo'
   ]);
   const [nuevoTemaRezagado, setNuevoTemaRezagado] = useState<string>('');
-  const [selectedDia, setSelectedDia] = useState<DiaSemana>('Lunes');
+  const [selectedDia, setSelectedDia] = useState<DiaNavegacion>('Lunes');
   const [viewMode, setViewMode] = useState<'dia' | 'semana_completa'>('dia');
   const [showConfig, setShowConfig] = useState<boolean>(true);
   const [isGeneratingRAG, setIsGeneratingRAG] = useState<boolean>(false);
   const [ragStep, setRagStep] = useState<number>(1);
   const [ragMessage, setRagMessage] = useState<string>('');
   const [aiEnrichment, setAiEnrichment] = useState<any>(null);
+  const [cotejoEstudiantes, setCotejoEstudiantes] = useState<Record<string, boolean[]>>({
+    '1': [true, true, true],
+    '2': [true, true, false],
+    '3': [true, false, true],
+    '4': [true, true, true],
+    '5': [true, true, true],
+    '6': [false, true, false],
+    '7': [true, true, true],
+    '8': [true, true, false],
+    '9': [true, false, false],
+  });
+
+  const toggleCriterioEstudiante = (estudianteId: string, critIndex: number) => {
+    playCartoonPopSound();
+    setCotejoEstudiantes(prev => {
+      const current = prev[estudianteId] ? [...prev[estudianteId]] : [false, false, false];
+      current[critIndex] = !current[critIndex];
+      return { ...prev, [estudianteId]: current };
+    });
+  };
+
   const [unifiedPlan, setUnifiedPlan] = useState<UnifiedWeeklyPlan>(() => 
     generateUnifiedRAGPlan({
       ciclo: 'segundo_ciclo',
@@ -900,19 +925,69 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
               )}
 
               {/* 
-                BARRA DE DÍAS: LUNES A JUEVES + VISTA SEMANA COMPLETA
+                ============================================================
+                1. EJE INTEGRADOR / TEMA GENERADOR COMÚN (METODOLOGÍA CNB MULTIGRADO)
+                ============================================================
+              */}
+              <div className="bg-gradient-to-r from-amber-500 via-[#FF5A5F] to-[#0077B6] p-0.5 rounded-3xl shadow-md">
+                <div className="bg-white rounded-[22px] p-5 sm:p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full border border-amber-300">
+                        🎯 Eje Integrador Multigrado
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        Área Curricular: {unifiedPlan.area_curricular || 'Matemáticas'} • Metodología CNB
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-slate-400">
+                      Bimestre {unifiedPlan.bimestre} • Semana {unifiedPlan.semana}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-snug">
+                      Tema Generador Común: "{unifiedPlan.tema_generador_comun}"
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      {unifiedPlan.descripcion_eje_integrador}
+                    </p>
+                  </div>
+
+                  {/* Graduación de la Complejidad por Grado (CNB DIGECUR) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                    {Object.values(unifiedPlan.alineacion_cnb || {}).map((al, alIdx) => (
+                      <div key={alIdx} className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-slate-900 text-xs">{al.grado}</span>
+                          <span className="text-[10px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded-full">
+                            CNB DIGECUR
+                          </span>
+                        </div>
+                        <p className="text-slate-700 font-medium text-[11px] leading-tight line-clamp-2" title={al.competencia}>
+                          {al.competencia}
+                        </p>
+                        <p className="text-sky-900 font-bold text-[10px] pt-1 border-t border-slate-200">
+                          {al.indicador_logro}
+                        </p>
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          Contenido: {al.contenido_declarativo}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 
+                ============================================================
+                2. BARRA DE NAVEGACIÓN: LUNES A JUEVES + VIERNES (EVALUACIÓN CNB)
+                ============================================================
               */}
               <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center space-x-1">
+                <div className="flex flex-wrap items-center gap-1">
                   {(['Lunes', 'Martes', 'Miércoles', 'Jueves'] as DiaSemana[]).map((dia) => {
                     const isActive = selectedDia === dia && viewMode === 'dia';
-                    const colors: Record<DiaSemana, string> = {
-                      'Lunes': 'border-emerald-400 text-emerald-800 bg-emerald-50',
-                      'Martes': 'border-amber-400 text-amber-800 bg-amber-50',
-                      'Miércoles': 'border-sky-400 text-sky-800 bg-sky-50',
-                      'Jueves': 'border-purple-400 text-purple-800 bg-purple-50',
-                    };
-
                     return (
                       <button
                         key={dia}
@@ -932,6 +1007,25 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                       </button>
                     );
                   })}
+
+                  {/* Pestaña Especial de Viernes (Evaluación del Alcance de la Competencia) */}
+                  <button
+                    onClick={() => {
+                      playCartoonPopSound();
+                      setSelectedDia('Viernes');
+                      setViewMode('dia');
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 ${
+                      selectedDia === 'Viernes' && viewMode === 'dia'
+                        ? 'bg-rose-600 text-white shadow-sm scale-105'
+                        : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
+                    }`}
+                  >
+                    <span>🔴 Viernes (Evaluación CNB)</span>
+                    {selectedDia === 'Viernes' && viewMode === 'dia' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-pulse" />
+                    )}
+                  </button>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -946,7 +1040,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                         : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                     }`}
                   >
-                    📑 {viewMode === 'semana_completa' ? 'Ver Día Individual' : 'Ver Semana Completa (L-J)'}
+                    📑 {viewMode === 'semana_completa' ? 'Ver Día Individual' : 'Ver Semana Completa (L-V)'}
                   </button>
 
                   <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
@@ -956,114 +1050,93 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
               </div>
 
               {/* 
-                ENFOQUE PEDAGÓGICO DEL DÍA Y RECOMENDACIÓN DE GEMINI AI
+                ============================================================
+                3. VISTA DIARIA: LUNES A JUEVES (CICLO DIARIO EN 3 FASES)
+                ============================================================
               */}
-              {viewMode === 'dia' && (
-                <div className="bg-gradient-to-r from-sky-50 via-indigo-50 to-purple-50 border border-sky-200/80 rounded-3xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-sky-600 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
-                        Jornada de {selectedDia}
-                      </span>
-                      <span className="text-xs font-bold text-slate-500">
-                        {unifiedPlan.dias[selectedDia]?.horarioBloque || '08:00 - 08:45 hrs'} (45 Minutos)
-                      </span>
+              {selectedDia !== 'Viernes' && (
+                <div className="space-y-6">
+                  {/* FASE 1: INICIO COMÚN (10–15 MINUTOS) */}
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-3xl p-5 shadow-sm">
+                    <div className="flex items-start space-x-3.5">
+                      <div className="w-9 h-9 rounded-2xl bg-amber-400 text-amber-950 font-black text-lg flex items-center justify-center shrink-0 shadow-sm">
+                        🌅
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase text-amber-900 tracking-wider">
+                            Fase 1: Inicio Común (10 – 15 Minutos - Todos los Grados Juntos)
+                          </span>
+                          <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                            Activación de Conocimientos Previos
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-black text-amber-950">
+                          Dinámica Motivacional: {unifiedPlan.tema_generador_comun}
+                        </h4>
+                        <p className="text-xs text-amber-900/90 leading-relaxed font-medium">
+                          {unifiedPlan.dias[selectedDia as DiaSemana]?.fase_inicio_comun}
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-base font-black text-slate-900">
-                      {unifiedPlan.dias[selectedDia]?.enfoqueDidactico}
-                    </h3>
                   </div>
 
-                  {aiEnrichment && (
-                    <div className="bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl border border-indigo-200 text-xs max-w-md shadow-xs">
-                      <p className="text-[10px] font-black uppercase text-purple-700 flex items-center space-x-1 mb-1">
-                        <Lightbulb className="w-3 h-3 text-purple-600" />
-                        <span>Sugerencia Metodológica Gemini RAG</span>
-                      </p>
-                      <p className="text-slate-700 text-[11px] leading-snug">
-                        {aiEnrichment.observacionesPedagogicas || aiEnrichment.recomendacionRezagados}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 
-                LÍNEA DE TIEMPO VISUAL: DISTRIBUCIÓN DE TIEMPOS DE REFERENCIA DEL DOCENTE (45 MINUTOS)
-              */}
-              {viewMode === 'dia' && (
-                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-md">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-amber-400" />
-                      <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
-                        Tiempos de Referencia Docente en el Bloque de {selectedDia} (45 Minutos)
-                      </h3>
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
-                      Alternancia Rotativa Sugerida
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                      <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                        <span>Fase 1: 00 - 15 min</span>
-                        <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
-                          Atención Directa
-                        </span>
-                      </div>
-                      <p className="text-white/90 text-[11px] font-medium leading-relaxed">
-                        Explicación directa en pizarra con el grado asignado; los otros grados inician con lectura silenciosa guiada o ejercicios preparatorios.
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                      <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                        <span>Fase 2: 15 - 30 min</span>
-                        <span className="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                          Rotación Intermedia
-                        </span>
-                      </div>
-                      <p className="text-white/90 text-[11px] font-medium leading-relaxed">
-                        El docente se desplaza al segundo grado para modelar con ejemplos prácticos; el primer grado resuelve ejercicios en su cuaderno.
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
-                      <div className="flex items-center justify-between font-black text-amber-300 mb-1">
-                        <span>Fase 3: 30 - 45 min</span>
-                        <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                          Cierre y Síntesis
-                        </span>
-                      </div>
-                      <p className="text-white/90 text-[11px] font-medium leading-relaxed">
-                        Atención directa al tercer grado y verificación rápida de dudas en plenario antes de asignar la lectura para casa.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 
-                GUÍA UNIFICADA: COLUMNAS SIMULTÁNEAS SINCRONIZADAS POR GRADO (VISTA DÍA O SEMANA COMPLETA)
-              */}
-              {(viewMode === 'dia' ? [selectedDia] : ['Lunes', 'Martes', 'Miércoles', 'Jueves'] as DiaSemana[]).map((diaRender) => (
-                <div key={diaRender} className="space-y-4">
-                  {viewMode === 'semana_completa' && (
-                    <div className="pt-4 border-t-2 border-slate-200 flex items-center justify-between">
+                  {/* LÍNEA DE TIEMPO ROTATIVA DEL DOCENTE EN EL PERIODO (30–40 MINUTOS) */}
+                  <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-md">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <span className="w-3 h-3 rounded-full bg-[#FF5A5F]" />
-                        <h3 className="text-lg font-black text-slate-900 capitalize">
-                          Guía de {diaRender} — {unifiedPlan.dias[diaRender]?.enfoqueDidactico}
+                        <Clock className="w-4 h-4 text-amber-400" />
+                        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
+                          Fase 2: Desarrollo Diferenciado y Rotativo (30 – 40 Minutos)
                         </h3>
                       </div>
-                      <span className="text-xs font-bold text-slate-500">45 Minutos</span>
+                      <span className="text-[11px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
+                        Alternancia Simultánea
+                      </span>
                     </div>
-                  )}
 
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                        <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                          <span>Bloque 1: 00 - 15 min</span>
+                          <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            Atención Directa
+                          </span>
+                        </div>
+                        <p className="text-white/90 text-[11px] font-medium leading-relaxed">
+                          El maestro explica y modela en pizarra con el grado asignado; los demás grados inician con lectura silenciosa o resolución autónoma en sus libros físicos.
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                        <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                          <span>Bloque 2: 15 - 30 min</span>
+                          <span className="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            Rotación Docente
+                          </span>
+                        </div>
+                        <p className="text-white/90 text-[11px] font-medium leading-relaxed">
+                          El maestro rota la atención directa al segundo grado; el primer grado consolida ejercicios en su cuaderno y el tercer grado practica en parejas.
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                        <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                          <span>Bloque 3: 30 - 45 min</span>
+                          <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            Supervisión y Cierre
+                          </span>
+                        </div>
+                        <p className="text-white/90 text-[11px] font-medium leading-relaxed">
+                          Atención al tercer grado, verificación de dudas individuales y revisión de avance antes de pasar a la plenaria comunitaria de cierre.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FASE 2: COLUMNAS DE DESARROLLO DIFERENCIADO POR GRADO */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    {(unifiedPlan.dias[diaRender]?.gradosSincronizados || []).map((item, idx) => (
+                    {(unifiedPlan.dias[selectedDia as DiaSemana]?.gradosSincronizados || []).map((item, idx) => (
                       <div 
                         key={idx}
                         className={`bg-white rounded-3xl p-5 sm:p-6 border-2 transition-all flex flex-col justify-between shadow-sm ${
@@ -1071,24 +1144,37 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                         }`}
                       >
                         <div className="space-y-4">
-                          {/* Encabezado del Grado y Libro */}
+                          {/* Grado, Modalidad y Página de Guía */}
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-base font-black text-slate-900 bg-slate-100 px-3.5 py-1.5 rounded-2xl">
                                 {item.grado}
                               </span>
 
-                              <div className="flex items-center space-x-1.5">
-                                {item.esTemaRezagado && (
-                                  <span className="bg-rose-100 text-rose-900 text-[10px] font-black px-2 py-0.5 rounded-lg border border-rose-300">
-                                    Refuerzo Rezagado
-                                  </span>
-                                )}
-                                <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
-                                  <span>📖</span>
-                                  <span>Pág. Física {item.numeroPagina}</span>
+                              <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
+                                <span>📖</span>
+                                <span>Pág. Física {item.numeroPagina}</span>
+                              </span>
+                            </div>
+
+                            {/* Modalidad Pedagógica del Día */}
+                            <div className="mb-2">
+                              {item.modalidad === 'Atención Directa Docente' ? (
+                                <span className="bg-rose-100 text-rose-900 border border-rose-300 text-xs font-black px-3 py-1 rounded-full inline-flex items-center space-x-1.5">
+                                  <span>👨‍🏫</span>
+                                  <span>Atención Directa Docente</span>
                                 </span>
-                              </div>
+                              ) : item.modalidad === 'Trabajo Autónomo con Guía' ? (
+                                <span className="bg-teal-100 text-teal-900 border border-teal-300 text-xs font-black px-3 py-1 rounded-full inline-flex items-center space-x-1.5">
+                                  <span>📖</span>
+                                  <span>Trabajo Autónomo con Guía</span>
+                                </span>
+                              ) : (
+                                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black px-3 py-1 rounded-full inline-flex items-center space-x-1.5">
+                                  <span>👥</span>
+                                  <span>Trabajo Cooperativo / Práctica</span>
+                                </span>
+                              )}
                             </div>
 
                             <h3 className="font-black text-base text-slate-900 leading-snug">
@@ -1099,30 +1185,20 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                             </p>
                           </div>
 
-                          {/* Tiempos de Referencia Específicos del Grado */}
+                          {/* Actividad Específica del Grado según la Modalidad */}
                           <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center space-x-1">
-                              <Clock className="w-3 h-3 text-slate-500" />
-                              <span>Tiempos de Referencia Docente ({item.duracionTotal})</span>
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                              {item.modalidad === 'Atención Directa Docente' ? 'Actividad del Maestro en Pizarra:' : 'Actividad del Estudiante en Cuaderno/Libro:'}
                             </p>
-                            {item.tiemposReferencia.map((t, tIdx) => (
-                              <div key={tIdx} className="flex items-start space-x-2 text-[11px] leading-tight">
-                                <span className={`font-mono font-black shrink-0 px-1.5 py-0.5 rounded text-[10px] ${
-                                  t.rolDocente === 'atencion_directa' 
-                                    ? 'bg-rose-100 text-rose-800 font-bold' 
-                                    : 'bg-slate-200 text-slate-700'
-                                }`}>
-                                  {t.rango}
-                                </span>
-                                <span className="text-slate-700">{t.descripcion}</span>
-                              </div>
-                            ))}
+                            <p className="text-slate-800 font-semibold leading-relaxed">
+                              {item.modalidad === 'Atención Directa Docente' ? item.actividadDocente : item.actividadEstudiante}
+                            </p>
                           </div>
 
-                          {/* Objetivo y Competencia según el CNB (DIGECUR) */}
-                          <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-2xl text-xs space-y-1">
+                          {/* Objetivo CNB DIGECUR */}
+                          <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-2xl text-xs space-y-1">
                             <p className="text-[10px] font-black uppercase text-sky-800 tracking-wider">
-                              Objetivo Pedagógico según CNB (DIGECUR)
+                              Alineación CNB (DIGECUR)
                             </p>
                             <p className="text-sky-950 font-bold text-[11px] leading-snug">
                               {item.cnbCompetencia}
@@ -1132,17 +1208,15 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                             </p>
                           </div>
 
-                          {/* 
-                            EJERCICIOS LITERALES TAL CUAL ESTÁN EN LA GUÍA DEL MINEDUC
-                          */}
+                          {/* Ejercicios Literales de la Guía Oficial */}
                           <div className="p-4 bg-amber-50/40 border-2 border-amber-300 rounded-2xl space-y-2">
                             <div className="flex items-center justify-between">
                               <p className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
                                 <span>✏️</span>
-                                <span>Ejercicios Literales de la Guía Oficial</span>
+                                <span>Ejercicios Literales del Libro</span>
                               </p>
                               <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
-                                Texto Exacto del Libro
+                                Pág. {item.numeroPagina}
                               </span>
                             </div>
 
@@ -1155,10 +1229,10 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                             </div>
                           </div>
 
-                          {/* Sugerencia de Aprendizaje en el Hogar */}
+                          {/* Autoaprendizaje en el Hogar */}
                           <div className="p-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs">
-                            <p className="text-[10px] font-black uppercase text-purple-800 tracking-wider mb-1">
-                              🏠 Autoaprendizaje y Lectura en Casa
+                            <p className="text-[10px] font-black uppercase text-purple-800 tracking-wider mb-0.5">
+                              🏠 Tarea y Autoaprendizaje en Casa
                             </p>
                             <p className="text-purple-950 font-medium text-[11px] leading-snug">
                               {item.tareaCasa}
@@ -1169,7 +1243,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                         {/* Botón de Checklist */}
                         <div className="mt-5 pt-4 border-t border-slate-100">
                           <button
-                            onClick={() => toggleScheduleCompletado(diaRender, idx)}
+                            onClick={() => toggleScheduleCompletado(selectedDia as DiaSemana, idx)}
                             className={`w-full py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
                               item.completado
                                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
@@ -1177,14 +1251,241 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                             }`}
                           >
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>{item.completado ? `✓ Tema Impartido en ${diaRender}` : `Marcar como Impartido (${diaRender})`}</span>
+                            <span>{item.completado ? `✓ Tema Impartido en ${selectedDia}` : `Marcar como Impartido (${selectedDia})`}</span>
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* FASE 3: CIERRE COMÚN (10 MINUTOS) */}
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-3xl p-5 shadow-sm">
+                    <div className="flex items-start space-x-3.5">
+                      <div className="w-9 h-9 rounded-2xl bg-emerald-500 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-sm">
+                        🌆
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase text-emerald-900 tracking-wider">
+                            Fase 3: Cierre Común (10 Minutos - Todos los Grados Juntos)
+                          </span>
+                          <span className="text-[10px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">
+                            Socialización y Síntesis
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-black text-emerald-950">
+                          Puesta en Común y Verificación de Logros
+                        </h4>
+                        <p className="text-xs text-emerald-900/90 leading-relaxed font-medium">
+                          {unifiedPlan.dias[selectedDia as DiaSemana]?.fase_cierre_comun}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {/* 
+                ============================================================
+                4. VISTA DE VIERNES: EVALUACIÓN DEL ALCANCE DE LA COMPETENCIA
+                ============================================================
+              */}
+              {selectedDia === 'Viernes' && (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* Banner de Jornada de Evaluación de Viernes */}
+                  <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-indigo-900 text-white rounded-3xl p-6 sm:p-7 shadow-xl">
+                    <div className="max-w-3xl space-y-2">
+                      <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-yellow-300">
+                        <span>📝</span>
+                        <span>Jornada de Evaluación Formativa y Cuantitativa (Viernes)</span>
+                      </div>
+                      <h3 className="text-2xl font-black tracking-tight leading-tight">
+                        Evaluación del Alcance de la Competencia por Grado
+                      </h3>
+                      <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
+                        El Viernes se evalúa si cada estudiante alcanzó el <strong>indicador de logro del CNB</strong> trabajado durante la semana bajo el tema generador común. Se genera la <strong>hoja de trabajo individual</strong> y el <strong>instrumento de registro (lista de cotejo con 3 criterios observables)</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3 Columnas de Evaluación: Una por Grado */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {Object.values(unifiedPlan.evaluacion_viernes || {}).map((ev, evIdx) => {
+                      const gradoEstudiantes = students.filter(s => s.grado.includes(String(ev.gradoNumero)));
+                      return (
+                        <div key={evIdx} className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-rose-200 shadow-sm space-y-5 flex flex-col justify-between">
+                          <div className="space-y-4">
+                            {/* Grado y Título */}
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                              <span className="text-base font-black text-slate-900 bg-rose-50 text-rose-900 border border-rose-200 px-3 py-1 rounded-2xl">
+                                {ev.grado}
+                              </span>
+                              <span className="text-xs font-bold text-slate-500">
+                                Prueba Individual
+                              </span>
+                            </div>
+
+                            {/* Indicador a Evaluar */}
+                            <div className="p-3 bg-sky-50 border border-sky-200 rounded-2xl text-xs space-y-1">
+                              <p className="text-[10px] font-black uppercase text-sky-800 tracking-wider">
+                                Indicador CNB a Evaluar:
+                              </p>
+                              <p className="text-sky-950 font-bold text-[11px] leading-snug">
+                                {ev.indicador_a_evaluar}
+                              </p>
+                            </div>
+
+                            {/* Hoja de Trabajo / Test Individual */}
+                            <div className="p-4 bg-amber-50/50 border border-amber-300 rounded-2xl space-y-2">
+                              <p className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
+                                <span>📄</span>
+                                <span>Hoja de Evaluación Individual (3 Ítems)</span>
+                              </p>
+                              <p className="text-[11px] text-amber-950 font-semibold">
+                                {ev.descripcion_test}
+                              </p>
+                              <div className="bg-white p-3 rounded-xl border border-amber-200 font-mono text-xs text-slate-800 space-y-1.5 shadow-inner">
+                                {ev.hoja_trabajo_ejercicios.map((ej, ejIdx) => (
+                                  <p key={ejIdx} className="leading-relaxed">
+                                    <strong>{ej.split(':')[0]}:</strong>{ej.split(':')[1]}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Instrumento de Registro: Lista de Cotejo */}
+                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-black uppercase text-slate-700 tracking-wider flex items-center space-x-1">
+                                  <span>📋</span>
+                                  <span>Lista de Cotejo (3 Criterios)</span>
+                                </p>
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                  Registro Oficial
+                                </span>
+                              </div>
+
+                              {/* 3 Criterios de Evaluación */}
+                              <div className="space-y-1 text-[11px] text-slate-700 font-medium">
+                                {ev.criterios_lista_cotejo.map((crit, cIdx) => (
+                                  <div key={cIdx} className="p-1.5 rounded-lg bg-white border border-slate-200 flex items-start space-x-1.5">
+                                    <span className="font-bold text-slate-900 shrink-0">{cIdx + 1}.</span>
+                                    <span>{crit}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Tabla de Estudiantes del Grado con Casillas Interactivas */}
+                              <div className="pt-2">
+                                <p className="text-[10px] font-black uppercase text-slate-500 mb-1.5">
+                                  Calificación de Alumnos del Grado:
+                                </p>
+                                <div className="space-y-1.5">
+                                  {gradoEstudiantes.map((est) => {
+                                    const checks = cotejoEstudiantes[est.id] || [true, true, true];
+                                    const count = checks.filter(Boolean).length;
+                                    return (
+                                      <div key={est.id} className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                                        <div className="truncate pr-2">
+                                          <p className="font-bold text-slate-800 text-[11px] truncate">{est.nombre}</p>
+                                          <p className="text-[10px] text-slate-400">
+                                            {count === 3 ? '🟢 Logrado' : count === 2 ? '🟡 En Proceso' : '🔴 Necesita Refuerzo'}
+                                          </p>
+                                        </div>
+
+                                        <div className="flex items-center space-x-1 shrink-0">
+                                          {[0, 1, 2].map((cIdx) => (
+                                            <button
+                                              key={cIdx}
+                                              onClick={() => toggleCriterioEstudiante(est.id, cIdx)}
+                                              title={`Criterio ${cIdx + 1}`}
+                                              className={`w-6 h-6 rounded-lg text-xs font-black transition-all flex items-center justify-center ${
+                                                checks[cIdx]
+                                                  ? 'bg-emerald-500 text-white shadow-xs'
+                                                  : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                              }`}
+                                            >
+                                              {checks[cIdx] ? '✓' : '—'}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Botón de Impresión de la Prueba de Viernes */}
+                          <div className="pt-2">
+                            <button
+                              onClick={() => { playCartoonRisingSound(); window.print(); }}
+                              className="w-full py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center space-x-2 transition-all shadow-xs"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Imprimir Prueba y Lista de Cotejo</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 
+                ============================================================
+                5. VISTA SEMANA COMPLETA (LUNES A VIERNES)
+                ============================================================
+              */}
+              {viewMode === 'semana_completa' && (
+                <div className="space-y-8 pt-4">
+                  {(['Lunes', 'Martes', 'Miércoles', 'Jueves'] as DiaSemana[]).map((diaRender) => (
+                    <div key={diaRender} className="space-y-4 pt-4 border-t-2 border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-[#FF5A5F]" />
+                          <h3 className="text-lg font-black text-slate-900 capitalize">
+                            Jornada de {diaRender} — {unifiedPlan.dias[diaRender]?.enfoqueDidactico}
+                          </h3>
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">45 Minutos</span>
+                      </div>
+
+                      <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-2xl text-xs">
+                        <strong className="text-amber-900 font-black">🌅 Fase de Inicio Común:</strong>{' '}
+                        <span className="text-amber-950 font-medium">{unifiedPlan.dias[diaRender]?.fase_inicio_comun}</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {(unifiedPlan.dias[diaRender]?.gradosSincronizados || []).map((item, idx) => (
+                          <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="font-black text-slate-900 text-xs">{item.grado}</span>
+                              <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-200">
+                                Pág. {item.numeroPagina}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 block">
+                              {item.modalidad}
+                            </span>
+                            <p className="text-xs font-bold text-slate-800">{item.tema}</p>
+                            <p className="text-[11px] text-slate-600 leading-snug">
+                              {item.modalidad === 'Atención Directa Docente' ? item.actividadDocente : item.actividadEstudiante}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-xs">
+                        <strong className="text-emerald-900 font-black">🌆 Fase de Cierre Común:</strong>{' '}
+                        <span className="text-emerald-950 font-medium">{unifiedPlan.dias[diaRender]?.fase_cierre_comun}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
