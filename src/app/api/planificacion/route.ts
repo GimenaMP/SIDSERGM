@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateUnifiedRAGPlan, searchCNBCorresponding, searchMineducExercises, RAGRequestParams } from '@/utils/ragEngine';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
+import cnbDatabaseRaw from '../../../../data/cnb_processed.json';
+import mineducDatabaseRaw from '../../../../data/mineduc_ejercicios.json';
 
-// Inicializar cliente Supabase opcional si existen variables de entorno
+// Inicializar cliente Supabase opcional
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) 
@@ -11,87 +13,39 @@ const supabase = (supabaseUrl && supabaseKey && !supabaseUrl.includes('placehold
   : null;
 
 const SYSTEM_PROMPT = `
-Eres un experto metodólogo pedagógico en el Currículum Nacional Base (CNB) de Guatemala y educación multigrado en primaria. Generas planificaciones semanales (lunes a viernes) para aulas con 2 o 3 grados simultáneos.
+Eres un experto metodólogo pedagógico en el Currículum Nacional Base (CNB) de Guatemala y educación multigrado en primaria (DIGECUR / MINEDUC).
+Tu misión es formular la planificación semanal completa de lunes a jueves con evaluación de viernes para aulas multigrado donde el maestro atiende simultáneamente varios grados.
 
 REGLAS PEDAGÓGICAS OBLIGATORIAS:
-1. TEMA GENERADOR COMÚN: Articula el contenido bajo un mismo eje integrador.
-2. ALTERNANCIA MULTIGRADO ESTRICTA: Mientras un grado recibe "Atención Directa Docente", los otros grados DEBEN estar en "Trabajo Autónomo con Guía". En el siguiente período se invierten los roles.
-3. HORARIO DIARIO (08:00 a 12:00):
-   - BLOQUE 1 (08:00 - 10:00): 08:00-08:15 Inicio común | 08:15-09:05 Período 1 | 09:05-09:55 Período 2 | 09:55-10:00 Alistado.
-   - RECESO (10:00 - 10:30): Sin actividades académicas.
-   - BLOQUE 2 (10:30 - 12:00): 10:30-11:15 Período 3 | 11:15-11:50 Período 4 | 11:50-12:00 Cierre diario.
-4. ESTRUCTURA SEMANAL:
-   - LUNES A JUEVES: Clases, rotaciones y trabajo con guías de estudio.
-   - VIERNES: Test semanal por grado (medir indicador) e instrumento de registro (lista de cotejo de 3 criterios).
-5. EJERCICIOS REDACTADOS: Incluye la referencia Y la REDACCIÓN COMPLETA del problema/ejercicio.
+1. EJE TEMÁTICO INTEGRADOR: Identifica las COMPETENCIAS SIMILARES O ANÁLOGAS entre los grados seleccionados en las diferentes áreas curriculares para articular la clase bajo un mismo tema generador.
+2. INCORPORACIÓN DE ÁREAS CURRICULARES: Integra las áreas curriculares correspondientes a los grados (Matemáticas, Comunicación y Lenguaje, Medio Social y Natural / Ciencias, Formación Ciudadana / Ciencias Sociales) a lo largo de la semana.
+3. ALTERNANCIA MULTIGRADO ESTRICTA EN CADA JORNADA (08:00 a 12:00):
+   - 08:00 - 08:15: Fase de Inicio Común (todos los grados juntos, activación de presaberes sobre el tema común).
+   - 08:15 - 09:05: Período 1. Mientras un grado está en "Atención Directa Docente" (modelado en pizarra), los demás están en "Trabajo Autónomo con Guía".
+   - 09:05 - 09:55: Período 2 (Inversión Estricta de Roles). El maestro rota la atención directa al siguiente grado, mientras el grado anterior trabaja autónomamente en cuaderno.
+   - 09:55 - 10:00: Preparación receso.
+   - 10:00 - 10:30: RECESO ESCOLAR. Estrictamente libre de actividades académicas.
+   - 10:30 - 11:15: Período 3 (Aplicación e indagación contextualizada con segunda área curricular).
+   - 11:15 - 11:50: Período 4 (Práctica autónoma con guías).
+   - 11:50 - 12:00: Fase de Cierre Común y Síntesis.
+4. PLANIFICA DE UNA VEZ LOS 4 DÍAS (Lunes, Martes, Miércoles, Jueves).
+5. EJERCICIOS LITERALES REDACTADOS: Cada día y grado debe incluir el libro oficial, número de página, tema y los ejercicios redactados TAL CUAL están en los libros oficiales del MINEDUC para que los estudiantes los resuelvan directamente.
+6. EVALUACIÓN DE VIERNES: Test individual escrito (3 problemas completos por grado) y lista de cotejo con 3 criterios observables de desempeño.
 
-GUARDRAILS:
-- Usa ÚNICAMENTE la información del contexto RAG provisto.
-- No inventes números de página no presentes. Si falta, escribe: "Guía de Estudio - Tema: [Nombre]".
+GUARDRAILS DE SEGURIDAD (ANTI-ALUCINACIÓN):
+- Usa EXCLUSIVAMENTE los libros, páginas, temas y competencias del contexto RAG provisto.
+- No inventes números de página arbitrarios fuera del contexto.
+- Devuelve la respuesta ÚNICAMENTE como un objeto JSON válido.
 `;
-
-// Función para consultar Supabase RAG o fallback local
-async function obtenerContextoRAG(
-  genAI: GoogleGenerativeAI | null,
-  tipoDoc: 'CNB' | 'GUIA', 
-  gradoNum: number, 
-  area: string, 
-  bloque: number, 
-  semana: number
-): Promise<string> {
-  // 1. Intentar consulta a Supabase si está disponible
-  if (supabase && genAI) {
-    try {
-      const queryText = `Contenidos e indicadores de ${area} bloque ${bloque} semana ${semana} grado ${gradoNum}`;
-      const embedModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
-      const embeddingRes = await embedModel.embedContent(queryText);
-      const queryVector = embeddingRes.embedding?.values;
-
-      const { data, error } = await supabase.rpc('match_document_chunks', {
-        query_embedding: queryVector,
-        filter_documento: tipoDoc,
-        filter_grado: String(gradoNum),
-        filter_area: area,
-        filter_bloque: bloque,
-        filter_semana: semana,
-        match_count: 3,
-      });
-
-      if (!error && data && data.length > 0) {
-        return data.map((chunk: { content: string }) => chunk.content).join('\n---\n');
-      }
-    } catch {
-      // Continuar al motor documental local fáctico
-    }
-  }
-
-  // 2. Extracción fáctica directa desde la base documental local (Zero-Hallucination Baseline)
-  if (tipoDoc === 'CNB') {
-    const cnbItem = searchCNBCorresponding(gradoNum, semana, bloque);
-    return `Grado ${gradoNum}.° Primaria - Área: ${area || cnbItem.area_materia}\n` +
-      `Competencia ${cnbItem.competencia_numero}: ${cnbItem.competencia_descripcion}\n` +
-      `Indicador de Logro ${cnbItem.indicador_numero}: ${cnbItem.indicador_descripcion}\n` +
-      `Contenidos Declarativos: ${cnbItem.temas_declarativos.join(', ')}\n` +
-      `Criterios de Evaluación: ${cnbItem.criterios_evaluacion}`;
-  } else {
-    // Guías de estudio oficiales MINEDUC
-    const cnbItem = searchCNBCorresponding(gradoNum, semana, bloque);
-    const mineducItem = searchMineducExercises(gradoNum, 0, cnbItem.temas_declarativos[0]);
-    return `Libro Oficial: "${mineducItem.item.libro_titulo}" (Pág. ${mineducItem.paginaEfectiva})\n` +
-      `Unidad: ${mineducItem.item.seccion_unidad}\n` +
-      `Enunciado del Ejercicio: ${mineducItem.item.enunciado_ejercicio}\n` +
-      `Instrucciones Pedagógicas: ${mineducItem.item.instrucciones_docente}`;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Normalizar grados (soporta tanto { grado1, grado2 } como { grados: [3, 4] })
+    // Normalizar grados seleccionados
     let gradosNums: number[] = [];
     if (Array.isArray(body.grados) && body.grados.length > 0) {
-      gradosNums = body.grados.map((g: any) => parseInt(String(g).replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+      gradosNums = body.grados.map((g: any) => parseInt(String(g).replace(/\D/g, ''), 10)).filter((n: number) => !isNaN(n));
     } else {
       if (body.grado1) gradosNums.push(parseInt(String(body.grado1).replace(/\D/g, ''), 10));
       if (body.grado2) gradosNums.push(parseInt(String(body.grado2).replace(/\D/g, ''), 10));
@@ -101,22 +55,26 @@ export async function POST(req: NextRequest) {
     if (gradosNums.length === 0) {
       gradosNums = [3, 4];
     }
+    gradosNums.sort((a, b) => a - b);
 
-    const area = body.area || body.area_curricular || 'Matemáticas';
+    const area = body.area || body.area_curricular || 'Todas las Áreas Curriculares (Jornada Integral)';
     const bloque = Number(body.bloque || body.bimestre || 1);
     const semana = Number(body.semana || 3);
+    const temasRezagados = Array.isArray(body.temasRezagados) ? body.temasRezagados : [];
 
-    // 1. Generar la planificación fáctica de base unificada
+    // 1. Plan fáctico base de respaldo garantizado
     const basePlan = generateUnifiedRAGPlan({
       grados: gradosNums,
       bimestre: bloque,
       semana: semana,
+      area: area,
+      temasRezagados: temasRezagados,
       ciclo: gradosNums.some(g => g <= 3) ? 'primer_ciclo' : 'segundo_ciclo'
     });
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // Si no hay API key o es un placeholder, responder con la base documental fáctica
+    // Si no hay API key o es placeholder, responder con RAG local
     if (!apiKey || apiKey.includes('placeholder')) {
       return NextResponse.json({
         success: true,
@@ -127,12 +85,26 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Llamada a Gemini Flash con RAG Context y Temperature 0.1
+    // 2. Extraer fragmentos RAG para todos los grados y todas las áreas de los datos oficiales
+    const cnbDatabase = cnbDatabaseRaw as any[];
+    const mineducDatabase = mineducDatabaseRaw as any[];
+
+    const cnbContexto = cnbDatabase.filter(c => gradosNums.includes(c.grado));
+    const mineducContexto = mineducDatabase.filter(m => gradosNums.includes(m.grado_especifico));
+
+    // 3. Invocar a Gemini con modelo rápido y confiable
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
-      let model = null;
+      // 'gemini-3-flash-preview' está verificado y responde en ~3-10 segundos
+      const candidateModels = [
+        'gemini-3-flash-preview',
+        'gemini-3.5-flash',
+        'gemini-3.8-flash',
+        'gemini-2.5-flash',
+        'gemini-flash-latest'
+      ];
 
+      let model: any = null;
       for (const mName of candidateModels) {
         try {
           model = genAI.getGenerativeModel({
@@ -145,43 +117,70 @@ export async function POST(req: NextRequest) {
           });
           if (model) break;
         } catch {
-          // probar siguiente candidato
+          // probar siguiente
         }
       }
 
       if (model) {
-        // Obtener fragmentos RAG en paralelo
-        const ragPromises = gradosNums.map(async (g) => {
-          const [cnbCtx, guiaCtx] = await Promise.all([
-            obtenerContextoRAG(genAI, 'CNB', g, area, bloque, semana),
-            obtenerContextoRAG(genAI, 'GUIA', g, area, bloque, semana)
-          ]);
-          return { grado: g, cnbCtx, guiaCtx };
-        });
+        const prompt = `Actúa como especialista pedagógico CNB y genera la planificación multigrado oficial para los grados: ${gradosNums.map(g => `${g}.° Grado`).join(', ')}.
+Bloque (Bimestre): ${bloque} | Semana del ciclo: ${semana}
+Área Curricular Solicitada: ${area}
+Temas rezagados a reforzar: ${temasRezagados.length > 0 ? temasRezagados.join('; ') : 'Ninguno reportado'}
 
-        const contextos = await Promise.all(ragPromises);
+CONTEXTO DOCUMENTAL RAG RECUPERADO DE LA BASE DE DATOS (CNB DIGECUR + MINEDUC):
+--- REGISTROS CNB DE LOS GRADOS SELECCIONADOS ---
+${JSON.stringify(cnbContexto, null, 2)}
 
-        const prompt = `Genera la planificación multigrado automatizada para los grados: ${gradosNums.map(g => `${g}.° Grado`).join(', ')}.
-Área Curricular: ${area} | Bloque: ${bloque} | Semana: ${semana}
+--- LIBROS Y EJERCICIOS OFICIALES MINEDUC DE LOS GRADOS SELECCIONADOS ---
+${JSON.stringify(mineducContexto, null, 2)}
 
-${contextos.map(c => `--- CONTEXTO CNB GRADO ${c.grado} ---
-${c.cnbCtx}
+INSTRUCCIONES CLAVE DE GENERACIÓN:
+1. Revisa las competencias del CNB de los grados ${gradosNums.join(', ')} e identifica las COMPETENCIAS SIMILARES / ANÁLOGAS para definir:
+   - "tema_generador_comun": título del eje integrador
+   - "descripcion_eje_integrador": explicación pedagógica de cómo se articulan los grados
+   - "competencias_similares_identificadas": lista de objetos { "area": string, "eje_comun": string, "grados_articulacion": string }
+2. Genera de una vez los 4 DÍAS DE LA SEMANA (Lunes, Martes, Miércoles, Jueves).
+   En cada día, en el array "gradosSincronizados" debe existir un elemento para CADA uno de los grados atendidos (${gradosNums.map(g => `${g}.° Primaria`).join(', ')}).
+   Cada elemento debe contener:
+   - "grado": "${gradosNums[0]}.° Primaria", etc.
+   - "gradoNumero": número entero del grado
+   - "materia": Área curricular (Matemáticas, Comunicación y Lenguaje, Medio Social y Natural / Ciencias, Formación Ciudadana)
+   - "tema": Nombre exacto de la lección
+   - "modalidad": "Atención Directa Docente" o "Trabajo Autónomo con Guía" (respetando la alternancia entre grados)
+   - "cnbCompetencia": Competencia oficial del CNB
+   - "cnbIndicador": Indicador de logro oficial
+   - "libroTitulo": Nombre oficial del libro MINEDUC
+   - "numeroPagina": Número de página física real del libro
+   - "seccionLibro": Título de la unidad
+   - "ejerciciosLiterales": Array de strings con los enunciados y problemas completos redactados tal cual
+   - "actividadDocente": Indicación para el maestro
+   - "actividadEstudiante": Indicación para el estudiante
+   - "periodo1_actividad": "08:15 - 09:05 | ..."
+   - "periodo2_actividad": "09:05 - 09:55 | ..."
+   - "periodo3_actividad": "10:30 - 11:15 | ..."
+   - "periodo4_actividad": "11:15 - 11:50 | ..."
+   - "tareaCasa": Tarea de refuerzo en familia
+   - "completado": true/false
+3. Genera la "evaluacion_viernes" para cada grado con test individual (3 problemas completamente redactados) y lista de cotejo con 3 criterios observables.
 
---- CONTEXTO GUÍA GRADO ${c.grado} ---
-${c.guiaCtx}`).join('\n\n')}
-
-EJEMPLO DE SALIDA ESPERADA:
+Devuelve la respuesta en formato JSON con las claves:
 {
-  "tema_generador_comun": "${basePlan.tema_generador_comun}",
-  "observacionesPedagogicas": "Articulación de contenidos de ${area} graduando la complejidad de lunes a jueves.",
-  "recomendacionRotacion": "En el período 1 el maestro atiende al grado ${gradosNums[0]} en pizarra mientras el grado ${gradosNums[1] || gradosNums[0]} realiza lectura y resolución en su guía.",
-  "evaluacionViernes": "Aplicar de 08:00 a 10:00 la hoja de trabajo contextualizada y de 10:30 a 12:00 calificar en lista de cotejo."
-}
+  "tema_generador_comun": string,
+  "descripcion_eje_integrador": string,
+  "competencias_similares_identificadas": [ { "area": string, "eje_comun": string, "grados_articulacion": string } ],
+  "alineacion_cnb": { [grado: string]: { "grado": string, "competencia": string, "indicador_logro": string, "contenido_declarativo": string } },
+  "dias": {
+    "Lunes": { "dia": "Lunes", "enfoqueDidactico": string, "fase_inicio_comun": string, "fase_cierre_comun": string, "gradosSincronizados": [ ... ] },
+    "Martes": { "dia": "Martes", "enfoqueDidactico": string, "fase_inicio_comun": string, "fase_cierre_comun": string, "gradosSincronizados": [ ... ] },
+    "Miércoles": { "dia": "Miércoles", "enfoqueDidactico": string, "fase_inicio_comun": string, "fase_cierre_comun": string, "gradosSincronizados": [ ... ] },
+    "Jueves": { "dia": "Jueves", "enfoqueDidactico": string, "fase_inicio_comun": string, "fase_cierre_comun": string, "gradosSincronizados": [ ... ] }
+  },
+  "evaluacion_viernes": { [grado: string]: { "grado": string, "gradoNumero": number, "horario_evaluacion": "08:00 - 10:00", "horario_receso": "10:00 - 10:30", "horario_retroalimentacion": "10:30 - 12:00", "indicador_a_evaluar": string, "descripcion_test": string, "instrumento_evaluacion": string, "criterios_lista_cotejo": string[], "hoja_trabajo_ejercicios": string[] } }
+}`;
 
-Genera el JSON respetando el horario de 08:00 a 12:00, la alternancia docente estricta, los ejercicios redactados y el test del viernes.`;
-
+        // Timeout generoso de 35 segundos para permitir generación detallada de 4 días
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout Gemini RAG (usando RAG local)')), 6000)
+          setTimeout(() => reject(new Error('Timeout Gemini RAG multigrado (activando RAG fáctico local)')), 35000)
         );
 
         const geminiPromise = model.generateContent(prompt);
@@ -191,26 +190,69 @@ Genera el JSON respetando el horario de 08:00 a 12:00, la alternancia docente es
 
         try {
           const aiData = JSON.parse(cleanedJson);
-          return NextResponse.json({
-            success: true,
-            fuente: 'gemini_2_5_flash_rag',
-            mensaje: 'Planificación generada con éxito con Gemini 2.5 Flash y dosificación oficial CNB/MINEDUC.',
-            tema_generador_comun: aiData.tema_generador_comun || basePlan.tema_generador_comun,
-            enriquecimientoAI: aiData,
-            plan: {
-              ...basePlan,
-              tema_generador_comun: aiData.tema_generador_comun || basePlan.tema_generador_comun,
-              fuenteGeneracion: 'gemini_rag_grounded'
+
+          // Validar que dias tenga Lunes a Jueves con gradosSincronizados
+          if (aiData.dias && aiData.dias.Lunes && Array.isArray(aiData.dias.Lunes.gradosSincronizados)) {
+            // Unir con basePlan para garantizar propiedades auxiliares (horarios de bloques, etc.)
+            const mergedDias: any = {};
+            const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves'] as const;
+
+            for (const d of diasSemana) {
+              const aiDia = aiData.dias[d] || {};
+              const baseDia = basePlan.dias[d] || {};
+
+              mergedDias[d] = {
+                dia: d,
+                enfoqueDidactico: aiDia.enfoqueDidactico || baseDia.enfoqueDidactico,
+                horarioJornada: '08:00 - 12:00 (210 min efectivos)',
+                duracionMinutos: 210,
+                bloque1_horario: '08:00 - 10:00 (Bloque Troncal: 120 min)',
+                fase_inicio_comun: aiDia.fase_inicio_comun || baseDia.fase_inicio_comun,
+                periodo_1_horario: '08:15 - 09:05 (50 min) | Período 1: Rotación Multigrado (Atención Directa vs Autónomo)',
+                periodo_2_horario: '09:05 - 09:55 (50 min) | Período 2: Inversión Estricta de Roles de Rotación',
+                preparacion_receso: '09:55 - 10:00 (5 min) | Guardar materiales y preparación para el receso',
+                receso_horario: '10:00 - 10:30 (30 min) | RECESO ESCOLAR - Libre de actividades académicas',
+                bloque2_horario: '10:30 - 12:00 (Bloque Aplicado: 90 min)',
+                periodo_3_horario: '10:30 - 11:15 (45 min) | Período 3: Aplicación e Indagación Contextualizada por Grado',
+                periodo_4_horario: '11:15 - 11:50 (35 min) | Período 4: Práctica Autónoma con Guía y Cuaderno',
+                fase_cierre_comun: aiDia.fase_cierre_comun || baseDia.fase_cierre_comun,
+                gradosSincronizados: aiDia.gradosSincronizados.map((item: any, idx: number) => {
+                  const baseItem = baseDia.gradosSincronizados?.[idx] || {};
+                  return {
+                    ...baseItem,
+                    ...item,
+                    gradoNumero: item.gradoNumero || baseItem.gradoNumero || gradosNums[idx] || gradosNums[0],
+                    materia: item.materia || baseItem.materia || 'Matemáticas',
+                    ejerciciosLiterales: Array.isArray(item.ejerciciosLiterales) && item.ejerciciosLiterales.length > 0 
+                      ? item.ejerciciosLiterales 
+                      : (baseItem.ejerciciosLiterales || [])
+                  };
+                })
+              };
             }
-          });
-        } catch {
-          // Si el texto devuelto es válido pero no parsea directo, devolver con plan fáctico
-          return NextResponse.json({
-            success: true,
-            fuente: 'gemini_2_5_flash_rag',
-            mensaje: 'Planificación ensamblada con base curricular oficial CNB y ejercicios verificados.',
-            plan: basePlan
-          });
+
+            const completePlan = {
+              ...basePlan,
+              area_curricular: area,
+              tema_generador_comun: aiData.tema_generador_comun || basePlan.tema_generador_comun,
+              descripcion_eje_integrador: aiData.descripcion_eje_integrador || basePlan.descripcion_eje_integrador,
+              competencias_similares_identificadas: aiData.competencias_similares_identificadas || [],
+              alineacion_cnb: aiData.alineacion_cnb || basePlan.alineacion_cnb,
+              dias: mergedDias,
+              evaluacion_viernes: aiData.evaluacion_viernes || basePlan.evaluacion_viernes,
+              fuenteGeneracion: 'gemini_rag_grounded'
+            };
+
+            return NextResponse.json({
+              success: true,
+              fuente: 'gemini_3_flash_rag',
+              mensaje: 'Planificación multigrado generada por Gemini con búsqueda fáctica en CNB y guías oficiales MINEDUC.',
+              tema_generador_comun: completePlan.tema_generador_comun,
+              plan: completePlan
+            });
+          }
+        } catch (jsonErr) {
+          console.warn('Advertencia parseando JSON de Gemini:', jsonErr);
         }
       }
     } catch (geminiError: any) {

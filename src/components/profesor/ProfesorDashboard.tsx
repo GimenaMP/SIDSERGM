@@ -179,7 +179,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
 
   // Estados de Planificación Multigrado RAG (Tres datos simples del docente)
   const [selectedGrados, setSelectedGrados] = useState<number[]>([3, 4]);
-  const [selectedArea, setSelectedArea] = useState<string>('Matemáticas');
+  const [selectedArea, setSelectedArea] = useState<string>('Todas las Áreas Curriculares (Jornada Integral)');
   const [selectedBloque, setSelectedBloque] = useState<number>(1);
   const [selectedSemanaBloque, setSelectedSemanaBloque] = useState<number>(3);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false);
@@ -222,7 +222,7 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
       grados: [3, 4],
       bimestre: 1,
       semana: 3,
-      area: 'Matemáticas'
+      area: 'Todas las Áreas Curriculares (Jornada Integral)'
     })
   );
 
@@ -275,17 +275,17 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
     playCartoonRisingSound();
     setIsGeneratingRAG(true);
     setRagStep(1);
-    setRagMessage(`Paso 1: Consultando CNB (DIGECUR) para Bloque ${selectedBloque}, Semana ${selectedSemanaBloque}...`);
+    setRagMessage(`Paso 1: Buscando en el CNB (DIGECUR) competencias similares para los grados ${selectedGrados.map(g => `${g}.°`).join(' y ')}...`);
 
     setTimeout(() => {
       setRagStep(2);
-      setRagMessage(`Paso 2: Deduciendo ejercicios literales de guías MINEDUC para ${selectedGrados.map(g => `${g}.°`).join(' y ')}...`);
-    }, 700);
+      setRagMessage(`Paso 2: Buscando en guías oficiales MINEDUC lecciones, números de página y ejercicios redactados...`);
+    }, 800);
 
     setTimeout(() => {
       setRagStep(3);
-      setRagMessage('Paso 3: Sincronizando alternancia multigrado (08:00 a 12:00) con Gemini 2.5 Flash...');
-    }, 1500);
+      setRagMessage('Paso 3: La IA de Gemini está articulando los 4 días de clase (08:00 a 12:00) y la evaluación de viernes...');
+    }, 1800);
 
     try {
       const res = await fetch('/api/planificacion', {
@@ -811,14 +811,16 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                           onChange={(e) => setSelectedArea(e.target.value)}
                           className="w-full text-xs font-bold bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
                         >
+                          <option value="Todas las Áreas Curriculares (Jornada Integral)">🌟 Todas las Áreas Curriculares (Jornada Integral)</option>
                           <option value="Matemáticas">📐 Matemáticas (Oficial MINEDUC)</option>
-                          <option value="Medio Social y Natural">🌿 Medio Social y Natural / CCNN</option>
                           <option value="Comunicación y Lenguaje">📖 Comunicación y Lenguaje (L1)</option>
+                          <option value="Medio Social y Natural">🌿 Medio Social y Natural / Ciencias</option>
+                          <option value="Ciencias Sociales y Formación Ciudadana">🏛️ Ciencias Sociales y Formación Ciudadana</option>
                         </select>
                       </div>
 
                       <p className="text-[10px] text-slate-500 leading-tight">
-                        Se vinculan los libros de texto y guías pedagógicas oficiales del área seleccionada.
+                        La IA articula los libros de texto y competencias de las áreas seleccionadas para los grados.
                       </p>
                     </div>
 
@@ -1016,6 +1018,33 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                       {unifiedPlan.descripcion_eje_integrador}
                     </p>
                   </div>
+
+                  {/* Competencias Similares del CNB Identificadas (Magia de la API de Gemini) */}
+                  {unifiedPlan.competencias_similares_identificadas && unifiedPlan.competencias_similares_identificadas.length > 0 && (
+                    <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-sky-50 border border-purple-200 p-4 rounded-2xl space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs">✨</span>
+                        <h4 className="text-xs font-black uppercase text-purple-900 tracking-wider">
+                          Competencias Similares Articuladas por la IA (CNB Multigrado)
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                        {unifiedPlan.competencias_similares_identificadas.map((comp, cIdx) => (
+                          <div key={cIdx} className="bg-white/90 p-2.5 rounded-xl border border-purple-100 shadow-2xs space-y-1">
+                            <span className="text-[10px] font-black uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full inline-block">
+                              {comp.area}
+                            </span>
+                            <p className="text-[11px] font-bold text-slate-800 leading-tight">
+                              {comp.eje_comun}
+                            </p>
+                            <p className="text-[10px] text-slate-600 leading-tight">
+                              {comp.grados_articulacion || (comp.gradoA_enfoque ? `${comp.gradoA_enfoque} • ${comp.gradoB_enfoque}` : '')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Graduación de la Complejidad por Grado (CNB DIGECUR) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
@@ -1236,10 +1265,17 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                                 {item.grado}
                               </span>
 
-                              <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
-                                <span>📖</span>
-                                <span>Pág. Física {item.numeroPagina}</span>
-                              </span>
+                              <div className="flex items-center space-x-1.5">
+                                {item.materia && (
+                                  <span className="text-[10px] font-black uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-xl">
+                                    {item.materia}
+                                  </span>
+                                )}
+                                <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
+                                  <span>📖</span>
+                                  <span>Pág. Física {item.numeroPagina}</span>
+                                </span>
+                              </div>
                             </div>
 
                             {/* Modalidad Pedagógica del Día */}

@@ -73,6 +73,14 @@ export interface EvaluacionGradoViernes {
   hoja_trabajo_ejercicios: string[];
 }
 
+export interface SimilarCompetency {
+  area: string;
+  eje_comun: string;
+  grados_articulacion?: string;
+  gradoA_enfoque?: string;
+  gradoB_enfoque?: string;
+}
+
 export interface UnifiedWeeklyPlan {
   ciclo: 'segundo_ciclo' | 'primer_ciclo';
   grados: number[];
@@ -81,6 +89,7 @@ export interface UnifiedWeeklyPlan {
   area_curricular: string;
   tema_generador_comun: string;
   descripcion_eje_integrador: string;
+  competencias_similares_identificadas?: SimilarCompetency[];
   alineacion_cnb: Record<string, AlineacionCNBGrado>;
   paginasConfiguradas: Record<number, number>;
   temasRezagados: string[];
@@ -95,6 +104,7 @@ export interface RAGRequestParams {
   grados?: number[];
   bimestre?: number;
   semana?: number;
+  area?: string;
   paginasPorGrado?: Record<number, number>;
   temasRezagados?: string[];
   diaSeleccionado?: DiaSemana;
@@ -547,7 +557,11 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
   let descripcionEje = '';
 
   const areaLower = areaCurricular.toLowerCase();
-  if (areaLower.includes('social') || areaLower.includes('ciencia')) {
+  const isMultiArea = areaLower.includes('todas') || areaLower.includes('integral');
+  if (isMultiArea) {
+    temaGenerador = 'Saberes comunitarios, razonamiento lógico y expresión en nuestra escuela multigrado';
+    descripcionEje = 'Eje Integrador Multigrado: Articulación interdisciplinaria de todas las áreas curriculares (Matemáticas, Comunicación y Lenguaje, Ciencias Naturales / Medio Social y Formación Ciudadana), vinculando las situaciones de la comunidad con los libros oficiales del MINEDUC.';
+  } else if (areaLower.includes('social') || areaLower.includes('ciencia')) {
     temaGenerador = 'Ecosistemas comunitarios, conservación de recursos naturales y vida saludable';
     descripcionEje = 'Eje Integrador Multigrado: Los grados exploran los seres vivos y recursos de la comunidad, graduando desde la observación sensorial del entorno (1.°/2.°), ciclos de vida y plantas medicinales (3.°/4.°), hasta relaciones ecológicas y sostenibilidad comunitaria (5.°/6.°).';
   } else if (areaLower.includes('lengua') || areaLower.includes('comunic')) {
@@ -562,10 +576,35 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
       : 'Eje Integrador Multigrado: Los grados interactúan con objetos y alimentos del entorno (elotes, naranjas, pupitres) graduando desde relaciones espaciales (1.°), decenas y adición (2.°) hasta multiplicación con arreglos rectangulares (3.°).';
   }
 
+  // Competencias similares identificadas para articulación multigrado
+  const competenciasSimilares: SimilarCompetency[] = [
+    {
+      area: 'Matemáticas',
+      eje_comun: 'Pensamiento lógico y cálculo aritmético contextualizado a la economía comunitaria',
+      grados_articulacion: 'Articulación progresiva desde conteo y adición básica hasta operaciones fraccionarias y proporciones.',
+      gradoA_enfoque: 'Multiplicación y cálculo aplicado a productos locales.',
+      gradoB_enfoque: 'Descomposición posicional y estimación en presupuestos agrícolas.'
+    },
+    {
+      area: 'Comunicación y Lenguaje',
+      eje_comun: 'Comprensión lectora, expresión oral y redacción formal de textos',
+      grados_articulacion: 'Articulación desde la narración oral y estructura de la oración hasta párrafos expositivos y argumentación.',
+      gradoA_enfoque: 'Identificación de sujeto, predicado y anécdotas de la comunidad.',
+      gradoB_enfoque: 'Extracción de ideas principales y redacción de párrafos expositivos.'
+    },
+    {
+      area: 'Ciencias y Entorno Comunitario',
+      eje_comun: 'Conservación ambiental, cuerpo humano y relaciones ecológicas en la aldea',
+      grados_articulacion: 'Articulación desde el cuidado de los recursos hídricos locales hasta ecosistemas y método científico escolar.',
+      gradoA_enfoque: 'Fuentes de agua comunal y protección del suelo.',
+      gradoB_enfoque: 'Ecosistemas, cadenas alimenticias y geografía de Guatemala.'
+    }
+  ];
+
   // 1. Alineación CNB (DIGECUR)
   const alineacionCNB: Record<string, AlineacionCNBGrado> = {};
   for (const g of grados) {
-    const cnb = searchCNBCorresponding(g, semana, bimestre, undefined, areaCurricular);
+    const cnb = searchCNBCorresponding(g, semana, bimestre, undefined, isMultiArea ? undefined : areaCurricular);
     alineacionCNB[`${g}.° Primaria`] = {
       grado: `${g}.° Primaria`,
       competencia: `Competencia ${cnb.competencia_numero}: ${cnb.competencia_descripcion}`,
@@ -580,23 +619,23 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
 
   const dinámicasInicio: Record<DiaSemana, string> = {
     'Lunes': '08:00 - 08:15 | Dinámica Grupal Común: "La Tienda de la Aldea". Todos los grados juegan a comprar y vender con monedas didácticas para activar conocimientos de numeración y cálculo.',
-    'Martes': '08:00 - 08:15 | Activación Grupal Común: "El Número Secreto del Día". Un estudiante da pistas de un número y todos calculan mentalmente el doble, la mitad o su posición.',
-    'Miércoles': '08:00 - 08:15 | Contextualización Comunitaria: "La Cosecha de Amatitlán". Conversatorio sobre el pesaje de granos y precios actuales en el mercado municipal.',
-    'Jueves': '08:00 - 08:15 | Calentamiento de Síntesis: "El Desafío Relámpago". Tres preguntas rápidas en pizarra, una para cada grado, para repasar antes del cierre semanal.'
+    'Martes': '08:00 - 08:15 | Activación Grupal Común: "El Círculo de Cuentos". Lectura guiada comunitaria para identificar personajes e ideas principales entre todos.',
+    'Miércoles': '08:00 - 08:15 | Contextualización Ambiental: "Los Guardianes del Agua". Conversatorio guiado sobre las fuentes de agua y la naturaleza en nuestra aldea.',
+    'Jueves': '08:00 - 08:15 | Calentamiento Cívico y Síntesis: "Nuestra Aldea Democrática". Dinámica sobre acuerdos del aula y cómo resolver diferencias con diálogo.'
   };
 
   const plenariasCierre: Record<DiaSemana, string> = {
     'Lunes': '11:50 - 12:00 | Plenaria de Cierre Común: Puesta en común de estrategias. Un representante de cada grado explica en qué página física trabajó y qué aprendió.',
-    'Martes': '11:50 - 12:00 | Plenaria de Cierre Común: Coevaluación guiada y resolución de dos dudas recurrentes encontradas en los cuadernos de trabajo.',
-    'Miércoles': '11:50 - 12:00 | Plenaria de Cierre Común: Socialización de problemas inventados por los estudiantes sobre la compra y venta de cosechas.',
+    'Martes': '11:50 - 12:00 | Plenaria de Cierre Común: Coevaluación guiada y lectura en voz alta de los párrafos y oraciones redactadas en sus cuadernos.',
+    'Miércoles': '11:50 - 12:00 | Plenaria de Cierre Común: Socialización de dibujos ecológicos y problemas resueltos sobre la protección de la naturaleza.',
     'Jueves': '11:50 - 12:00 | Plenaria de Cierre y Checklist: Revisión de los 3 indicadores clave de la semana. Los alumnos marcan su lista de cotejo y llevan tarea de repaso para el test del viernes.'
   };
 
   const enfoques: Record<DiaSemana, string> = {
-    'Lunes': 'Apertura Semanal: Introducción conceptual y modelado en pizarra bajo el tema generador común.',
-    'Martes': 'Profundización Didáctica: Ejercitación guiada en libros de texto oficiales MINEDUC y trabajo en parejas.',
-    'Miércoles': 'Aplicación Comunal: Resolución de situaciones reales de cooperativas agrícolas y comercio local.',
-    'Jueves': 'Consolidación y Checklist: Síntesis semanal de logros y preparación para la prueba diagnóstica del viernes.'
+    'Lunes': 'Apertura Semanal (Matemáticas + Lenguaje): Razonamiento numérico, modelado en pizarra y ejercitación en guía.',
+    'Martes': 'Profundización Lingüística y Comprensión: Lectura comprensiva, redacción y vocabulario contextual en guías oficiales.',
+    'Miércoles': 'Indagación del Entorno (Ciencias y Medio Social): Exploración ecológica, fuentes naturales y cálculo aplicado.',
+    'Jueves': 'Integración Ciudadana y Síntesis: Convivencia democrática, acuerdos escolares y preparación para el test del viernes.'
   };
 
   for (const dia of diasSemana) {
@@ -614,7 +653,11 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
         temasRezagados.length === 1
       );
 
-      const cnbInfo = searchCNBCorresponding(g, semana, bimestre, rezagadoMatch);
+      const diaMateria = isMultiArea
+        ? (dia === 'Lunes' ? 'Matemáticas' : dia === 'Martes' ? 'Comunicación y Lenguaje' : dia === 'Miércoles' ? (g <= 3 ? 'Medio Social y Natural' : 'Ciencias Naturales y Tecnología') : (g <= 3 ? 'Formación Ciudadana' : 'Ciencias Sociales y Formación Ciudadana'))
+        : areaCurricular;
+
+      const cnbInfo = searchCNBCorresponding(g, semana, bimestre, rezagadoMatch, diaMateria);
       const mineducInfo = searchMineducExercises(g, pagCalculada, rezagadoMatch || cnbInfo.temas_declarativos[0]);
 
       const rotacion = buildRotationalTimeline(dia, grados, g);
@@ -630,11 +673,11 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
       if (dia === 'Lunes') {
         tareaCasa = `Pág. ${mineducInfo.paginaEfectiva + 1}: Leer la sección de autoaprendizaje y resolver los ejercicios 1 y 2 en familia.`;
       } else if (dia === 'Martes') {
-        tareaCasa = `Pág. ${mineducInfo.paginaEfectiva + 1}: Resolver la situación de la vida diaria aplicando medidas tradicionales.`;
+        tareaCasa = `Pág. ${mineducInfo.paginaEfectiva + 1}: Lectura comprensiva en casa y anotar 3 palabras desconocidas con un adulto.`;
       } else if (dia === 'Miércoles') {
-        tareaCasa = `Cuaderno: Plantear a un familiar el problema de cosecha/comercio resuelto hoy y anotar su firma.`;
+        tareaCasa = `Cuaderno: Conversar con la familia sobre el cuidado de los recursos naturales y registrar una acción familiar.`;
       } else {
-        tareaCasa = `Preparación para el Test de Viernes: Repasar las páginas ${pagBase} a ${mineducInfo.paginaEfectiva} trabajadas durante la semana.`;
+        tareaCasa = `Preparación para el Test de Viernes: Repasar las páginas trabajadas durante la semana y firmar la lista de cotejo.`;
       }
 
       gradosSincronizados.push({
@@ -642,7 +685,7 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
         gradoNumero: g,
         bloque: `Jornada Diaria (08:00 - 12:00 hrs | 210 min efectivos)`,
         duracionTotal: '210 min',
-        materia: mineducInfo.item.materia || 'Matemáticas',
+        materia: mineducInfo.item.materia || diaMateria,
         tema: rezagadoMatch ? `[Refuerzo Rezagado] ${mineducInfo.item.seccion_unidad}` : mineducInfo.item.seccion_unidad,
         modalidad: rotacion.modalidad,
         actividadDocente: rotacion.actividadDocente,
@@ -786,9 +829,10 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
     grados,
     bimestre,
     semana,
-    area_curricular: 'Matemáticas',
+    area_curricular: areaCurricular,
     tema_generador_comun: temaGenerador,
     descripcion_eje_integrador: descripcionEje,
+    competencias_similares_identificadas: competenciasSimilares,
     alineacion_cnb: alineacionCNB,
     paginasConfiguradas: paginasPorGrado,
     temasRezagados,

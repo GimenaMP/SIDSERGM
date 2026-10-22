@@ -372,5 +372,90 @@
       "Mecanismos de diálogo y mediación de conflictos en el aula"
     ],
     "criterios_evaluacion": "Propone una solución dialogada a un dilema de convivencia escolar."
+  },
+  {
+    "grado": 5,
+    "ciclo": "segundo_ciclo",
+    "area_materia": "Comunicación y Lenguaje",
+    "bloque_bimestre": 1,
+    "semana_sugerida": 1,
+    "competencia_numero": 1,
+    "competencia_descripcion": "Produce textos informativos y argumentativos breves utilizando vocabulario variado y la concordancia gramatical.",
+    "indicador_numero": "1.1",
+    "indicador_descripcion": "Redacta párrafos expositivos con ideas principales y secundarias claras.",
+    "temas_declarativos": [
+      "El párrafo expositivo",
+      "Conectores lógicos de causa y efecto",
+      "Uso de signos de puntuación (coma, punto y coma)"
+    ],
+    "criterios_evaluacion": "Redacta un texto de dos párrafos explicando un fenómeno natural de su región."
+  },
+  {
+    "grado": 6,
+    "ciclo": "segundo_ciclo",
+    "area_materia": "Comunicación y Lenguaje",
+    "bloque_bimestre": 1,
+    "semana_sugerida": 1,
+    "competencia_numero": 1,
+    "competencia_descripcion": "Utiliza el lenguaje oral y escrito con propiedad, autonomía y sentido crítico para comunicarse y resolver problemas.",
+    "indicador_numero": "1.1",
+    "indicador_descripcion": "Elabora ensayos sencillos, informes y textos argumentativos con coherencia lógica.",
+    "temas_declarativos": [
+      "El informe de investigación escolar",
+      "Estructura del ensayo: introducción, desarrollo y conclusiones",
+      "Fichas bibliográficas y paráfrasis"
+    ],
+    "criterios_evaluacion": "Presenta un informe escrito con estructura completa sobre los recursos de su comunidad."
+  },
+  {
+    "grado": 1,
+    "ciclo": "primer_ciclo",
+    "area_materia": "Formación Ciudadana",
+    "bloque_bimestre": 1,
+    "semana_sugerida": 1,
+    "competencia_numero": 1,
+    "competencia_descripcion": "Demuestra respeto hacia sí mismo y hacia sus compañeros practicando normas básicas de convivencia en el aula.",
+    "indicador_numero": "1.1",
+    "indicador_descripcion": "Cumple los acuerdos y responsabilidades del salón de clase.",
+    "temas_declarativos": [
+      "Reglas del aula y acuerdos de convivencia",
+      "El valor del respeto y la amistad",
+      "Cuidado de los útiles escolares y el espacio común"
+    ],
+    "criterios_evaluacion": "Participa en la elaboración del cartel de acuerdos del aula."
+  },
+  {
+    "grado": 2,
+    "ciclo": "primer_ciclo",
+    "area_materia": "Formación Ciudadana",
+    "bloque_bimestre": 1,
+    "semana_sugerida": 1,
+    "competencia_numero": 1,
+    "competencia_descripcion": "Reconoce la importancia de la familia, la escuela y la comunidad en la construcción de relaciones solidarias.",
+    "indicador_numero": "1.1",
+    "indicador_descripcion": "Participa en actividades grupales demostrando empatía y colaboración.",
+    "temas_declarativos": [
+      "La familia y los roles en el hogar",
+      "El trabajo cooperativo en la escuela",
+      "La solidaridad con compañeros"
+    ],
+    "criterios_evaluacion": "Colabora activamente en equipos de trabajo escolar."
+  },
+  {
+    "grado": 3,
+    "ciclo": "primer_ciclo",
+    "area_materia": "Formación Ciudadana",
+    "bloque_bimestre": 1,
+    "semana_sugerida": 1,
+    "competencia_numero": 1,
+    "competencia_descripcion": "Valora la diversidad cultural de Guatemala y promueve la equidad en su entorno escolar.",
+    "indicador_numero": "1.1",
+    "indicador_descripcion": "Reconoce los cuatro pueblos de Guatemala (Maya, Ladino, Xinka y Garífuna) y sus aportes.",
+    "temas_declarativos": [
+      "Pueblos de Guatemala e interculturalidad",
+      "La equidad de género en los juegos y tareas",
+      "Resolución pacífica de desacuerdos escolares"
+    ],
+    "criterios_evaluacion": "Menciona costumbres de los pueblos de Guatemala y respeta a sus compañeros."
   }
 ]

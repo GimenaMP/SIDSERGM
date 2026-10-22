@@ -259,5 +259,117 @@
     "tipo_recurso": "ejercicio_estudiante",
     "enunciado_ejercicio": "Organiza los siguientes seres vivos en una cadena alimenticia señalando productor, consumidor primario y secundario: Águila, Maíz, Ratón de campo, Serpiente.",
     "instrucciones_docente": "Actividad de aplicación de conceptos de ecología."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 1.° Primaria",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 20,
+    "seccion_unidad": "Unidad 1: Escuchamos y dialogamos",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Dibuja en tu cuaderno tres cosas que haces para escuchar con atención a tu maestra y a tus compañeros cuando hablan en clase.",
+    "instrucciones_docente": "El docente modela el turno de palabra en el círculo de inicio."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 3.° Primaria",
+    "grado_especifico": 3,
+    "grados_aplicables": [
+      3
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 34,
+    "seccion_unidad": "Unidad 2: La oración y sus partes",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Subraya con color azul el sujeto y con color rojo el predicado en las siguientes oraciones: a) Los agricultores cultivan maíz en la parcela. b) Doña Carmen hornea pan dulce los domingos. c) Los niños juegan pelota en el recreo.",
+    "instrucciones_docente": "Trabajo autónomo mientras el maestro atiende en pizarra a los alumnos de 4.° grado."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 5.° Primaria",
+    "grado_especifico": 5,
+    "grados_aplicables": [
+      5
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 48,
+    "seccion_unidad": "Unidad 3: Párrafos expositivos",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Redacta en tu cuaderno un párrafo expositivo de 5 líneas sobre la importancia de cuidar las fuentes de agua en nuestra comunidad. Subraya la idea principal y encierra en un recuadro dos conectores lógicos usados.",
+    "instrucciones_docente": "Revisión y retroalimentación entre pares de 5.° y 6.°."
+  },
+  {
+    "libro_titulo": "Comunicación y Lenguaje 6.° Primaria",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Comunicación y Lenguaje",
+    "numero_pagina": 56,
+    "seccion_unidad": "Unidad 3: Informes escolares y ensayos breves",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Elabora un esquema de ensayo con tres partes: 1) Tesis (postura sobre el reciclaje escolar), 2) Dos argumentos fundamentados con datos, 3) Conclusión propositiva.",
+    "instrucciones_docente": "Preparación para el proyecto interdisciplinario del jueves."
+  },
+  {
+    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 4.°",
+    "grado_especifico": 4,
+    "grados_aplicables": [
+      4
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "numero_pagina": 36,
+    "seccion_unidad": "Unidad 2: Geografía y relieve de Guatemala",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "En el mapa mudo de Guatemala, ubica y colorea la Sierra Madre y los volcanes Tajumulco, Fuego y Pacaya. Escribe el nombre de tu departamento.",
+    "instrucciones_docente": "Trabajo en parejas con mapa comunal o atlas escolar."
+  },
+  {
+    "libro_titulo": "Ciencias Sociales y Formación Ciudadana 6.°",
+    "grado_especifico": 6,
+    "grados_aplicables": [
+      6
+    ],
+    "ciclo": "segundo_ciclo",
+    "materia": "Ciencias Sociales y Formación Ciudadana",
+    "numero_pagina": 45,
+    "seccion_unidad": "Unidad 2: Derechos Humanos y Convivencia Democrática",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Analiza el siguiente caso: Dos estudiantes discuten por el turno de usar la cancha. Plantea 3 pasos basados en el diálogo y la mediación escolar para resolver el conflicto sin violencia.",
+    "instrucciones_docente": "Plenaria de cierre con el docente y el resto de los grados."
+  },
+  {
+    "libro_titulo": "Medio Social y Natural 1.° Primaria",
+    "grado_especifico": 1,
+    "grados_aplicables": [
+      1
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Medio Social y Natural",
+    "numero_pagina": 18,
+    "seccion_unidad": "Unidad 1: Mi cuerpo y mi salud",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Colorea las partes del cuerpo humano en el dibujo (cabeza, tronco, brazos y piernas). Marca con una estrella las acciones de higiene que realizas todos los días antes de entrar a la escuela.",
+    "instrucciones_docente": "Dinámica de movimiento corporal con canciones infantiles."
+  },
+  {
+    "libro_titulo": "Medio Social y Natural 2.° Primaria",
+    "grado_especifico": 2,
+    "grados_aplicables": [
+      2
+    ],
+    "ciclo": "primer_ciclo",
+    "materia": "Medio Social y Natural",
+    "numero_pagina": 26,
+    "seccion_unidad": "Unidad 2: Plantas y animales de la comunidad",
+    "tipo_recurso": "ejercicio_estudiante",
+    "enunciado_ejercicio": "Clasifica en una tabla de dos columnas los animales de tu aldea en: Domésticos (viven con las personas) y Silvestres (viven en el bosque o campo). Dibuja tu favorito.",
+    "instrucciones_docente": "Socialización grupal mostrando sus dibujos."
   }
 ]
