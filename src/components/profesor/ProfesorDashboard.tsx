@@ -38,16 +38,25 @@ export interface ProfesorDashboardProps {
 
 export type SidebarMode = 'dashboard' | 'planificaciones' | 'grados' | 'asistencia' | 'pruebas' | 'calendario';
 
+interface TimeAllocation {
+  rango: string;
+  rolDocente: 'atencion_directa' | 'trabajo_autonomo';
+  descripcion: string;
+}
+
 interface GradeSchedule {
   grado: string;
   bloque: string;
-  tiempo: string;
-  modo: 'atencion_directa' | 'trabajo_autonomo';
+  duracionTotal: string;
+  materia: string;
   tema: string;
+  cnbCompetencia: string;
   cnbIndicador: string;
-  libro: string;
-  pagina: number;
-  ejercicio: string;
+  libroTitulo: string;
+  numeroPagina: number;
+  seccionLibro: string;
+  tiemposReferencia: TimeAllocation[];
+  ejerciciosLiterales: string[];
   tareaCasa: string;
   completado: boolean;
 }
@@ -62,41 +71,87 @@ interface StudentAttendance {
 const INITIAL_SCHEDULE: GradeSchedule[] = [
   {
     grado: '4.° Primaria',
-    bloque: 'Bloque 1 (8:00 - 8:45)',
-    tiempo: '45 min',
-    modo: 'atencion_directa',
-    tema: 'Fracciones propias e impropias',
-    cnbIndicador: 'Indicador 4.2.1 • Representa fracciones usando objetos y diagramas del entorno.',
-    libro: 'Guía de Aprendizaje Integrada - 2.° Ciclo',
-    pagina: 48,
-    ejercicio: 'Actividad 2: Representación gráfica de fracciones en papel cuadriculado.',
-    tareaCasa: 'Lectura pág. 49, resolver ejercicios 1 y 2 en el cuaderno.',
+    bloque: 'Bloque 1 (08:00 - 08:45 hrs)',
+    duracionTotal: '45 min',
+    materia: 'Matemáticas',
+    tema: 'Descomposición posicional y valor relativo de números grandes',
+    cnbCompetencia: 'Competencia 4: Aplica elementos matemáticos y de su entorno en situaciones que promueven la mejora de su comunidad.',
+    cnbIndicador: 'Indicador 4.2.1: Representa números hasta de 6 dígitos mediante descomposición posicional y valor relativo en situaciones cotidianas.',
+    libroTitulo: 'Matemáticas 4G — MINEDUC (Edición Oficial)',
+    numeroPagina: 38,
+    seccionLibro: 'Unidad 2: Descomposición posicional y valor relativo',
+    tiemposReferencia: [
+      { rango: '00 - 15 min', rolDocente: 'atencion_directa', descripcion: 'Explicación del maestro en pizarra: Lectura y escritura de cantidades de 6 dígitos con la tabla posicional.' },
+      { rango: '15 - 35 min', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo individual en cuaderno: Los alumnos resuelven los incisos a, b y c de la pág. 38.' },
+      { rango: '35 - 45 min', rolDocente: 'trabajo_autonomo', descripcion: 'Revisión en parejas: Comparan resultados y escriben en letras la cantidad del problema de café.' },
+    ],
+    ejerciciosLiterales: [
+      '1. Descompón aditivamente los siguientes números según el valor posicional de cada cifra:',
+      '   a) 354,210 = 300,000 + 50,000 + 4,000 + 200 + 10',
+      '   b) 608,405 = _______ + _______ + _______ + _______',
+      '   c) 920,014 = _______ + _______ + _______ + _______',
+      '2. Problema de aplicación comunitaria:',
+      '   En una cooperativa de Amatitlán se cosecharon 452,190 libras de café en grano.',
+      '   • Escribe en tu cuaderno cómo se lee esta cantidad en letras.',
+      '   • Dibuja la tabla de posiciones (CM, DM, UM, C, D, U) y ubica cada dígito.',
+    ],
+    tareaCasa: 'Pág. 39: Leer la sección de autoaprendizaje y resolver en familia los ejercicios 1 y 2.',
     completado: true,
   },
   {
     grado: '5.° Primaria',
-    bloque: 'Bloque 1 (8:00 - 8:45)',
-    tiempo: '45 min',
-    modo: 'trabajo_autonomo',
-    tema: 'Suma de fracciones con igual denominador',
-    cnbIndicador: 'Indicador 5.1.3 • Opera adición de fracciones homogéneas en problemas de la comunidad.',
-    libro: 'Matemáticas 5.° Primaria - MINEDUC',
-    pagina: 64,
-    ejercicio: 'Pág. 64, sección "Practiquemos juntos", problemas del 1 al 5.',
-    tareaCasa: 'Pág. 65, ejercicio 6 (Problema de reparto de maíz).',
+    bloque: 'Bloque 1 (08:00 - 08:45 hrs)',
+    duracionTotal: '45 min',
+    materia: 'Matemáticas',
+    tema: 'Suma y resta de fracciones homogéneas (igual denominador)',
+    cnbCompetencia: 'Competencia 5: Aplica conocimientos matemáticos en la formulación de soluciones a problemas de la vida cotidiana.',
+    cnbIndicador: 'Indicador 5.1.3: Opera adición y sustracción de fracciones homogéneas en situaciones de comercio y agricultura local.',
+    libroTitulo: 'Matemáticas 5G — MINEDUC (Edición Oficial)',
+    numeroPagina: 64,
+    seccionLibro: 'Unidad 3: Fracciones y sus operaciones en la comunidad',
+    tiemposReferencia: [
+      { rango: '00 - 15 min', rolDocente: 'trabajo_autonomo', descripcion: 'Lectura silenciosa guiada: Observar las ilustraciones de reparto de granos en la pág. 64.' },
+      { rango: '15 - 30 min', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Demostración en pizarra con tiras de papel doblado sobre por qué el denominador se mantiene.' },
+      { rango: '30 - 45 min', rolDocente: 'trabajo_autonomo', descripcion: 'Resolución autónoma en cuaderno: Resolver los 3 problemas de suma de fracciones de la guía.' },
+    ],
+    ejerciciosLiterales: [
+      '1. Calcula la suma de fracciones homogéneas y simplifica al máximo:',
+      '   a) 2/7 + 3/7 = _______',
+      '   b) 5/12 + 4/12 = _______',
+      '   c) 3/10 + 4/10 = _______',
+      '2. Problema contextual de la comunidad:',
+      '   Don Mateo vendió 3/8 de quintal de maíz por la mañana y 2/8 de quintal por la tarde.',
+      '   • ¿Qué fracción total del quintal de maíz vendió durante el día?',
+      '   • ¿Qué fracción le falta vender para completar el quintal entero?',
+    ],
+    tareaCasa: 'Pág. 65: Ejercicio 6 de autoaprendizaje (El reparto familiar de frijol en medidas tradicionales).',
     completado: true,
   },
   {
     grado: '6.° Primaria',
-    bloque: 'Bloque 1 (8:00 - 8:45)',
-    tiempo: '45 min',
-    modo: 'trabajo_autonomo',
-    tema: 'Fracciones equivalentes y simplificación',
-    cnbIndicador: 'Indicador 6.3.2 • Simplifica fracciones hasta su mínima expresión mediante MCD.',
-    libro: 'Guía de Autoaprendizaje 6.° - MINEDUC',
-    pagina: 82,
-    ejercicio: 'Pág. 82, ejercicio 4: Crucigrama de simplificación de fracciones.',
-    tareaCasa: 'Pág. 83, actividad de repaso para el hogar.',
+    bloque: 'Bloque 1 (08:00 - 08:45 hrs)',
+    duracionTotal: '45 min',
+    materia: 'Matemáticas',
+    tema: 'Proporcionalidad directa y Regla de Tres Simple aplicada',
+    cnbCompetencia: 'Competencia 6: Emplea modelos matemáticos en la formulación y resolución de problemas de cálculo y producción.',
+    cnbIndicador: 'Indicador 6.3.2: Plantea y resuelve problemas de regla de tres simple directa aplicados a la economía y comercio local.',
+    libroTitulo: 'Guía para la enseñanza de Matemáticas Segundo Ciclo — MINEDUC',
+    numeroPagina: 115,
+    seccionLibro: 'Unidad 4: Proporcionalidad, porcentajes y regla de tres',
+    tiemposReferencia: [
+      { rango: '00 - 25 min', rolDocente: 'trabajo_autonomo', descripcion: 'Trabajo en equipo de 2: Plantear la tabla de magnitudes (quintales vs quetzales) en base a la pág. 115.' },
+      { rango: '25 - 40 min', rolDocente: 'atencion_directa', descripcion: 'Atención directa del maestro: Despeje de la incógnita "x" en proporciones directas y verificación de resultados.' },
+      { rango: '40 - 45 min', rolDocente: 'trabajo_autonomo', descripcion: 'Cierre individual: Anotar el procedimiento estándar de regla de tres en el cuaderno de trabajo.' },
+    ],
+    ejerciciosLiterales: [
+      '1. Problema de regla de tres simple directa:',
+      '   Si un quintal de café pergamino tiene un valor de Q 850.00 en la cooperativa local de Amatitlán:',
+      '   a) ¿Cuánto dinero se obtendrá por la venta de 4 quintales?',
+      '   b) ¿Cuánto se pagará por 7 quintales y medio (7.5 qq)?',
+      '   • Planteamiento obligatorio en el cuaderno: 1 / 850 = 4 / x => x = (4 * 850) / 1',
+      '2. Formula un problema similar con la compra de abono o semillas en tu aldea.',
+    ],
+    tareaCasa: 'Pág. 116: Investigar en casa el precio de 1 arroba de azúcar y calcular el precio de 3 y 5 arrobas.',
     completado: false,
   },
 ];
@@ -409,15 +464,15 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-xs font-extrabold text-slate-800">{item.grado}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          item.modo === 'atencion_directa' 
+                          item.tiemposReferencia[0]?.rolDocente === 'atencion_directa' 
                             ? 'bg-rose-100 text-rose-800' 
                             : 'bg-teal-100 text-teal-800'
                         }`}>
-                          {item.modo === 'atencion_directa' ? 'Profesor' : 'Guía MINEDUC'}
+                          {item.tiemposReferencia[0]?.rolDocente === 'atencion_directa' ? '👨‍🏫 Atención Directa' : '📖 Autónomo en Guía'}
                         </span>
                       </div>
-                      <p className="text-xs font-bold text-slate-900">{item.tema}</p>
-                      <p className="text-[11px] text-slate-500 mt-1">Pág. {item.pagina} • {item.tiempo}</p>
+                      <p className="text-xs font-bold text-slate-900 line-clamp-1">{item.tema}</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Pág. {item.numeroPagina} • {item.duracionTotal}</p>
                     </div>
                   ))}
                 </div>
@@ -426,124 +481,205 @@ export const ProfesorDashboard: React.FC<ProfesorDashboardProps> = ({
           )}
 
           {/* ========================================================
-              MODO 2: PLANIFICACIONES (Simultánea CNB + MINEDUC)
+              MODO 2: PLANIFICACIONES (Guía Pedagógica Unificada Multigrado)
               ======================================================== */}
           {currentMode === 'planificaciones' && (
             <div className="space-y-6 animate-fadeIn">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              {/* Encabezado Principal de la Guía Unificada */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    Planificación Simultánea Semanal
+                  <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-200 mb-2">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Guía Pedagógica Unificada Multigrado • Ciclo Escolar 2026</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    Planificación Simultánea Unificada: 4.°, 5.° y 6.° Primaria
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Alineación oficial CNB (DIGECUR) y referencias directas a páginas de libros MINEDUC.
+                  <p className="text-xs text-slate-600 mt-1 max-w-3xl leading-relaxed">
+                    Esta guía unifica todos los grados en un solo documento. Incluye los <strong>ejercicios transcritos literalmente de las guías del MINEDUC</strong>, los <strong>números de página física</strong> para confrontar con tu libro, los <strong>objetivos oficiales del CNB (DIGECUR)</strong> y los <strong>tiempos de referencia sugeridos</strong> para alternar la atención docente.
                   </p>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold text-slate-500">Filtrar:</span>
-                  {['todos', '4.° Primaria', '5.° Primaria', '6.° Primaria'].map((grado) => (
-                    <button
-                      key={grado}
-                      onClick={() => { playCartoonPopSound(); setSelectedGradoFilter(grado); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
-                        selectedGradoFilter === grado
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {grado}
-                    </button>
-                  ))}
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={() => { playCartoonRisingSound(); window.print(); }}
+                    className="bg-[#0077B6] hover:bg-sky-700 active:bg-sky-800 text-white font-bold px-4 py-2.5 rounded-2xl text-xs transition-all shadow-sm flex items-center space-x-1.5"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Imprimir Guía Unificada</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Tarjetas simultáneas */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {schedule
-                  .filter(s => selectedGradoFilter === 'todos' || s.grado === selectedGradoFilter)
-                  .map((item, idx) => (
-                    <div 
-                      key={idx}
-                      className={`bg-white rounded-3xl p-5 border-2 transition-all flex flex-col justify-between shadow-xs ${
-                        item.completado ? 'border-emerald-300 bg-emerald-50/15' : 'border-slate-200'
-                      }`}
-                    >
+              {/* 
+                LÍNEA DE TIEMPO VISUAL: DISTRIBUCIÓN DE TIEMPOS DE REFERENCIA DEL DOCENTE (45 MINUTOS)
+              */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-md">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
+                      Tiempos de Referencia Docente en el Bloque Simultáneo (45 Minutos)
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
+                    Alternancia Rotativa Sugerida
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                    <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                      <span>Fase 1: 00 - 15 min</span>
+                      <span className="bg-rose-500 text-white text-[10px] px-2 py-0.2 rounded-full">Profesor en 4.°</span>
+                    </div>
+                    <p className="text-white/90 text-[11px] font-medium">
+                      <strong>4.° Grado:</strong> Explicación directa en pizarra.<br/>
+                      <strong>5.° Grado:</strong> Lectura silenciosa guiada en libro.<br/>
+                      <strong>6.° Grado:</strong> Trabajo en parejas planteando datos.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                    <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                      <span>Fase 2: 15 - 30 min</span>
+                      <span className="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.2 rounded-full">Profesor en 5.°</span>
+                    </div>
+                    <p className="text-white/90 text-[11px] font-medium">
+                      <strong>4.° Grado:</strong> Resolución individual en cuaderno.<br/>
+                      <strong>5.° Grado:</strong> Modelado directo con material concreto.<br/>
+                      <strong>6.° Grado:</strong> Resolución de regla de tres.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-white/10 border border-white/15">
+                    <div className="flex items-center justify-between font-black text-amber-300 mb-1">
+                      <span>Fase 3: 30 - 45 min</span>
+                      <span className="bg-emerald-500 text-slate-950 text-[10px] px-2 py-0.2 rounded-full">Profesor en 6.°</span>
+                    </div>
+                    <p className="text-white/90 text-[11px] font-medium">
+                      <strong>4.° Grado:</strong> Revisión en parejas y puesta en común.<br/>
+                      <strong>5.° Grado:</strong> Ejercicios prácticos autónomos.<br/>
+                      <strong>6.° Grado:</strong> Revisión de incógnita "x" y cierre.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 
+                GUÍA UNIFICADA: 3 COLUMNAS SIMULTÁNEAS SINCRONIZADAS
+              */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {schedule.map((item, idx) => (
+                  <div 
+                    key={idx}
+                    className={`bg-white rounded-3xl p-5 sm:p-6 border-2 transition-all flex flex-col justify-between shadow-sm ${
+                      item.completado ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200'
+                    }`}
+                  >
+                    <div className="space-y-4">
+                      {/* Encabezado del Grado y Libro */}
                       <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="font-black text-sm text-slate-800 bg-slate-100 px-3 py-1 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-base font-black text-slate-900 bg-slate-100 px-3.5 py-1.5 rounded-2xl">
                             {item.grado}
                           </span>
-                          <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
-                            item.modo === 'atencion_directa'
-                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                              : 'bg-teal-100 text-teal-800 border border-teal-200'
-                          }`}>
-                            {item.modo === 'atencion_directa' ? '👨‍🏫 Atención Directa' : '📖 Autónomo en Guía'}
+                          <span className="bg-amber-100 text-amber-900 text-xs font-black px-2.5 py-1 rounded-xl border border-amber-300 flex items-center space-x-1">
+                            <span>📖</span>
+                            <span>Pág. Física {item.numeroPagina}</span>
+                          </span>
+                        </div>
+                        <h3 className="font-black text-base text-slate-900 leading-snug">
+                          {item.tema}
+                        </h3>
+                        <p className="text-xs font-bold text-slate-500 mt-0.5">
+                          {item.libroTitulo} • {item.seccionLibro}
+                        </p>
+                      </div>
+
+                      {/* Tiempos de Referencia Específicos del Grado */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center space-x-1">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          <span>Tiempos de Referencia Docente ({item.duracionTotal})</span>
+                        </p>
+                        {item.tiemposReferencia.map((t, tIdx) => (
+                          <div key={tIdx} className="flex items-start space-x-2 text-[11px] leading-tight">
+                            <span className={`font-mono font-black shrink-0 px-1.5 py-0.5 rounded text-[10px] ${
+                              t.rolDocente === 'atencion_directa' 
+                                ? 'bg-rose-100 text-rose-800 font-bold' 
+                                : 'bg-slate-200 text-slate-700'
+                            }`}>
+                              {t.rango}
+                            </span>
+                            <span className="text-slate-700">{t.descripcion}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Objetivo y Competencia según el CNB (DIGECUR) */}
+                      <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-2xl text-xs space-y-1">
+                        <p className="text-[10px] font-black uppercase text-sky-800 tracking-wider">
+                          Objetivo Pedagógico según CNB (DIGECUR)
+                        </p>
+                        <p className="text-sky-950 font-bold text-[11px] leading-snug">
+                          {item.cnbCompetencia}
+                        </p>
+                        <p className="text-sky-900 font-medium text-[11px] leading-relaxed pt-1 border-t border-sky-200/60">
+                          {item.cnbIndicador}
+                        </p>
+                      </div>
+
+                      {/* 
+                        EJERCICIOS LITERALES TAL CUAL ESTÁN EN LA GUÍA DEL MINEDUC
+                      */}
+                      <div className="p-4 bg-amber-50/40 border-2 border-amber-300 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1">
+                            <span>✏️</span>
+                            <span>Ejercicios Literales de la Guía Oficial</span>
+                          </p>
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
+                            Texto Exacto del Libro
                           </span>
                         </div>
 
-                        <h3 className="font-extrabold text-base text-slate-900 mb-1">
-                          {item.tema}
-                        </h3>
-                        <p className="text-[11px] font-bold text-slate-400 mb-3 flex items-center space-x-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{item.bloque} ({item.tiempo})</span>
-                        </p>
-
-                        {/* CNB */}
-                        <div className="bg-sky-50 border border-sky-200 rounded-2xl p-3 mb-3">
-                          <p className="text-[10px] font-black uppercase text-sky-800 tracking-wider mb-1">
-                            Alineación CNB Oficial
-                          </p>
-                          <p className="text-xs text-sky-950 font-medium leading-relaxed">
-                            {item.cnbIndicador}
-                          </p>
-                        </div>
-
-                        {/* MINEDUC y Página Exacta */}
-                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-[10px] font-black uppercase text-amber-800 tracking-wider">
-                              Libro MINEDUC
+                        <div className="bg-white p-3 rounded-xl border border-amber-200 font-mono text-xs text-slate-800 space-y-1.5 leading-relaxed shadow-inner">
+                          {item.ejerciciosLiterales.map((line, lIdx) => (
+                            <p key={lIdx} className={`${line.startsWith('   ') ? 'pl-3 font-semibold text-slate-700' : 'font-bold text-slate-900'}`}>
+                              {line}
                             </p>
-                            <span className="bg-amber-300 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-md">
-                              Pág. {item.pagina}
-                            </span>
-                          </div>
-                          <p className="text-xs font-bold text-amber-950 mb-0.5">
-                            {item.libro}
-                          </p>
-                          <p className="text-[11px] text-amber-900 font-medium">
-                            {item.ejercicio}
-                          </p>
-                        </div>
-
-                        {/* Tarea en Casa */}
-                        <div className="bg-purple-50 border border-purple-200 rounded-2xl p-3 mb-4 text-xs">
-                          <p className="text-[10px] font-black uppercase text-purple-800 tracking-wider mb-1">
-                            🏠 Autoaprendizaje en Casa
-                          </p>
-                          <p className="text-purple-950 font-medium">
-                            {item.tareaCasa}
-                          </p>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Botón de Checklist de Jueves */}
+                      {/* Sugerencia de Aprendizaje en el Hogar */}
+                      <div className="p-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs">
+                        <p className="text-[10px] font-black uppercase text-purple-800 tracking-wider mb-1">
+                          🏠 Autoaprendizaje y Lectura en Casa
+                        </p>
+                        <p className="text-purple-950 font-medium text-[11px] leading-snug">
+                          {item.tareaCasa}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Botón de Checklist de Jueves */}
+                    <div className="mt-5 pt-4 border-t border-slate-100">
                       <button
                         onClick={() => toggleScheduleCompletado(idx)}
-                        className={`w-full py-2.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
+                        className={`w-full py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
                           item.completado
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
                             : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                         }`}
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>{item.completado ? '✓ Tema Impartido' : 'Marcar como Impartido'}</span>
+                        <span>{item.completado ? '✓ Tema Confirmado en Jueves' : 'Marcar como Impartido'}</span>
                       </button>
                     </div>
-                  ))}
+                  </div>
+                ))}
               </div>
             </div>
           )}
