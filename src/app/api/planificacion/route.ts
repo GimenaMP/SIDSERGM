@@ -487,7 +487,7 @@ Devuelve la respuesta en formato JSON con las claves:
               const history = acceptedActivitiesByGrade[gradoNum] || [];
               for (const pastText of history) {
                 const sim = calculateTextSimilarity(clean, pastText);
-                if (sim > 0.55) {
+                if (sim > 0.80) {
                   return fallback;
                 }
               }
@@ -518,7 +518,7 @@ Devuelve la respuesta en formato JSON con las claves:
                 componentes_multigrado: aiDia.componentes_multigrado || baseDia.componentes_multigrado,
                 temaEjePeriodo1: baseDia.temaEjePeriodo1,
                 temaEjePeriodo2: baseDia.temaEjePeriodo2,
-                temaEjePeriodo3: baseDia.temaEjePeriodo3 || ((d === 'Martes' || d === 'Jueves') ? 'Sociedades Prehistóricas, Poblamiento y Primeros Asentamientos de América' : 'La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular'),
+                temaEjePeriodo3: baseDia.temaEjePeriodo3 || undefined,
                 temaEjePeriodo4: baseDia.temaEjePeriodo4,
                 gradosSincronizados: (baseDia.gradosSincronizados || []).map((baseItem: any, idx: number) => {
                   const aiItem = (aiDia.gradosSincronizados || []).find((it: any) =>

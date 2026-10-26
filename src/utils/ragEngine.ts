@@ -452,44 +452,59 @@ export function findExercisesInMineduc(
         continue;
       }
 
+      let cleanText = raw;
+      cleanText = cleanText.replace(/^(?:\d+\s+)?(?:Ciencias|Matemáticas|Comunicación|Medio|Formación|Vivamos)[^.]*?\.\s*/i, '');
+      cleanText = cleanText.replace(/Autoridades Ministeriales[\s\S]*/i, '');
+      cleanText = cleanText.replace(/^(?:¿Cómo es mi libro\?|Competencias y estándares)[^.]*?\.\s*/i, '');
+
       // 1. Detección de sección "Organizo" / "Nos organizamos" / "Organizamos"
-      const organizoMatch = raw.match(/(?:Organizo|Organizamos|Nos organizamos)\s*[:\.]?\s*([^%\n]{15,350})/i);
+      const organizoMatch = cleanText.match(/(?:Organizo|Organizamos|Nos organizamos)\s*[:\.]?\s*([^%\n]{15,350})/i);
       if (organizoMatch) {
-        list.push(`Pág. ${m.numero_pagina}: Organizo: ${organizoMatch[1].trim()}`);
+        list.push(`Pág. ${m.numero_pagina} (Organizo): ${organizoMatch[1].trim()}`);
         continue;
       }
 
       // 2. Detección de sección "Instrucciones" / "Actividades" / "Aplico" / "En mi cuaderno"
-      const instrucMatch = raw.match(/(?:Instrucciones|Instrucción|Actividades|Aplico lo aprendido|En mi cuaderno|Copiamos en el cuaderno)\s*[:\.]?\s*([^%\n]{15,350})/i);
+      const instrucMatch = cleanText.match(/(?:Instrucciones|Instrucción|Actividades|Aplico lo aprendido|En mi cuaderno|Copiamos en el cuaderno)\s*[:\.]?\s*([^%\n]{15,350})/i);
       if (instrucMatch) {
-        list.push(`Pág. ${m.numero_pagina}: ${instrucMatch[0].trim()}`);
+        list.push(`Pág. ${m.numero_pagina} (Instrucciones): ${instrucMatch[0].trim()}`);
         continue;
       }
 
-      // 3. Detección de ejercicios numerados (1. ... 2. ...)
-      const numberedMatch = raw.match(/(?:1\.\s*[^2]{15,200}(?:2\.\s*[^3]{15,200})?)/i);
-      if (numberedMatch && numberedMatch[0].length > 25) {
-        list.push(`Pág. ${m.numero_pagina}: Actividades del libro: ${numberedMatch[0].trim().slice(0, 320)}`);
+      // 3. Detección de preguntas problematizadoras directas del libro (¿...?)
+      const questions = cleanText.match(/¿[^?]{10,250}\?/g);
+      if (questions && questions.length > 0) {
+        list.push(`Pág. ${m.numero_pagina} (Preguntas del libro oficial): ${questions.slice(0, 2).join(' ')}`);
         continue;
       }
 
-      // 4. Detección de viñetas de tareas/experimentos (• ...)
-      const bulletMatch = raw.match(/(?:•\s*[^•]{15,180}(?:•\s*[^•]{15,180})?)/i);
-      if (bulletMatch && bulletMatch[0].length > 25 && !bulletMatch[0].includes('Autoridades') && !bulletMatch[0].includes('Ministeriales')) {
-        list.push(`Pág. ${m.numero_pagina}: Actividades guiadas: ${bulletMatch[0].trim().slice(0, 320)}`);
+      // 4. Detección de viñetas con tareas o contenidos (• ...)
+      const bullets = cleanText.match(/•\s*[^•\n]{15,250}/g);
+      if (bullets && bullets.length > 0) {
+        list.push(`Pág. ${m.numero_pagina} (Actividades del libro): ${bullets.slice(0, 2).map(b => b.trim()).join(' | ')}`);
         continue;
       }
 
-      // 5. Si la página es expositiva/conceptual sin sección explícita de "Organizo" o "Instrucciones":
-      // Aplicar la regla didáctica de dos sesiones
-      const esSesion1 = (isNat && (dia === 'Lunes' || !dia)) || 
-                        (isSoc && (dia === 'Martes' || !dia)) || 
-                        (!isNat && !isSoc && (dia === 'Lunes' || dia === 'Martes' || !dia));
+      // 5. Detección de ejercicios numerados (1. ... 2. ...)
+      const numbered = cleanText.match(/\b\d+\.\s*[^0-9\n]{15,250}/g);
+      if (numbered && numbered.length > 0) {
+        list.push(`Pág. ${m.numero_pagina} (Ejercicios del libro): ${numbered.slice(0, 2).map(n => n.trim()).join(' | ')}`);
+        continue;
+      }
 
-      if (esSesion1) {
-        list.push(`Pág. ${m.numero_pagina}: Sesión 1 (Explicación Docente): Lectura guiada sobre "${tema || materia}". El docente modela los conceptos clave en pizarra, activa presaberes y formula preguntas generadoras a la clase.`);
-      } else {
-        list.push(`Pág. ${m.numero_pagina}: Sesión 2 (Aplicación en Cuaderno): Lectura comprensiva individual. Los estudiantes extraen las 3 ideas principales del tema en su cuaderno y elaboran un organizador gráfico (cuadro sinóptico o mapa conceptual ilustrado).`);
+      // 6. Si la página es conceptual: Extraer el contenido literal exacto del libro oficial
+      if (cleanText.length > 25) {
+        const excerpt = cleanText.slice(0, 200).trim();
+        const esSesion1 = (isNat && (dia === 'Lunes' || !dia)) || 
+                          (isSoc && (dia === 'Martes' || !dia)) || 
+                          (!isNat && !isSoc && (dia === 'Lunes' || dia === 'Martes' || !dia));
+
+        if (esSesion1) {
+          list.push(`Pág. ${m.numero_pagina} (Contenido oficial MINEDUC): "${excerpt}...". El docente modela estos conceptos en pizarra con preguntas generadoras.`);
+        } else {
+          list.push(`Pág. ${m.numero_pagina} (Aplicación en cuaderno): "${excerpt}...". Los estudiantes leen el libro oficial y elaboran un organizador gráfico en su cuaderno.`);
+        }
+        continue;
       }
     }
 
@@ -833,62 +848,62 @@ export function buildRotationalTimeline(
     const pag = matItem.paginaInicio;
     const t = matItem.tema.replace(/\(Pág\..*?\)/g, '').trim();
     const ej = (matItem.ejerciciosLiterales && matItem.ejerciciosLiterales[0])
-      ? matItem.ejerciciosLiterales[0].slice(0, 110)
+      ? matItem.ejerciciosLiterales[0].slice(0, 180)
       : '';
 
     if (mLower.includes('lengua') || mLower.includes('comunic')) {
       if (fase === 'apertura') {
         return esDirecta
-          ? `Lectura compartida y modelado comprensivo en pizarra (Pág. ${pag} · ${t}): El docente lee con entonación, explica vocabulario clave y formula preguntas de activación.`
-          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Lectura silenciosa del texto oficial MINEDUC, subrayado de ideas centrales y respuesta a preguntas exploratorias.`;
+          ? `Modelado comprensivo en pizarra (Pág. ${pag} · ${t}): El docente guía la lectura en voz alta ${ej ? `[${ej}]` : ''}, modela la pronunciación y activa preguntas generadoras.`
+          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): ${ej ? `Lectura atenta y resolución de: ${ej}.` : 'Lectura silenciosa del texto oficial MINEDUC y subrayado de ideas centrales en el cuaderno.'}`;
       } else if (fase === 'ejercitacion') {
         return esDirecta
-          ? `Taller de concordancia gramatical y ortografía (Pág. ${pag} · ${t}): Modelado en la pizarra de estructura sintáctica y redacción dirigida de oraciones.`
-          : `Trabajo Autónomo (Pág. ${pag} · ${t}): Resolución de ejercicios gramaticales del libro MINEDUC y producción de un párrafo en el cuaderno de líneas.`;
+          ? `Taller lingüístico y redacción en pizarra (Pág. ${pag} · ${t}): Modelado sintáctico y de vocabulario a partir de ${ej ? `[${ej}]` : 'la lección del libro oficial'}.`
+          : `Ejercitación en cuaderno (Pág. ${pag} · ${t}): ${ej ? `Resolución de: ${ej}.` : 'Resolución de ejercicios gramaticales del libro MINEDUC y producción de oraciones en cuaderno.'}`;
       } else if (fase === 'indagacion') {
         return esDirecta
-          ? `Comunicación dialógica y tradición oral (Pág. ${pag} · ${t}): Narración de relatos y leyendas de la aldea con enfoque de respeto y escucha activa.`
-          : `Círculo de lectura y escritura creativa (Pág. ${pag}): Redacción de anécdotas comunitarias en parejas para fomentar la fluidez lectora.`;
+          ? `Comunicación dialógica y tradición oral (Pág. ${pag} · ${t}): Análisis colectivo de relatos comunitarios relacionados con ${ej || t}.`
+          : `Círculo de lectura creativa (Pág. ${pag}): ${ej ? `Aplicación de: ${ej}.` : 'Redacción de relatos breves en parejas para fortalecer la fluidez lectora.'}`;
       } else {
         return esDirecta
-          ? `Consolidación lingüística (Pág. ${pag} · ${t}): Aclaración final de dudas, revisión de cuadernos y verificación de criterios de la lista de cotejo.`
-          : `Autoevaluación de lectura en el libro oficial MINEDUC y síntesis de reglas ortográficas en el cuaderno.`;
+          ? `Consolidación lingüística (Pág. ${pag} · ${t}): Verificación de respuestas en pizarra sobre ${ej || t} y aclaración de dudas.`
+          : `Comprobación en cuaderno (Pág. ${pag}): ${ej ? `Síntesis final de: ${ej}.` : 'Autoevaluación en el libro oficial MINEDUC y fijación de reglas ortográficas en cuaderno.'}`;
       }
     } else if (mLower.includes('social') || mLower.includes('ciudad') || mLower.includes('historia') || mLower.includes('geograf')) {
       if (fase === 'apertura') {
         return esDirecta
-          ? `Introducción interactiva a "${t}" (Pág. ${pag}): El docente activa conocimientos previos con preguntas generadoras, explica el contexto histórico o geográfico en mapas de la pizarra y guía la lectura inicial del libro oficial MINEDUC.`
-          : `Lectura comprensiva y mapa conceptual (Pág. ${pag} · "${t}"): Lectura silenciosa del texto oficial MINEDUC, identificación de conceptos clave y elaboración del esquema inicial en el cuaderno.`;
+          ? `Introducción y análisis histórico-geográfico (Pág. ${pag} · "${t}"): El docente activa conocimientos previos, explica en la pizarra ${ej ? `[${ej}]` : `el tema "${t}"`} y guía la observación de fuentes e ilustraciones del texto oficial.`
+          : `Lectura analítica en cuaderno (Pág. ${pag} · "${t}"): ${ej ? `Lectura del texto oficial y respuesta a: ${ej}.` : 'Lectura silenciosa del texto oficial MINEDUC e identificación de conceptos clave en el cuaderno.'}`;
       } else if (fase === 'ejercitacion') {
         return esDirecta
-          ? `Análisis guiado de causas y consecuencias (Pág. ${pag} · "${t}"): Explicación de dinámicas sociales e históricas, modelado de cuadros analíticos en pizarra y discusión grupal de hechos relevantes.`
-          : `Trabajo en cuaderno y libro oficial (Pág. ${pag} · "${t}"): Resolución guiada de los incisos de análisis del libro MINEDUC (${ej || 'ejercicios de análisis de fuentes e imágenes'}) y redacción de conclusiones en el cuaderno.`;
+          ? `Análisis guiado de causas y consecuencias (Pág. ${pag} · "${t}"): Explicación de hechos históricos o geográficos en pizarra a partir de ${ej ? `[${ej}]` : `la lección`} y discusión grupal.`
+          : `Trabajo en cuaderno y libro oficial (Pág. ${pag} · "${t}"): ${ej ? `Resolución guiada de: ${ej}.` : 'Resolución de incisos de análisis del libro MINEDUC y redacción de conclusiones en el cuaderno.'}`;
       } else if (fase === 'indagacion') {
         return esDirecta
-          ? `Estudio de casos y aplicación comunitaria (Pág. ${pag} · "${t}"): Vinculación del tema con situaciones reales de Guatemala, resolución pacífica de conflictos y fomento de convivencia democrática.`
-          : `Taller de investigación cívica en parejas (Pág. ${pag} · "${t}"): Trabajo cooperativo resolviendo preguntas problematizadoras del texto oficial y formulación de propuestas ciudadanas en el cuaderno.`;
+          ? `Estudio de casos y aplicación comunitaria (Pág. ${pag} · "${t}"): Vinculación de ${ej || t} con la historia y convivencia comunitaria de Guatemala.`
+          : `Taller de investigación cívica (Pág. ${pag} · "${t}"): ${ej ? `Trabajo en parejas resolviendo: ${ej}.` : 'Resolución de preguntas problematizadoras del texto oficial en el cuaderno.'}`;
       } else {
         return esDirecta
-          ? `Síntesis cívico-social y debate formativo (Pág. ${pag} · "${t}"): Plenaria de conclusiones semanales, verificación de aprendizajes clave y orientación para la comprobación del viernes.`
-          : `Comprobación y portafolio (Pág. ${pag} · "${t}"): Resolución de la sección evaluativa del libro oficial MINEDUC (${ej || 'actividades de autoevaluación y síntesis'}), organización del portafolio y repaso final en cuaderno.`;
+          ? `Síntesis cívico-social y debate formativo (Pág. ${pag} · "${t}"): Plenaria de conclusiones semanales sobre ${ej || t} y verificación de aprendizajes clave.`
+          : `Comprobación y síntesis (Pág. ${pag} · "${t}"): ${ej ? `Resolución final de: ${ej}.` : 'Resolución de actividades de síntesis del libro oficial MINEDUC en cuaderno.'}`;
       }
     } else if (mLower.includes('ciencia') || mLower.includes('medio') || mLower.includes('natural')) {
       if (fase === 'apertura') {
         return esDirecta
-          ? `Exploración científica del entorno (Pág. ${pag} · ${t}): Presentación de fenómenos naturales, partes del cuerpo o ecosistemas y preguntas generadoras.`
-          : `Trabajo Autónomo (Pág. ${pag} · ${t}): Observación atenta de imágenes del libro oficial MINEDUC y dibujo del esquema inicial en el cuaderno.`;
+          ? `Modelado científico en pizarra (Pág. ${pag} · ${t}): El docente explica los conceptos del libro oficial ${ej ? `[${ej}]` : ''} mediante esquemas y preguntas generadoras.`
+          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Lectura comprensiva del libro oficial MINEDUC. ${ej ? `Desarrollo de: ${ej}.` : 'Identificación de conceptos y dibujo del esquema en cuaderno.'}`;
       } else if (fase === 'ejercitacion') {
         return esDirecta
-          ? `Profundización de procesos biológicos y ecológicos (Pág. ${pag} · ${t}): Análisis de relaciones causa-efecto y explicación de ciclos guiados por el libro.`
-          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Resolución de cuestionarios analíticos y tablas comparativas del libro oficial MINEDUC.`;
+          ? `Profundización de procesos científicos (Pág. ${pag} · ${t}): Análisis de relaciones causa-efecto basado en el libro oficial ${ej ? `(${ej})` : ''} y modelado de respuestas en pizarra.`
+          : `Resolución en cuaderno (Pág. ${pag} · ${t}): ${ej ? `Los estudiantes resuelven: ${ej}.` : 'Resolución de cuestionarios analíticos y tablas comparativas del libro oficial MINEDUC.'}`;
       } else if (fase === 'indagacion') {
         return esDirecta
-          ? `Aplicación ecológica y de salud comunitaria (Pág. ${pag} · ${t}): Vinculación de la lección con la prevención de enfermedades y el cuidado del agua local.`
-          : `Rincón de Ciencias y afiches (Pág. ${pag}): Elaboración de compromisos ambientales en equipos y registro de observaciones del huerto escolar.`;
+          ? `Aplicación ecológica y comunitaria (Pág. ${pag} · ${t}): Vinculación de ${ej || t} con el entorno local y la salud de la comunidad.`
+          : `Rincón de Ciencias (Pág. ${pag}): ${ej ? `Aplicación de: ${ej}.` : 'Elaboración de compromisos ambientales y registro de observaciones.'}`;
       } else {
         return esDirecta
-          ? `Consolidación científica (Pág. ${pag} · ${t}): Exposición de murales científicos, síntesis en la pizarra y autoevaluación formativa.`
-          : `Resolución de la sección evaluativa de ciencias del libro MINEDUC y organización de notas en el portafolio.`;
+          ? `Consolidación científica (Pág. ${pag} · ${t}): Síntesis en pizarra de los aprendizajes clave de ${ej || t} y autoevaluación formativa.`
+          : `Comprobación en cuaderno (Pág. ${pag}): ${ej ? `Resolución de: ${ej}.` : 'Resolución de la sección evaluativa de ciencias del libro MINEDUC.'}`;
       }
     } else if (mLower.includes('artíst') || mLower.includes('arte') || mLower.includes('músic') || mLower.includes('plástic')) {
       return esDirecta
@@ -906,20 +921,20 @@ export function buildRotationalTimeline(
       // Matemáticas u otras
       if (fase === 'apertura') {
         return esDirecta
-          ? `Modelado del algoritmo matemático (Pág. ${pag} · ${t}): El maestro explica en la pizarra el procedimiento paso a paso, modela el ejercicio muestra (${ej || 'ejercicio 1'}) y resuelve dudas.`
-          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Resolución individual de los primeros incisos de cálculo del libro oficial MINEDUC (${ej || 'cálculo básico'}).`;
+          ? `Modelado del algoritmo matemático (Pág. ${pag} · ${t}): El maestro explica en la pizarra el procedimiento paso a paso a partir de ${ej ? `[${ej}]` : 'los ejercicios del libro'} y resuelve dudas.`
+          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): ${ej ? `Resolución individual en cuaderno de: ${ej}.` : 'Resolución individual de los primeros incisos de cálculo del libro oficial MINEDUC.'}`;
       } else if (fase === 'ejercitacion') {
         return esDirecta
-          ? `Ejercitación guiada y análisis de cálculo (Pág. ${pag} · ${t}): Modelado de operaciones combinadas o problemas de mayor complejidad y corrección en pizarra.`
-          : `Trabajo Autónomo (Pág. ${pag} · ${t}): Práctica intensiva en cuaderno resolviendo los problemas y operaciones de la página oficial MINEDUC (${ej || 'práctica formal'}).`;
+          ? `Ejercitación guiada y análisis de cálculo (Pág. ${pag} · ${t}): Modelado de operaciones y resolución en pizarra de ${ej ? `[${ej}]` : 'los problemas del libro'}.`
+          : `Trabajo Autónomo (Pág. ${pag} · ${t}): ${ej ? `Práctica formal en cuaderno: ${ej}.` : 'Práctica intensiva en cuaderno resolviendo los problemas y operaciones de la página oficial MINEDUC.'}`;
       } else if (fase === 'indagacion') {
         return esDirecta
-          ? `Aplicación contextualizada (Pág. ${pag} · ${t}): Formulación de situaciones matemáticas del mercado local, compras y presupuestos en Quetzales.`
-          : `Rincón de Matemáticas (Pág. ${pag}): Resolución en parejas de desafíos de cálculo con billetes didácticos, semillas o ábacos.`;
+          ? `Aplicación contextualizada (Pág. ${pag} · ${t}): Formulación de situaciones matemáticas del mercado local, compras y cosechas basadas en ${ej || t}.`
+          : `Rincón de Matemáticas (Pág. ${pag}): ${ej ? `Desafíos con material concreto de: ${ej}.` : 'Resolución en parejas de desafíos de cálculo con semillas o ábacos.'}`;
       } else {
         return esDirecta
-          ? `Consolidación de cálculo y agilidad mental (Pág. ${pag} · ${t}): Repaso de propiedades numéricas, retos rápidos en pizarra y preparación para el test escrito.`
-          : `Resolución individual en silencio de la sección de repaso del libro oficial MINEDUC y revisión final de procedimientos en cuaderno.`;
+          ? `Consolidación de cálculo y agilidad mental (Pág. ${pag} · ${t}): Repaso de propiedades numéricas y retos en pizarra sobre ${ej || t}.`
+          : `Resolución individual (Pág. ${pag}): ${ej ? `Revisión final y entrega de: ${ej}.` : 'Resolución individual en silencio de la sección de repaso del libro oficial MINEDUC en cuaderno.'}`;
       }
     }
   };
@@ -994,7 +1009,9 @@ export function buildRotationalTimeline(
       ? `09:05 - 09:55 | ${matP2.materia} (Atención Directa Docente - Rotación · Pág. ${matP2.paginaInicio}): ${actP2}`
       : `09:05 - 09:55 | ${matP2.materia} (Trabajo Autónomo con Libro · Pág. ${matP2.paginaInicio}): ${actP2}`;
 
-    p3Text = `10:30 - 11:15 | ${matP3.materia} (Apertura Plenaria en Pizarra + Práctica en Libro · Pág. ${matP3.paginaInicio}): [Explicación Conjunta en Pizarra (15 min): El docente modela el concepto nuclear del Tema Eje de ${matP3.materia} ("${matP3.temaEje}") para ambos grados a la vez] + [Trabajo Autónomo en Libro y Cuaderno (30 min)]: ${actP3}`;
+    p3Text = matP3.temaEje
+      ? `10:30 - 11:15 | ${matP3.materia} (Apertura Plenaria en Pizarra + Práctica en Libro · Pág. ${matP3.paginaInicio}): [Explicación Conjunta en Pizarra (15 min): El docente modela el concepto nuclear del Tema Eje de ${matP3.materia} ("${matP3.temaEje}") para ambos grados a la vez] + [Trabajo Autónomo en Libro y Cuaderno (30 min)]: ${actP3}`
+      : `10:30 - 11:15 | ${matP3.materia} (Dosificación Regular por Grado · Pág. ${matP3.paginaInicio}): ${actP3}`;
     p4Text = `11:15 - 11:50 | ${matP4.materia} (${rolP4} · Pág. ${matP4.paginaInicio}): ${actP4}`;
   }
 
@@ -1224,6 +1241,7 @@ export function determineTemaEjeTransversal(
     categoriaConceptual,
     propositoComun,
     descripcionEje,
+    analisisResultados,
     actividadesLenguaje: {
       expresion_oral: 'Diálogo de saberes comunitarios matutino, exposición de argumentos y socialización en plenaria.',
       escritura: 'Resolución de incisos y registro de algoritmos, resúmenes y cuadros comparativos en el cuaderno de trabajo.',
@@ -1287,6 +1305,7 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
   const propositoComun = ejeResult.propositoComun;
   const actividadesLenguaje = ejeResult.actividadesLenguaje;
   const materialesDidacticos = ejeResult.materialesDidacticos;
+  const analisisResultados = (ejeResult as any).analisisResultados || [];
 
   // Competencias similares identificadas para articulación multigrado
   const competenciasSimilares: SimilarCompetency[] = [
@@ -1360,6 +1379,10 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
         const matSeleccionadasDetalle: MateriaSeleccionadaDetalle[] = itemsG.map(it => {
           const subDia = getSubtemaForDay(dia, it);
           const matEjercicios = findExercisesInMineduc(g, it.materia, subDia.pagina, subDia.pagina, subDia.titulo, dia);
+          const mKey = it.materiaBase || it.materia.toLowerCase().trim();
+          const rAnalisis = analisisResultados.find(r => r.idBase === mKey || r.materiaNombre.toLowerCase().includes(mKey));
+          const temaEjeAsignatura = (rAnalisis && rAnalisis.tieneRelacion) ? rAnalisis.temaEjeTrazado || undefined : undefined;
+
           return {
             materia: it.materia,
             tema: subDia.titulo,
@@ -1369,7 +1392,8 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
             paginaFin: subDia.pagina,
             competencias: it.competencias || [],
             indicadores: it.indicadores || [],
-            ejerciciosLiterales: matEjercicios
+            ejerciciosLiterales: matEjercicios,
+            temaEje: temaEjeAsignatura
           };
         });
 
