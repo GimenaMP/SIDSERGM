@@ -315,9 +315,13 @@ INSTRUCCIÓN RIGUROSA SOBRE ACTIVIDADES Y EJERCICIOS DEL LIBRO OFICIAL (RF-06):
      - En Sesión 2 (Miércoles en Naturales, Jueves en Sociales): Los alumnos leen en su libro, extraen las 3 ideas principales del tema en su cuaderno y elaboran un organizador gráfico (cuadro sinóptico o mapa conceptual ilustrado).
 
 INSTRUCCIONES CLAVE DE GENERACIÓN Y PRIORIZACIÓN CNB (RF-01 AL RF-09):
-1. TEMA EJE TRANSVERSAL UNIFICADOR:
-   - Debe integrar los contenidos de todos los grados representados bajo un mismo propósito didáctico.
-   - Llena los campos "tema_generador_comun", "categoria_conceptual", "proposito_comun" y "descripcion_eje_integrador".
+1. TEMA EJE TRANSVERSAL Y ANÁLISIS DE RELACIÓN POR ASIGNATURA:
+   - Los temas eje DEBEN basarse en el análisis de los temas de la MISMA asignatura entre los diferentes grados:
+     * SI LOS TEMAS TIENEN RELACIÓN CONCEPTUAL DIRECTA (ej: la célula y mitocondria en Ciencias Naturales, múltiplos y divisores en Matemáticas, poblamiento prehistórico en Ciencias Sociales):
+       Propón como "tema_generador_comun" un Tema Eje específico y enriquecido con los conceptos comunes, y en "descripcion_eje_integrador" la estrategia para explicarlo conjuntamente en pizarra antes del trabajo diferenciado en cada libro de texto.
+     * SI LOS TEMAS NO TIENEN RELACIÓN DIRECTA (o pertenecen a unidades/ramas pedagógicas distintas):
+       ESTÁ ESTRICTAMENTE PROHIBIDO INVENTAR O FORZAR UN TEMA EJE GENÉRICO.
+       En ese caso, establece exactamente "tema_generador_comun": "Dosificación Curricular Regular Diferenciada por Grado", "categoria_conceptual": "Dosificación Regular CNB (Temas Independientes)", y desarrolla la planificación con la dosificación normal de cada libro oficial por grado.
 
 2. SECUENCIACIÓN PROGRESIVA DIARIA (LUNES A JUEVES - CERO REPETICIÓN):
    - LUNES (Día 1 - Exploración e Introducción): Activación de presaberes con el Tema Eje (15 min) + Presentación y modelado del concepto nuevo con Atención Directa al Grado Base (modelado en pizarra) mientras los demás leen su libro.

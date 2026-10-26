@@ -1,7 +1,13 @@
 import cnbRaw from '../../data/cnb_processed.json';
 import mineducRaw from '../../data/mineduc_ejercicios.json';
 import { getCNBCorrespondingEntry, getMineducPageForGrade } from './cnbDosificacionCompleta';
-import { clusterTemaEjeTransversal, pedagogicalDecisionTree, recommendOptimalExercises } from './machineLearningPlanning';
+import { 
+  clusterTemaEjeTransversal, 
+  pedagogicalDecisionTree, 
+  recommendOptimalExercises,
+  analizarRelacionTemasMismaMateria,
+  ResultadoRelacionTemasMateria
+} from './machineLearningPlanning';
 
 export type DiaSemana = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves';
 
@@ -679,54 +685,11 @@ export function getSubtemaForDay(
 }
 
 
-function getTemaEjeParaMateria(matItem: MateriaSeleccionadaDetalle): string {
-  const mLower = matItem.materia.toLowerCase();
-  const text = (matItem.tema + ' ' + (matItem.competencias || []).join(' ') + ' ' + (matItem.indicadores || []).join(' ')).toLowerCase();
-
-  if (mLower.includes('social')) {
-    if (/paleol[ií]tico|prehist[oó]ri|pobla|primeros pobladores|origen|cazadores|asentamiento/i.test(text)) {
-      return 'Sociedades Prehistóricas, Poblamiento y Primeros Asentamientos de América';
-    }
-    if (/maya|ind[ií]gena|pueblos|ancestral|colonia|conquista/i.test(text)) {
-      return 'Evolución Histórica, Pueblos Originarios y Memoria Cultural de Guatemala';
-    }
-    if (/geograf|mapa|relieve|clima|continente|territorio/i.test(text)) {
-      return 'El Espacio Geográfico de América, Recursos Naturales y Organización Territorial';
-    }
-    return 'Sociedades Prehistóricas, Organización Social y Geografía de América';
+function getTemaEjeParaMateria(matItem: MateriaSeleccionadaDetalle): string | undefined {
+  if (matItem.temaEje && matItem.temaEje.length > 3) {
+    return matItem.temaEje;
   }
-
-  if (mLower.includes('natural') || mLower.includes('ciencia')) {
-    if (/c[eé]lula|mitocondria|reproducci[oó]n|mitosis|meiosis|organelo|tejido|gen[eé]tica/i.test(text)) {
-      return 'La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular';
-    }
-    if (/ecosistema|biodiversidad|planta|animal|flora|fauna|cadena/i.test(text)) {
-      return 'Los Ecosistemas, la Biodiversidad y el Equilibrio Ambiental en Nuestra Región';
-    }
-    if (/salud|higiene|cuerpo|enfermedad|nutrici[oó]n|sistema/i.test(text)) {
-      return 'Salud Comunitaria, Sistemas del Cuerpo Humano y Prevención de Enfermedades';
-    }
-    return 'La Célula como Unidad de Vida y Organización Biológica de los Seres Vivos';
-  }
-
-  if (mLower.includes('mate')) {
-    if (/m[uú]ltiplo|divisor|mcm|mcd|primo|factor/i.test(text)) {
-      return 'Razonamiento Numérico y Divisibilidad: Múltiplos, Divisores y Proporciones';
-    }
-    if (/fracci[oó]n|decimal|porcentaje|proporci[oó]n|raz[oó]n/i.test(text)) {
-      return 'Operaciones con Fracciones, Razones y Proporciones en el Comercio Comunitario';
-    }
-    return 'El Razonamiento Numérico, Operaciones y Cálculo en las Actividades Cotidianas';
-  }
-
-  if (mLower.includes('lengua') || mLower.includes('comunic')) {
-    if (/f[aá]bula|ensayo|narrat|moraleja|argument|cuento|leyenda/i.test(text)) {
-      return 'Comprensión Lectora, Tipologías Textuales (Fábula y Ensayo) y Expresión Escrita';
-    }
-    return 'La Comunicación Dialógica, Expresión Oral y Producción Escrita en la Escuela';
-  }
-
-  return 'Desarrollo Formativo Integral, Creatividad y Vinculación Comunitaria';
+  return undefined;
 }
 
 export function buildRotationalTimeline(
@@ -1213,79 +1176,47 @@ export function determineTemaEjeTransversal(
     ? items.map(it => it.materia).filter((v, i, a) => a.indexOf(v) === i)
     : [areaCurricular || 'Matemáticas'];
 
-  const allTemasStr = items.map(it => (it.tema || '')).join(' ').toLowerCase();
   const gradosLabel = grados.map(g => `${g}.°`).join(' y ');
 
-  // Aplicación del algoritmo de Clustering Semántico (K-Means / Feature Vector)
-  const itemsText = items.map(it => `${it.materia} ${it.tema || ''} ${it.unidadTitulo || ''}`);
-  if (itemsText.length === 0 && areaCurricular) itemsText.push(areaCurricular);
-  const mlCluster = clusterTemaEjeTransversal(itemsText);
+  // Agrupamiento de items por materia para análisis riguroso de relación entre grados
+  const itemsPorMateria: Record<string, typeof items> = {};
+  items.forEach(it => {
+    const mKey = it.materiaBase || it.materia.toLowerCase().trim();
+    if (!itemsPorMateria[mKey]) itemsPorMateria[mKey] = [];
+    itemsPorMateria[mKey].push(it);
+  });
 
-  let temaGenerador = mlCluster.temaEje;
-  let categoriaConceptual = mlCluster.categoria;
-  let propositoComun = mlCluster.proposito;
-  let descripcionEje = `Eje Temático Transversal (Cluster ML: ${mlCluster.categoria}): Articulación didáctica para los grados ${gradosLabel} Primaria. Conecta los contenidos seleccionados bajo el principio de aprendizaje espiralado y gradual del CNB.`;
+  // Ejecución de análisis de convergencia por asignatura (RF-04 / RF-05)
+  const analisisResultados: ResultadoRelacionTemasMateria[] = Object.entries(itemsPorMateria).map(([mKey, mItems]) => {
+    const temasPorGrado = mItems.map(it => ({
+      grado: it.grado,
+      libroTitulo: it.libroTitulo,
+      temas: it.temasSeleccionados && it.temasSeleccionados.length > 0
+        ? it.temasSeleccionados
+        : [{ titulo: it.tema, paginaInicio: it.paginaInicio, paginaFin: it.paginaFin }]
+    }));
+    const matNombre = mItems[0]?.materia || mKey;
+    return analizarRelacionTemasMismaMateria(mKey, matNombre, temasPorGrado);
+  });
 
-  const hasMate = allMaterias.some(m => /mate/i.test(m));
-  const hasLenguaje = allMaterias.some(m => /lengua|comunic/i.test(m));
-  const hasCiencias = allMaterias.some(m => /ciencia|medio|natural/i.test(m));
-  const hasSociales = allMaterias.some(m => /social|ciudad/i.test(m));
+  const ejeConvergente = analisisResultados.find(r => r.tieneRelacion && r.temaEjeTrazado);
 
-  if (hasCiencias && /celula|célula|mitocondria|reproduccion|reproducción|organelo|tejido|genetica|genética|mitosis|meiosis|adn|dna/i.test(allTemasStr)) {
-    categoriaConceptual = 'Biología Celular y Continuidad de la Vida';
-    temaGenerador = 'La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular';
-    propositoComun = 'Comprender la organización celular, el papel de la mitocondria en la obtención de energía y los procesos de división y reproducción celular que garantizan la vida de los seres vivos.';
-    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} exploran la base biológica de la vida de forma concéntrica: en 5.° identifican la célula, sus partes y organelos clave (como la mitocondria), mientras que en 6.° profundizan en la respiración celular, el ciclo celular y la reproducción por mitosis y meiosis.`;
-  } else if (hasCiencias && /ecosistema|biodiversidad|planta|animal|flora|fauna|cadena|trófica|adaptacion|habitat/i.test(allTemasStr)) {
-    categoriaConceptual = 'Ecología, Ecosistemas y Biodiversidad';
-    temaGenerador = 'Los Ecosistemas, la Biodiversidad y el Equilibrio Ambiental en Nuestra Región';
-    propositoComun = 'Identificar las relaciones entre los seres vivos y su entorno, reconociendo la importancia de preservar los ecosistemas locales.';
-    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} estudian las interacciones ecológicas de su entorno, graduando desde la clasificación de especies hasta las dinámicas de cadenas tróficas y conservación comunitaria.`;
-  } else if (hasCiencias && /salud|higiene|cuerpo|enfermedad|nutricion|alimento/i.test(allTemasStr)) {
-    categoriaConceptual = 'Salud, Higiene y Prevención de Enfermedades';
-    temaGenerador = 'Salud e higiene comunitaria: Las enfermedades y el cuidado del cuerpo';
-    propositoComun = 'Identificar las principales enfermedades de la comunidad y las formas de atenderlas y aplicar las medidas preventivas que estén a su alcance en su vida personal.';
-    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} abordan la preservación de la salud y prevención de enfermedades, graduando desde la higiene personal y esquema corporal en grados iniciales hasta la estructura biológica y hábitos comunitarios en grados avanzados.`;
-  } else if (hasCiencias && /materia|energia|energía|fuerza|movimiento|calor|luz|quimic|fisic|átomo/i.test(allTemasStr)) {
-    categoriaConceptual = 'Materia, Energía y Fenómenos Físicos';
-    temaGenerador = 'La Materia, las Fuerzas y las Transformaciones de Energía en la Vida Cotidiana';
-    propositoComun = 'Reconocer las propiedades de la materia, las manifestaciones de energía y sus aplicaciones prácticas en la comunidad.';
-    descripcionEje = `Eje Temático Transversal: Articulación de conceptos físicos y químicos para ${gradosLabel} Primaria, vinculando los estados de la materia y tipos de energía con el entorno natural.`;
-  } else if (hasMate && /posicional|numer|suma|resta|multiplic|fraccion|proporc|conjunto|decimal|calculo/i.test(allTemasStr)) {
-    categoriaConceptual = 'Aritmética, Numeración y Razonamiento Lógico';
-    temaGenerador = 'El razonamiento numérico, las operaciones y el cálculo en las actividades cotidianas de la comunidad';
-    propositoComun = 'Desarrollar la agilidad de cálculo mental, la comprensión del valor posicional de los números y la resolución de situaciones comerciales y cotidianas de la aldea.';
-    descripcionEje = `Eje Temático Transversal: Articulación del razonamiento aritmético para ${gradosLabel} Primaria, conectando el valor relativo de los dígitos y las operaciones matemáticas con el mercado local, cosechas y presupuestos familiares.`;
-  } else if (hasLenguaje && /dialogo|conversacion|oral|comunic|gesto|palabra|lectura|cuento|leyenda|narrac/i.test(allTemasStr)) {
-    categoriaConceptual = 'Comunicación Dialógica y Tradición Oral';
-    temaGenerador = 'La comunicación dialógica, las formas de expresión y el valor de la palabra en la comunidad';
-    propositoComun = 'Fortalecer la expresión oral, el respeto en la conversación y la capacidad de comunicar acuerdos en la familia y la escuela.';
-    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} desarrollan habilidades comunicativas a través de diálogos, relatos orales y normas de participación en asambleas de aula.`;
-  } else if (hasSociales && /maya|indigena|indígena|prehispan|colonia|conquista|independencia|historia|patrimonio|costumbre/i.test(allTemasStr)) {
-    categoriaConceptual = 'Historia, Memoria y Raíces Culturales';
-    temaGenerador = 'Evolución Histórica, Pueblos de Guatemala y Patrimonio Cultural Comunitario';
-    propositoComun = 'Reconocer los procesos históricos de Guatemala, valorar la diversidad cultural de los cuatro pueblos y preservar la memoria comunitaria.';
-    descripcionEje = `Eje Temático Transversal: Articulación histórica para ${gradosLabel} Primaria, conectando el origen de los pueblos y hechos históricos con la identidad y costumbres locales.`;
-  } else if (hasSociales && /geografia|geografía|mapa|relieve|clima|hidrografia|continente|america|territorio/i.test(allTemasStr)) {
-    categoriaConceptual = 'Geografía, Espacio y Recursos Naturales';
-    temaGenerador = 'El Espacio Geográfico, Recursos Naturales y Organización Territorial';
-    propositoComun = 'Comprender la ubicación geográfica, características físicas del territorio y el aprovechamiento sostenible de los recursos naturales.';
-    descripcionEje = `Eje Temático Transversal: Conexión geográfica para ${gradosLabel} Primaria, graduando desde el mapa local y departamental hasta la geografía de Guatemala y América.`;
-  } else if (hasSociales && /derecho|ciudadan|democracia|constitucion|constitución|paz|gobierno|normas|convivencia/i.test(allTemasStr)) {
-    categoriaConceptual = 'Formación Ciudadana y Cultura de Paz';
-    temaGenerador = 'Convivencia Democrática, Derechos Humanos y Participación Comunitaria';
-    propositoComun = 'Fomentar la cultura de paz, el conocimiento de los derechos ciudadanos y la resolución dialogada de conflictos en la escuela y la aldea.';
-    descripcionEje = `Eje Temático Transversal: Desarrollo cívico-social para ${gradosLabel} Primaria, articulando los valores democráticos y el gobierno escolar con la vida en comunidad.`;
-  } else if (hasSociales) {
-    categoriaConceptual = 'Identidad Comunitaria y Convivencia Social';
-    temaGenerador = 'Identidad comunitaria, organización social, geografía y convivencia armónica en el aula multigrado';
-    propositoComun = 'Reconocer las raíces culturales, el espacio geográfico y las normas de convivencia democrática a través del diálogo.';
-    descripcionEje = `Eje Temático Transversal: Articulación de los saberes cívicos y geográficos para ${gradosLabel} Primaria, contextualizados en las vivencias y necesidades de la aldea.`;
+  let temaGenerador: string;
+  let categoriaConceptual: string;
+  let propositoComun: string;
+  let descripcionEje: string;
+
+  if (ejeConvergente && ejeConvergente.temaEjeTrazado) {
+    temaGenerador = ejeConvergente.temaEjeTrazado;
+    categoriaConceptual = `${ejeConvergente.materiaNombre} (Eje Temático Común)`;
+    propositoComun = ejeConvergente.estrategiaDidactica;
+    descripcionEje = `Eje Temático Transversal (${ejeConvergente.materiaNombre}): Articulación didáctica para los grados ${gradosLabel} Primaria. ${ejeConvergente.estrategiaDidactica}`;
   } else {
-    categoriaConceptual = 'Saberes Integrados y Razonamiento Comunitario';
-    temaGenerador = 'Saberes comunitarios, razonamiento lógico y expresión en nuestra escuela multigrado';
-    propositoComun = 'Integrar de manera interdisciplinaria el cálculo, la expresión comunicativa y el cuidado del entorno local en proyectos articulados para el aula multigrado.';
-    descripcionEje = `Eje Temático Transversal: Articulación interdisciplinaria de las áreas de estudio para ${gradosLabel} Primaria, contextualizadas en las vivencias locales.`;
+    // Si no tienen relación conceptual comprobable o es aula monogrado: DOSIFICACIÓN REGULAR NORMAL (Sin inventar temas genéricos)
+    temaGenerador = 'Dosificación Curricular Regular Diferenciada por Grado';
+    categoriaConceptual = 'Dosificación Regular CNB (Temas Independientes)';
+    propositoComun = 'Desarrollar sistemáticamente los contenidos programáticos del libro de texto oficial correspondiente a cada grado, sin forzar ejes temáticos transversales artificiales.';
+    descripcionEje = `Los temas seleccionados para los grados ${gradosLabel} Primaria corresponden a unidades temáticas independientes. Se aplica la dosificación regular mediante atención alternada y rotación guiada con el libro oficial de cada grado.`;
   }
 
   return {

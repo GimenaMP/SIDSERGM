@@ -99,10 +99,358 @@ export function pedagogicalDecisionTree(features: PedagogicalFeatures): Decision
 }
 
 /**
- * 2. K-MEANS / SEMANTIC FEATURE CLUSTERING (Clustering de Tema Eje Transversal)
- * Extrae vectores de características de los temas seleccionados y calcula la distancia hacia
- * los clusters temáticos oficiales del CNB para encontrar el centroide óptimo.
+ * 2. ANÁLISIS DE RELACIÓN CONCEPTUAL Y TRAZADO DE TEMA EJE POR ASIGNATURA
+ * Evalúa rigurosamente si los temas seleccionados para una misma materia entre distintos grados
+ * poseen una relación pedagógica genuina (convergencia semántica o taxonómica).
+ * 
+ * Regla de Oro:
+ * - SI TIENEN RELACIÓN: Propone un Tema Eje específico y palabras clave comunes para modelado compartido.
+ * - SI NO TIENEN RELACIÓN: NO inventa temas genéricos; devuelve temaEje = null y orienta la dosificación normal.
  */
+
+export interface ResultadoRelacionTemasMateria {
+  materiaNombre: string;
+  idBase: string;
+  temasPorGrado: {
+    grado: number;
+    libroTitulo?: string;
+    temas: { titulo: string; paginaInicio?: number; paginaFin?: number }[];
+  }[];
+  tieneRelacion: boolean;
+  scoreSimilitud: number;
+  palabrasClaveComunes: string[];
+  temaEjeTrazado: string | null;
+  estrategiaDidactica: string;
+  motivoClasificacion: string;
+}
+
+interface SubDominioCluster {
+  id: string;
+  nombre: string;
+  temaEje: string;
+  estrategia: string;
+  keywords: string[];
+}
+
+const TAXONOMIA_ASIGNATURAS: Record<string, SubDominioCluster[]> = {
+  ciencias_naturales: [
+    {
+      id: 'celular',
+      nombre: 'Biología Celular y Reproducción',
+      temaEje: 'Biología Celular: Estructura, Mitocondria y Reproducción Celular',
+      estrategia: 'Convergencia en biología celular: el docente modela la estructura y funciones celulares en la pizarra para toda la clase (10-15 min); luego cada grado resuelve las actividades específicas en su libro oficial (organelos en 5.° y reproducción celular en 6.°).',
+      keywords: ['celula', 'celular', 'mitocondria', 'organelo', 'organelos', 'reproduccion', 'mitosis', 'meiosis', 'tejido', 'tejidos', 'adn', 'nucleo']
+    },
+    {
+      id: 'ecosistemas',
+      nombre: 'Ecosistemas y Biodiversidad',
+      temaEje: 'Los Ecosistemas, la Biodiversidad y el Equilibrio Ambiental',
+      estrategia: 'Convergencia ecológica: el docente modela las relaciones de los seres vivos y el ambiente en la pizarra antes de que cada grado resuelva las guías de su libro.',
+      keywords: ['ecosistema', 'ecosistemas', 'biodiversidad', 'cadena', 'trofica', 'alimenticia', 'flora', 'fauna', 'habitat', 'especies', 'adaptacion', 'ambiente']
+    },
+    {
+      id: 'cuerpo_salud',
+      nombre: 'Anatomía, Sistemas y Salud',
+      temaEje: 'Sistemas del Cuerpo Humano, Salud y Prevención de Enfermedades',
+      estrategia: 'Convergencia en salud y anatomía: explicación plenaria del funcionamiento de los sistemas vitales antes del trabajo individual en cuaderno.',
+      keywords: ['cuerpo', 'humano', 'sistema', 'digestivo', 'circulatorio', 'nervioso', 'salud', 'higiene', 'enfermedad', 'enfermedades', 'nutricion', 'vacuna']
+    },
+    {
+      id: 'materia_energia',
+      nombre: 'Materia y Energía',
+      temaEje: 'Propiedades de la Materia, Formas de Energía y Máquinas Simples',
+      estrategia: 'Demostración compartida de fenómenos físicos y energéticos en el aula, derivando en ejercicios diferenciados por grado.',
+      keywords: ['materia', 'energia', 'fuerza', 'movimiento', 'electricidad', 'maquinas', 'luz', 'calor', 'estados']
+    },
+    {
+      id: 'universo_tierra',
+      nombre: 'La Tierra y el Universo',
+      temaEje: 'El Sistema Solar, la Tierra y los Fenómenos Astronómicos',
+      estrategia: 'Modelado visual del cosmos y capas terrestres en pizarra antes del trabajo en el texto oficial.',
+      keywords: ['universo', 'planeta', 'planetas', 'sistema solar', 'tierra', 'luna', 'atmosfera', 'gravedad', 'galaxia']
+    }
+  ],
+  ciencias_sociales: [
+    {
+      id: 'prehistoria_origen',
+      nombre: 'Prehistoria y Primeros Pobladores',
+      temaEje: 'Sociedades Prehistóricas, Poblamiento y Primeros Asentamientos de América',
+      estrategia: 'Ambos grados convergen en la prehistoria y el origen humano: el docente modela una línea de tiempo compartida en la pizarra (10-15 min) y luego cada grado resuelve sus actividades específicas (cazadores de América en 5.° y el Paleolítico en 6.°).',
+      keywords: ['paleolitico', 'prehistoria', 'prehistorico', 'poblamiento', 'primeros pobladores', 'poblador', 'pobladores', 'origen', 'cazador', 'cazadores', 'bering', 'nomadas', 'asentamiento']
+    },
+    {
+      id: 'cultura_maya',
+      nombre: 'Civilización Maya y Pueblos Originarios',
+      temaEje: 'Evolución Histórica, Pueblos Originarios y Memoria Cultural de Guatemala',
+      estrategia: 'Conversación comunitaria sobre las raíces históricas y el legado maya antes de la indagación por grado en los libros oficiales.',
+      keywords: ['maya', 'mayas', 'indigena', 'indigenas', 'ancestral', 'pueblos originarios', 'cosmovision', 'popol vuh', 'arqueologia']
+    },
+    {
+      id: 'conquista_colonia',
+      nombre: 'Época Colonial e Independencia',
+      temaEje: 'Procesos Históricos: Conquista, Época Colonial y Construcción de la República',
+      estrategia: 'Análisis guiado de causas y consecuencias históricas en pizarra antes de la lectura analítica por grado.',
+      keywords: ['conquista', 'colonia', 'colonial', 'espanoles', 'independencia', 'revolucion', 'republica', 'reforma']
+    },
+    {
+      id: 'geografia_territorio',
+      nombre: 'Geografía y Recursos de América',
+      temaEje: 'El Espacio Geográfico de América, Recursos Naturales y Territorio',
+      estrategia: 'Lectura compartida de mapas y relieve en pizarra antes del trabajo cartográfico en el cuaderno de cada grado.',
+      keywords: ['geografia', 'mapa', 'mapas', 'relieve', 'clima', 'volcan', 'volcanes', 'rio', 'rios', 'continente', 'territorio', 'departamento', 'recursos naturales']
+    },
+    {
+      id: 'ciudadania_derechos',
+      nombre: 'Ciudadanía, Convivencia y Derechos',
+      temaEje: 'Ciudadanía, Derechos Humanos y Convivencia Democrática en la Comunidad',
+      estrategia: 'Dilema moral o estudio de caso comunitario en plenaria, derivando en compromisos cívicos en el cuaderno de cada grado.',
+      keywords: ['derechos', 'deberes', 'ciudadania', 'democracia', 'constitucion', 'convivencia', 'paz', 'valores', 'gobierno']
+    }
+  ],
+  matematicas: [
+    {
+      id: 'divisibilidad',
+      nombre: 'Múltiplos, Divisores y Divisibilidad',
+      temaEje: 'Razonamiento Numérico y Divisibilidad: Múltiplos, Divisores y Proporciones',
+      estrategia: 'El docente modela el concepto de divisibilidad y múltiplos en pizarra. Un grado resuelve múltiplos y el otro avanza a divisores y descomposición factorial en su libro.',
+      keywords: ['multiplo', 'multiplos', 'divisor', 'divisores', 'mcm', 'mcd', 'factor', 'factores', 'primo', 'primos', 'compuesto', 'divisibilidad']
+    },
+    {
+      id: 'fracciones',
+      nombre: 'Fracciones y Proporciones',
+      temaEje: 'Operaciones con Fracciones, Proporciones y Razones en la Vida Cotidiana',
+      estrategia: 'Modelado del algoritmo con fracciones en pizarra antes de la ejercitación guiada en el cuaderno de cada grado.',
+      keywords: ['fraccion', 'fracciones', 'numerador', 'denominador', 'equivalente', 'equivalentes', 'decimal', 'decimales', 'proporcion', 'porcentaje', 'razon']
+    },
+    {
+      id: 'numeracion_posicional',
+      nombre: 'Numeración y Valor Posicional',
+      temaEje: 'Sistemas de Numeración, Valor Posicional y Conteo Ancestral',
+      estrategia: 'Demostración de equivalencias en la tabla de valor posicional en pizarra para ambos grados.',
+      keywords: ['posicional', 'millar', 'millares', 'millon', 'millones', 'lectura de numeros', 'sistema maya', 'numeracion maya', 'descomposicion']
+    },
+    {
+      id: 'operaciones_basicas',
+      nombre: 'Operaciones Fundamentales',
+      temaEje: 'Operaciones Fundamentales y Resolución de Problemas Aritméticos',
+      estrategia: 'Modelado conjunto de estrategias de cálculo mental antes de la resolución de problemas en el libro oficial.',
+      keywords: ['suma', 'resta', 'multiplicacion', 'division', 'calculo mental', 'algoritmo', 'problemas comerciales']
+    },
+    {
+      id: 'geometria',
+      nombre: 'Geometría y Medición',
+      temaEje: 'Geometría, Medición de Figuras y Exploración Espacial',
+      estrategia: 'Construcción de figuras y medición geométrica en pizarra antes del trazo individual en cuaderno.',
+      keywords: ['geometria', 'angulo', 'angulos', 'triangulo', 'triangulos', 'poligono', 'poligonos', 'perimetro', 'area', 'volumen', 'figura', 'cuerpo geometrico']
+    }
+  ],
+  comunicacion_lenguaje: [
+    {
+      id: 'narrativo',
+      nombre: 'Textos Narrativos (Fábula y Cuento)',
+      temaEje: 'Comprensión Lectora, Tipologías Textuales (Fábula y Cuento) y Expresión Escrita',
+      estrategia: 'El docente modela la estructura narrativa en pizarra; cada grado analiza fábulas, cuentos o leyendas con su respectivo libro oficial.',
+      keywords: ['fabula', 'fabulas', 'cuento', 'cuentos', 'leyenda', 'leyendas', 'mito', 'narracion', 'personaje', 'personajes', 'moraleja']
+    },
+    {
+      id: 'argumentativo_informativo',
+      nombre: 'Textos Argumentativos e Informativos',
+      temaEje: 'Lectura Crítica, Textos Argumentativos (Ensayo) y Síntesis de Ideas',
+      estrategia: 'Debate oral y modelado de tesis y argumentos en pizarra antes de la redacción por grado.',
+      keywords: ['ensayo', 'ensayos', 'noticia', 'articulo', 'argumento', 'tesis', 'informe', 'resumen', 'ideas principales', 'expositivo']
+    },
+    {
+      id: 'gramatica_sintaxis',
+      nombre: 'Gramática y Sintaxis',
+      temaEje: 'Estructura Gramatical de la Oración, Concordancia y Redacción',
+      estrategia: 'Modelado de análisis sintáctico en pizarra antes de la ejercitación gramatical en cuaderno.',
+      keywords: ['sustantivo', 'adjetivo', 'verbo', 'sujeto', 'predicado', 'oracion', 'concordancia', 'pronombre', 'sintaxis']
+    },
+    {
+      id: 'ortografia_puntuacion',
+      nombre: 'Ortografía y Puntuación',
+      temaEje: 'Normas Ortográficas, Acentuación y Puntuación en la Escritura',
+      estrategia: 'Dictado reflexivo y corrección en pizarra compartida para ambos grados.',
+      keywords: ['puntuacion', 'coma', 'punto', 'acento', 'aguda', 'grave', 'esdrujula', 'ortografia', 'reglas']
+    },
+    {
+      id: 'oralidad_dialogo',
+      nombre: 'Comunicación Dialógica y Tradición Oral',
+      temaEje: 'La Comunicación Dialógica, Expresión Oral y Tradición de la Aldea',
+      estrategia: 'Círculo de diálogo inicial para todos los grados antes de la redacción en cuaderno.',
+      keywords: ['dialogo', 'entrevista', 'debate', 'oral', 'escucha activa', 'tradicion oral', 'conversacion']
+    }
+  ]
+};
+
+const STOPWORDS_ES = new Set([
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al', 'a',
+  'en', 'para', 'por', 'con', 'sin', 'sobre', 'entre', 'y', 'e', 'o', 'u', 'sus',
+  'su', 'mi', 'mis', 'tu', 'tus', 'que', 'como', 'se', 'es', 'son', 'tema', 'leccion',
+  'unidad', 'bloque', 'parte', 'partes', 'pagina', 'paginas', 'libro', 'grado', 'primaria'
+]);
+
+function normalizarTexto(txt: string): string {
+  return (txt || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .trim();
+}
+
+function extraerTokensSignificativos(txt: string): string[] {
+  const norm = normalizarTexto(txt);
+  return norm
+    .split(/\s+/)
+    .filter(t => t.length > 2 && !STOPWORDS_ES.has(t));
+}
+
+/**
+ * Función central de auditoría y análisis de relación de temas por asignatura
+ */
+export function analizarRelacionTemasMismaMateria(
+  materiaIdBase: string,
+  materiaNombre: string,
+  temasPorGrado: {
+    grado: number;
+    libroTitulo?: string;
+    temas: { titulo: string; paginaInicio?: number; paginaFin?: number }[];
+  }[]
+): ResultadoRelacionTemasMateria {
+  // Caso 1: Aula monogrado o sin suficientes grados con esta materia
+  if (!temasPorGrado || temasPorGrado.length < 2) {
+    return {
+      materiaNombre,
+      idBase: materiaIdBase,
+      temasPorGrado: temasPorGrado || [],
+      tieneRelacion: false,
+      scoreSimilitud: 0,
+      palabrasClaveComunes: [],
+      temaEjeTrazado: null,
+      estrategiaDidactica: 'Dosificación curricular directa: materia desarrollada de manera exclusiva para este grado.',
+      motivoClasificacion: 'Asignatura cursada por un único grado. Se aplica la dosificación normal.'
+    };
+  }
+
+  // Extraer tokens por cada grado
+  const tokensPorGrado = temasPorGrado.map(tg => {
+    const textGrado = tg.temas.map(t => t.titulo).join(' ');
+    return {
+      grado: tg.grado,
+      tokens: extraerTokensSignificativos(textGrado),
+      normText: normalizarTexto(textGrado)
+    };
+  });
+
+  // 1. Buscar intersección léxica directa (palabras o raíces compartidas)
+  const g1Tokens = tokensPorGrado[0].tokens;
+  const g2Tokens = tokensPorGrado[1].tokens;
+
+  const palabrasComunesDirectas: string[] = [];
+  for (const t1 of g1Tokens) {
+    for (const t2 of g2Tokens) {
+      if (t1 === t2 || (t1.length >= 4 && t2.startsWith(t1)) || (t2.length >= 4 && t1.startsWith(t2))) {
+        const palabraBase = t1.length <= t2.length ? t1 : t2;
+        if (!palabrasComunesDirectas.includes(palabraBase)) {
+          palabrasComunesDirectas.push(palabraBase);
+        }
+      }
+    }
+  }
+
+  // 2. Buscar intersección en la taxonomía curricular oficial del CNB
+  const keyTaxonomia = materiaIdBase.includes('social') ? 'ciencias_sociales' :
+                       (materiaIdBase.includes('natural') || materiaIdBase.includes('ciencia')) ? 'ciencias_naturales' :
+                       materiaIdBase.includes('mate') ? 'matematicas' :
+                       (materiaIdBase.includes('lengua') || materiaIdBase.includes('comunic')) ? 'comunicacion_lenguaje' :
+                       null;
+
+  let clusterComun: SubDominioCluster | null = null;
+  const clustersAsignatura = keyTaxonomia ? TAXONOMIA_ASIGNATURAS[keyTaxonomia] : null;
+
+  if (clustersAsignatura) {
+    let mejorClusterG1: { cluster: SubDominioCluster; score: number } | null = null;
+    let mejorClusterG2: { cluster: SubDominioCluster; score: number } | null = null;
+
+    for (const c of clustersAsignatura) {
+      const cKeywords = c.keywords;
+      let scoreG1 = 0;
+      let scoreG2 = 0;
+
+      for (const kw of cKeywords) {
+        if (tokensPorGrado[0].normText.includes(kw)) scoreG1 += 2;
+        if (tokensPorGrado[1].normText.includes(kw)) scoreG2 += 2;
+      }
+
+      if (!mejorClusterG1 || scoreG1 > mejorClusterG1.score) {
+        mejorClusterG1 = { cluster: c, score: scoreG1 };
+      }
+      if (!mejorClusterG2 || scoreG2 > mejorClusterG2.score) {
+        mejorClusterG2 = { cluster: c, score: scoreG2 };
+      }
+    }
+
+    // Convergencia estricta: AMBOS grados deben puntuar positivamente en el MISMO cluster
+    if (
+      mejorClusterG1 &&
+      mejorClusterG2 &&
+      mejorClusterG1.cluster.id === mejorClusterG2.cluster.id &&
+      mejorClusterG1.score >= 2 &&
+      mejorClusterG2.score >= 2
+    ) {
+      clusterComun = mejorClusterG1.cluster;
+      // Añadir palabras clave del cluster presentes en ambos
+      clusterComun.keywords.forEach(kw => {
+        if (
+          (tokensPorGrado[0].normText.includes(kw) || tokensPorGrado[1].normText.includes(kw)) &&
+          !palabrasComunesDirectas.includes(kw)
+        ) {
+          palabrasComunesDirectas.push(kw);
+        }
+      });
+    }
+  }
+
+  // 3. Regla de Decisión Factual: ¿Existe relación genuina comprobable?
+  const tieneRelacion = Boolean(clusterComun || palabrasComunesDirectas.length >= 1);
+
+  if (tieneRelacion) {
+    const temaEje = clusterComun
+      ? clusterComun.temaEje
+      : `Eje Temático Articulador: ${palabrasComunesDirectas.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' y ')}`;
+
+    const estrategia = clusterComun
+      ? clusterComun.estrategia
+      : `Convergencia curricular detectada en torno a "${palabrasComunesDirectas.join(', ')}". El docente realiza la apertura y modelado conjunto en pizarra (10-15 min) y posteriormente cada grado resuelve las actividades de su libro oficial.`;
+
+    return {
+      materiaNombre,
+      idBase: materiaIdBase,
+      temasPorGrado,
+      tieneRelacion: true,
+      scoreSimilitud: clusterComun ? 90 : 75,
+      palabrasClaveComunes: palabrasComunesDirectas.slice(0, 5),
+      temaEjeTrazado: temaEje,
+      estrategiaDidactica: estrategia,
+      motivoClasificacion: `Convergencia temática confirmada en ${clusterComun ? clusterComun.nombre : 'conceptos comunes'}. Procede formular Tema Eje.`
+    };
+  }
+
+  // Caso Sin Relación Genuina: NO FORZAR TEMA EJE
+  return {
+    materiaNombre,
+    idBase: materiaIdBase,
+    temasPorGrado,
+    tieneRelacion: false,
+    scoreSimilitud: 15,
+    palabrasClaveComunes: [],
+    temaEjeTrazado: null,
+    estrategiaDidactica: 'Dosificación regular independiente: Los temas corresponden a unidades o ramas curriculares distintas. El docente imparte la clase de forma diferenciada mediante atención alternada y trabajo autónomo con el libro de texto oficial de cada grado.',
+    motivoClasificacion: 'Temas independientes sin convergencia conceptual directa. Se mantiene la dosificación regular de cada grado.'
+  };
+}
+
 export interface ClusterCentroid {
   id: string;
   categoria: string;
@@ -110,37 +458,6 @@ export interface ClusterCentroid {
   proposito: string;
   keywords: string[];
 }
-
-const CNB_CLUSTERS: ClusterCentroid[] = [
-  {
-    id: 'cluster_salud_vida',
-    categoria: 'Salud, Higiene y Medio Ambiente',
-    temaEje: 'Salud e higiene comunitaria: El cuidado del cuerpo, los seres vivos y la madre naturaleza',
-    proposito: 'Identificar medidas preventivas de salud, hábitos de higiene y conservación del entorno natural en la comunidad.',
-    keywords: ['salud', 'higiene', 'cuerpo', 'enfermedad', 'organismo', 'celula', 'vida', 'seres', 'naturaleza', 'ecosistema', 'planta', 'animal', 'ambiente']
-  },
-  {
-    id: 'cluster_aritmetica_comercio',
-    categoria: 'Razonamiento Matemático y Economía Familiar',
-    temaEje: 'El razonamiento numérico, las operaciones y el cálculo en las actividades cotidianas de la comunidad',
-    proposito: 'Desarrollar agilidad de cálculo mental, valor posicional y resolución de problemas comerciales y de compras en el mercado local.',
-    keywords: ['posicional', 'numero', 'numeros', 'suma', 'resta', 'multiplicacion', 'fraccion', 'proporcion', 'decimal', 'calculo', 'quetzales', 'mercado', 'compra', 'venta']
-  },
-  {
-    id: 'cluster_comunicacion_dialógica',
-    categoria: 'Comunicación, Lenguaje y Tradición Oral',
-    temaEje: 'La comunicación dialógica, las formas de expresión y el valor de la palabra en la comunidad',
-    proposito: 'Fortalecer la expresión oral, la comprensión lectora, el respeto en la conversación y la capacidad de comunicar acuerdos.',
-    keywords: ['dialogo', 'conversacion', 'oral', 'lectura', 'redaccion', 'cuento', 'leyenda', 'oracion', 'palabra', 'lenguaje', 'comunicacion', 'texto']
-  },
-  {
-    id: 'cluster_ciudadania_geografia',
-    categoria: 'Identidad, Geografía y Convivencia Comunitaria',
-    temaEje: 'Identidad comunitaria, organización social, geografía y convivencia armónica en la escuela multigrado',
-    proposito: 'Reconocer el espacio geográfico local, las instituciones comunitarias y las normas de convivencia democrática.',
-    keywords: ['comunidad', 'aldea', 'municipio', 'geografia', 'mapa', 'relieve', 'sociedad', 'gobierno', 'civica', 'derechos', 'deberes', 'convivencia', 'cultura']
-  }
-];
 
 export function clusterTemaEjeTransversal(temasTexto: string[]): ClusterCentroid {
   const inputTokens = temasTexto
@@ -150,36 +467,13 @@ export function clusterTemaEjeTransversal(temasTexto: string[]): ClusterCentroid
     .split(/\s+/)
     .filter(t => t.length > 2);
 
-  if (inputTokens.length === 0) return CNB_CLUSTERS[1]; // Fallback aritmético
-
-  let bestCluster = CNB_CLUSTERS[0];
-  let maxScore = -1;
-
-  for (const cluster of CNB_CLUSTERS) {
-    let score = 0;
-    const clusterWordSet = new Set(cluster.keywords);
-
-    for (const token of inputTokens) {
-      if (clusterWordSet.has(token)) {
-        score += 2; // Match exacto
-      } else {
-        // Match parcial / prefijos
-        for (const kw of cluster.keywords) {
-          if (token.startsWith(kw) || kw.startsWith(token)) {
-            score += 1;
-            break;
-          }
-        }
-      }
-    }
-
-    if (score > maxScore) {
-      maxScore = score;
-      bestCluster = cluster;
-    }
-  }
-
-  return bestCluster;
+  return {
+    id: 'cluster_dosificacion_regular',
+    categoria: 'Dosificación Curricular Oficial',
+    temaEje: 'Dosificación Curricular Regular Diferenciada por Grado',
+    proposito: 'Desarrollar los contenidos programáticos del CNB y libros de texto oficiales de cada grado de forma sistemática y progresiva.',
+    keywords: ['cnb', 'dosificacion', 'libro', 'mineduc']
+  };
 }
 
 /**
