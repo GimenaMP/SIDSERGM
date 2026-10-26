@@ -1,5 +1,7 @@
 import cnbRaw from '../../data/cnb_processed.json';
 import mineducRaw from '../../data/mineduc_ejercicios.json';
+import { getCNBCorrespondingEntry, getMineducPageForGrade } from './cnbDosificacionCompleta';
+import { clusterTemaEjeTransversal, pedagogicalDecisionTree, recommendOptimalExercises } from './machineLearningPlanning';
 
 export type DiaSemana = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves';
 
@@ -9,6 +11,44 @@ export interface TimeAllocation {
   descripcion: string;
 }
 
+export interface SelectedItemParam {
+  grado: number;
+  materia: string;
+  materiaId?: string;
+  materiaBase?: string;
+  libroTitulo: string;
+  unidad: number;
+  unidadTitulo: string;
+  tema: string;
+  temaNumero: number;
+  todosLosTemasNumeros?: number[];
+  temasSeleccionados?: {
+    numero: number;
+    titulo: string;
+    paginaInicio: number;
+    paginaFin: number;
+  }[];
+  paginaInicio: number;
+  paginaFin: number;
+  competencias?: string[];
+  indicadores?: string[];
+  periodosSemanales?: number;
+  pesoPorcentaje?: number;
+}
+
+export interface MateriaSeleccionadaDetalle {
+  materia: string;
+  tema: string;
+  libroTitulo: string;
+  unidad: number;
+  paginaInicio: number;
+  paginaFin: number;
+  competencias: string[];
+  indicadores: string[];
+  ejerciciosLiterales: string[];
+  temaEje?: string;
+}
+
 export interface GradeSchedule {
   grado: string;
   gradoNumero?: number;
@@ -16,7 +56,7 @@ export interface GradeSchedule {
   duracionTotal: string;
   materia: string;
   tema: string;
-  modalidad: 'Atención Directa Docente' | 'Trabajo Autónomo con Guía' | 'Trabajo Cooperativo / Práctica';
+  modalidad?: 'Atención Directa Docente' | 'Trabajo Autónomo con Guía' | 'Trabajo Cooperativo / Práctica';
   actividadDocente?: string;
   actividadEstudiante?: string;
   periodo1_actividad?: string; // 08:15 - 09:05
@@ -27,12 +67,22 @@ export interface GradeSchedule {
   cnbIndicador: string;
   libroTitulo: string;
   numeroPagina: number;
+  paginaFin?: number;
   seccionLibro: string;
   tiemposReferencia: TimeAllocation[];
   ejerciciosLiterales: string[];
   tareaCasa: string;
   completado: boolean;
   esTemaRezagado?: boolean;
+  materiasSeleccionadas?: MateriaSeleccionadaDetalle[];
+}
+
+export interface ComponentesAulaMultigrado {
+  dialogo_saberes: string; // Activación contextualizada de presaberes con vivencias de la comunidad
+  gobierno_escolar: string; // Rol de comisiones estudiantiles en autogestión y orden del aula
+  rincones_aprendizaje: string; // Espacio físico y materiales didácticos concretos utilizados
+  tutoria_entre_pares: string; // Interacción cooperativa donde estudiantes avanzados apoyan a menores
+  biblioteca_escolar: string; // Uso de textos y lecturas de autoaprendizaje para indagación
 }
 
 export interface DayPlan {
@@ -50,6 +100,11 @@ export interface DayPlan {
   periodo_3_horario: string; // 10:30 - 11:15 (45 min)
   periodo_4_horario: string; // 11:15 - 11:50 (35 min)
   fase_cierre_comun: string; // 11:50 - 12:00 (10 min)
+  componentes_multigrado?: ComponentesAulaMultigrado;
+  temaEjePeriodo1?: string;
+  temaEjePeriodo2?: string;
+  temaEjePeriodo3?: string;
+  temaEjePeriodo4?: string;
   gradosSincronizados: GradeSchedule[];
 }
 
@@ -81,6 +136,19 @@ export interface SimilarCompetency {
   gradoB_enfoque?: string;
 }
 
+export interface CurricularOverviewItem {
+  grado: number;
+  gradoLabel: string;
+  materia: string;
+  competenciaNumero: number;
+  competenciaTexto: string;
+  indicadorNumero: string;
+  indicadorTexto: string;
+  temas: string[];
+  libroReferencia: string;
+  paginaReferencia: number;
+}
+
 export interface UnifiedWeeklyPlan {
   ciclo: 'segundo_ciclo' | 'primer_ciclo';
   grados: number[];
@@ -88,7 +156,16 @@ export interface UnifiedWeeklyPlan {
   semana: number;
   area_curricular: string;
   tema_generador_comun: string;
+  categoria_conceptual?: string;
+  proposito_comun?: string;
   descripcion_eje_integrador: string;
+  actividades_lenguaje?: {
+    expresion_oral: string;
+    escritura: string;
+    lectura: string;
+  };
+  materiales_didacticos?: string[];
+  pilares_multigrado_cnb?: ComponentesAulaMultigrado;
   competencias_similares_identificadas?: SimilarCompetency[];
   alineacion_cnb: Record<string, AlineacionCNBGrado>;
   paginasConfiguradas: Record<number, number>;
@@ -103,11 +180,14 @@ export interface RAGRequestParams {
   ciclo?: 'segundo_ciclo' | 'primer_ciclo';
   grados?: number[];
   bimestre?: number;
+  bloque?: number;
   semana?: number;
   area?: string;
+  area_curricular?: string;
   paginasPorGrado?: Record<number, number>;
   temasRezagados?: string[];
   diaSeleccionado?: DiaSemana;
+  items?: SelectedItemParam[];
 }
 
 interface CNBItem {
@@ -153,49 +233,12 @@ function calculateTextSimilarity(query: string, targetText: string): number {
   return matches / Math.sqrt(qTokens.length * tTokens.size);
 }
 
-// Calculo automatico de pagina oficial del libro MINEDUC segun Bloque (1-4) y Semana (1-9)
-export function getDefaultPageForGrade(grado: number, bimestre: number, semana: number): number {
-  const b = Math.min(Math.max(bimestre || 1, 1), 4);
-  const s = Math.min(Math.max(semana || 1, 1), 9);
-  const isSecondHalf = s > 4;
-
-  switch (grado) {
-    case 1:
-      if (b === 1) return isSecondHalf ? 28 : 14;
-      if (b === 2) return isSecondHalf ? 56 : 42;
-      if (b === 3) return isSecondHalf ? 88 : 70;
-      return isSecondHalf ? 120 : 102;
-    case 2:
-      if (b === 1) return isSecondHalf ? 32 : 18;
-      if (b === 2) return isSecondHalf ? 64 : 48;
-      if (b === 3) return isSecondHalf ? 98 : 80;
-      return isSecondHalf ? 130 : 112;
-    case 3:
-      if (b === 1) return isSecondHalf ? 24 : 12;
-      if (b === 2) return isSecondHalf ? 54 : 36;
-      if (b === 3) return isSecondHalf ? 86 : 68;
-      return isSecondHalf ? 128 : 104;
-    case 4:
-      if (b === 1) return isSecondHalf ? 26 : 16;
-      if (b === 2) return isSecondHalf ? 52 : 38;
-      if (b === 3) return isSecondHalf ? 90 : 72;
-      return isSecondHalf ? 134 : 110;
-    case 5:
-      if (b === 1) return isSecondHalf ? 36 : 20;
-      if (b === 2) return isSecondHalf ? 64 : 44;
-      if (b === 3) return isSecondHalf ? 102 : 82;
-      return isSecondHalf ? 148 : 122;
-    case 6:
-      if (b === 1) return isSecondHalf ? 40 : 22;
-      if (b === 2) return isSecondHalf ? 115 : 58;
-      if (b === 3) return isSecondHalf ? 156 : 132;
-      return isSecondHalf ? 194 : 170;
-    default:
-      return 30 + ((b - 1) * 20) + (s * 2);
-  }
+// Calculo automatico y continuo de pagina oficial del libro MINEDUC segun Bloque (1-4) y Semana (1-9)
+export function getDefaultPageForGrade(grado: number, bimestre: number, semana: number, materia?: string): number {
+  return getMineducPageForGrade(grado, bimestre, semana, materia);
 }
 
-// Búsqueda curricular en el CNB (DIGECUR) con soporte de Área Curricular
+// Búsqueda curricular en el CNB (DIGECUR) con soporte de Área Curricular 100% dosificada por semana y bloque
 export function searchCNBCorresponding(
   grado: number, 
   semana: number, 
@@ -203,59 +246,75 @@ export function searchCNBCorresponding(
   temaRezagado?: string,
   areaMateria?: string
 ): CNBItem {
-  let gradoItems = cnbDatabase.filter(c => c.grado === grado);
+  const b = Math.min(Math.max(bimestre || 1, 1), 4);
+  const s = Math.min(Math.max(semana || 1, 1), 9);
+  const entry = getCNBCorrespondingEntry(grado, b, s, areaMateria || 'Matemáticas');
 
-  if (areaMateria && areaMateria.trim().length > 0) {
-    const areaLower = areaMateria.toLowerCase();
-    const areaFiltered = gradoItems.filter(c => 
-      c.area_materia.toLowerCase().includes(areaLower) ||
-      (areaLower.includes('social') && c.area_materia.toLowerCase().includes('social')) ||
-      (areaLower.includes('ciencia') && c.area_materia.toLowerCase().includes('ciencia')) ||
-      (areaLower.includes('lengua') && c.area_materia.toLowerCase().includes('lengua')) ||
-      (areaLower.includes('mate') && c.area_materia.toLowerCase().includes('mate'))
-    );
-    if (areaFiltered.length > 0) {
-      gradoItems = areaFiltered;
+  return {
+    grado: entry.grado,
+    ciclo: entry.ciclo,
+    area_materia: entry.area_materia,
+    bloque_bimestre: entry.bloque_bimestre,
+    semana_sugerida: entry.semana_sugerida,
+    competencia_numero: entry.competencia_numero,
+    competencia_descripcion: entry.competencia_descripcion,
+    indicador_numero: entry.indicador_numero,
+    indicador_descripcion: entry.indicador_descripcion,
+    temas_declarativos: entry.temas_declarativos,
+    criterios_evaluacion: entry.criterios_evaluacion
+  };
+}
+
+// Función Oficial para obtener la carga de temas y competencias del CNB para la semana seleccionada
+// correspondiente a los grados que el docente seleccionó (1 solo grado, varios, o todos)
+export function getWeeklyCurricularOverview(
+  grados: number[],
+  bloque: number,
+  semana: number,
+  areaFiltro?: string
+): CurricularOverviewItem[] {
+  const gradosFiltrados = (grados && grados.length > 0) ? [...grados].sort((a, b) => a - b) : [1, 2, 3, 4, 5, 6];
+  const items: CurricularOverviewItem[] = [];
+
+  const todasMaterias = [
+    'Matemáticas',
+    'Comunicación y Lenguaje',
+    'Medio Social y Natural', // o Ciencias Naturales
+    'Formación Ciudadana' // o Ciencias Sociales
+  ];
+
+  for (const g of gradosFiltrados) {
+    const materiasGrado = todasMaterias.map(m => {
+      if (m === 'Medio Social y Natural' && g >= 4) return 'Ciencias Naturales y Tecnología';
+      if (m === 'Formación Ciudadana' && g >= 4) return 'Ciencias Sociales y Formación Ciudadana';
+      return m;
+    });
+
+    const materiasToProcess = (areaFiltro && !areaFiltro.toLowerCase().includes('todas') && !areaFiltro.toLowerCase().includes('integral'))
+      ? materiasGrado.filter(m => m.toLowerCase().includes(areaFiltro.toLowerCase()) || areaFiltro.toLowerCase().includes(m.toLowerCase()))
+      : materiasGrado;
+
+    for (const mat of materiasToProcess) {
+      const cnbInfo = searchCNBCorresponding(g, semana, bloque, undefined, mat);
+      const pag = getDefaultPageForGrade(g, bloque, semana);
+      const mineduc = searchMineducExercises(g, pag, cnbInfo.temas_declarativos[0], mat);
+
+      items.push({
+        grado: g,
+        gradoLabel: `${g}.° Primaria`,
+        materia: mat,
+        competenciaNumero: cnbInfo.competencia_numero,
+        competenciaTexto: cnbInfo.competencia_descripcion,
+        indicadorNumero: cnbInfo.indicador_numero,
+        indicadorTexto: cnbInfo.indicador_descripcion,
+        temas: cnbInfo.temas_declarativos,
+        libroReferencia: mineduc.item.libro_titulo,
+        paginaReferencia: mineduc.paginaEfectiva
+      });
     }
   }
 
-  if (gradoItems.length === 0) {
-    return {
-      grado,
-      ciclo: grado <= 3 ? 'primer_ciclo' : 'segundo_ciclo',
-      area_materia: areaMateria || 'Matemáticas',
-      bloque_bimestre: bimestre,
-      semana_sugerida: semana,
-      competencia_numero: grado,
-      competencia_descripcion: `Aplica conocimientos y habilidades en situaciones de su entorno comunitario (Grado ${grado}°).`,
-      indicador_numero: `${grado}.1.1`,
-      indicador_descripcion: `Opera y aplica conceptos con precisión según lineamientos del CNB para ${grado}° Primaria.`,
-      temas_declarativos: ['Aprendizajes fundamentales', 'Resolución de problemas contextuales'],
-      criterios_evaluacion: 'Resuelve problemas cotidianos con exactitud.'
-    };
-  }
-
-  if (temaRezagado && temaRezagado.trim().length > 0) {
-    let bestMatch = gradoItems[0];
-    let maxSim = -1;
-    for (const item of gradoItems) {
-      const combined = `${item.competencia_descripcion} ${item.indicador_descripcion} ${item.temas_declarativos.join(' ')}`;
-      const sim = calculateTextSimilarity(temaRezagado, combined);
-      if (sim > maxSim) {
-        maxSim = sim;
-        bestMatch = item;
-      }
-    }
-    if (maxSim > 0.1) return bestMatch;
-  }
-
-  const exactWeek = gradoItems.find(c => c.semana_sugerida === semana && c.bloque_bimestre === bimestre);
-  if (exactWeek) return exactWeek;
-
-  const exactBloque = gradoItems.find(c => c.bloque_bimestre === bimestre);
-  if (exactBloque) return exactBloque;
-
-  return gradoItems[0];
+  return items;
 }
 
 // Búsqueda de ejercicios oficiales MINEDUC por materia y número de página
@@ -344,6 +403,109 @@ export function searchMineducExercises(
   return { item: gradoItems[0], paginaEfectiva: gradoItems[0].numero_pagina };
 }
 
+
+// Búsqueda y extracción inteligente de ejercicios e instrucciones literales en libros MINEDUC
+export function findExercisesInMineduc(
+  grado: number,
+  materia: string,
+  pagInicio: number,
+  pagFin: number,
+  tema?: string,
+  dia?: DiaSemana
+): string[] {
+  const matLower = materia.toLowerCase();
+  const isSoc = matLower.includes('social') || matLower.includes('ciudad') || matLower.includes('historia') || matLower.includes('geograf');
+  const isNat = (matLower.includes('ciencia') || matLower.includes('natural') || matLower.includes('medio')) && !isSoc;
+  const isMate = matLower.includes('mate');
+  const isLeng = matLower.includes('lengua') || matLower.includes('comunic');
+
+  const matches = mineducDatabase.filter(m => {
+    const gMatch = m.grado_especifico === grado;
+    const pMatch = m.numero_pagina >= pagInicio && m.numero_pagina <= pagFin;
+    if (!gMatch || !pMatch) return false;
+    const itemMat = (m.materia || '').toLowerCase();
+    if (isSoc) return itemMat.includes('social') || itemMat.includes('ciudad') || itemMat.includes('historia') || itemMat.includes('cs');
+    if (isNat) return (itemMat.includes('ciencia') || itemMat.includes('natural') || itemMat.includes('medio')) && !itemMat.includes('social');
+    if (isLeng) return itemMat.includes('lengua') || itemMat.includes('comunic');
+    if (isMate) return itemMat.includes('mate');
+    return true;
+  });
+
+  const list: string[] = [];
+
+  if (matches.length > 0) {
+    for (const m of matches) {
+      if (!m.enunciado_ejercicio || m.enunciado_ejercicio.trim().length <= 15) continue;
+      const raw = m.enunciado_ejercicio.replace(/\s+/g, ' ').trim();
+
+      // Filtrar mensajes institucionales
+      if (/estimado|autoridad|editorial|ministr|índice|tabla de contenido|carta al docente|presentación|créditos|himno|guatemala feliz/i.test(raw)) {
+        continue;
+      }
+      if (m.numero_pagina < 8 && /bienvenido|saludo|guatemala|cuadernillo|gratuita/i.test(raw)) {
+        continue;
+      }
+
+      // 1. Detección de sección "Organizo" / "Nos organizamos" / "Organizamos"
+      const organizoMatch = raw.match(/(?:Organizo|Organizamos|Nos organizamos)\s*[:\.]?\s*([^%\n]{15,350})/i);
+      if (organizoMatch) {
+        list.push(`Pág. ${m.numero_pagina}: Organizo: ${organizoMatch[1].trim()}`);
+        continue;
+      }
+
+      // 2. Detección de sección "Instrucciones" / "Actividades" / "Aplico" / "En mi cuaderno"
+      const instrucMatch = raw.match(/(?:Instrucciones|Instrucción|Actividades|Aplico lo aprendido|En mi cuaderno|Copiamos en el cuaderno)\s*[:\.]?\s*([^%\n]{15,350})/i);
+      if (instrucMatch) {
+        list.push(`Pág. ${m.numero_pagina}: ${instrucMatch[0].trim()}`);
+        continue;
+      }
+
+      // 3. Detección de ejercicios numerados (1. ... 2. ...)
+      const numberedMatch = raw.match(/(?:1\.\s*[^2]{15,200}(?:2\.\s*[^3]{15,200})?)/i);
+      if (numberedMatch && numberedMatch[0].length > 25) {
+        list.push(`Pág. ${m.numero_pagina}: Actividades del libro: ${numberedMatch[0].trim().slice(0, 320)}`);
+        continue;
+      }
+
+      // 4. Detección de viñetas de tareas/experimentos (• ...)
+      const bulletMatch = raw.match(/(?:•\s*[^•]{15,180}(?:•\s*[^•]{15,180})?)/i);
+      if (bulletMatch && bulletMatch[0].length > 25 && !bulletMatch[0].includes('Autoridades') && !bulletMatch[0].includes('Ministeriales')) {
+        list.push(`Pág. ${m.numero_pagina}: Actividades guiadas: ${bulletMatch[0].trim().slice(0, 320)}`);
+        continue;
+      }
+
+      // 5. Si la página es expositiva/conceptual sin sección explícita de "Organizo" o "Instrucciones":
+      // Aplicar la regla didáctica de dos sesiones
+      const esSesion1 = (isNat && (dia === 'Lunes' || !dia)) || 
+                        (isSoc && (dia === 'Martes' || !dia)) || 
+                        (!isNat && !isSoc && (dia === 'Lunes' || dia === 'Martes' || !dia));
+
+      if (esSesion1) {
+        list.push(`Pág. ${m.numero_pagina}: Sesión 1 (Explicación Docente): Lectura guiada sobre "${tema || materia}". El docente modela los conceptos clave en pizarra, activa presaberes y formula preguntas generadoras a la clase.`);
+      } else {
+        list.push(`Pág. ${m.numero_pagina}: Sesión 2 (Aplicación en Cuaderno): Lectura comprensiva individual. Los estudiantes extraen las 3 ideas principales del tema en su cuaderno y elaboran un organizador gráfico (cuadro sinóptico o mapa conceptual ilustrado).`);
+      }
+    }
+
+    if (list.length > 0) return list;
+  }
+
+  // Fallback didáctico riguroso si no se encontraron páginas físicas en BD
+  const pInicioEfectiva = pagInicio < 8 ? 8 : pagInicio;
+  const esSesion1 = (isNat && (dia === 'Lunes' || !dia)) || (isSoc && (dia === 'Martes' || !dia));
+  if (esSesion1) {
+    return [
+      `Pág. ${pInicioEfectiva}: Sesión 1 (Explicación Docente): Modelado y explicación de conceptos clave en la pizarra sobre "${tema || materia}".`,
+      `Pág. ${pInicioEfectiva}: Lectura compartida en el libro oficial MINEDUC y resolución de preguntas exploratorias.`
+    ];
+  } else {
+    return [
+      `Pág. ${pInicioEfectiva}: Sesión 2 (Aplicación en Cuaderno): Lectura analítica individual de "${tema || materia}".`,
+      `Pág. ${pInicioEfectiva}: Extracción de las 3 ideas principales en el cuaderno y elaboración de un organizador gráfico (mapa conceptual o cuadro comparativo).`
+    ];
+  }
+}
+
 // Estructurar enunciados literales del libro MINEDUC
 function formatLiteralExercises(
   enunciado: string, 
@@ -396,12 +558,190 @@ function formatLiteralExercises(
 }
 
 // Alternancia rotativa estructurada (Jornada 08:00 a 12:00 - 210 min efectivos)
-function buildRotationalTimeline(
+
+// ============================================================================
+// HELPER PARA OBTENER EL SUBTEMA Y PÁGINA ESPECÍFICA POR DÍA DE LA SEMANA
+// ============================================================================
+export function getSubtemaForDay(
+  dia: DiaSemana,
+  mainItem: SelectedItemParam
+): { titulo: string; pagina: number } {
+  const pInicio = mainItem.paginaInicio || 8;
+
+  if (mainItem.temasSeleccionados && mainItem.temasSeleccionados.length > 0) {
+    const list = mainItem.temasSeleccionados;
+    const mLower = (mainItem.materia || '').toLowerCase();
+    const isCienciasSociales = mLower.includes('social') || mLower.includes('ciudad') || mLower.includes('historia');
+    const isCienciasNaturales = (mLower.includes('natural') || mLower.includes('ciencia')) && !isCienciasSociales;
+    
+    // CASO 1: 4 o más subtemas (1 subtema y 1 página física real exclusiva para cada día)
+    if (list.length >= 4) {
+      const idx = dia === 'Lunes' ? 0 : dia === 'Martes' ? 1 : dia === 'Miércoles' ? 2 : 3;
+      const item = list[idx] || list[list.length - 1];
+      return { titulo: item.titulo, pagina: item.paginaInicio };
+    }
+
+    // CASO 2: 3 subtemas (Lunes, Martes, Miércoles con subtema propio; Jueves con página consecutiva de síntesis)
+    if (list.length === 3) {
+      if (dia === 'Lunes') return { titulo: list[0].titulo, pagina: list[0].paginaInicio };
+      if (dia === 'Martes') return { titulo: list[1].titulo, pagina: list[1].paginaInicio };
+      if (dia === 'Miércoles') return { titulo: list[2].titulo, pagina: list[2].paginaInicio };
+      const pagJueves = list[2].paginaFin > list[2].paginaInicio ? list[2].paginaFin : (list[2].paginaInicio + 1);
+      return { titulo: `${list[2].titulo} (Consolidación y Síntesis)`, pagina: pagJueves };
+    }
+
+    // CASO 3: 2 subtemas (Cuota oficial CNB para Ciencias Naturales y Ciencias Sociales)
+    if (list.length === 2) {
+      if (isCienciasSociales) {
+        // Ciencias Sociales se imparte los Martes (Sesión 1) y Jueves (Sesión 2)
+        if (dia === 'Lunes' || dia === 'Martes') {
+          return { titulo: `${list[0].titulo} · Sesión 1: Análisis y Fuentes`, pagina: list[0].paginaInicio };
+        } else {
+          return { titulo: `${list[1].titulo} · Sesión 2: Síntesis y Cuaderno`, pagina: list[1].paginaInicio };
+        }
+      }
+
+      if (isCienciasNaturales) {
+        // Ciencias Naturales se imparte los Lunes (Sesión 1) y Miércoles (Sesión 2)
+        if (dia === 'Lunes' || dia === 'Martes') {
+          return { titulo: `${list[0].titulo} · Sesión 1: Exploración y Observación`, pagina: list[0].paginaInicio };
+        } else {
+          return { titulo: `${list[1].titulo} · Sesión 2: Experimentación y Cuaderno`, pagina: list[1].paginaInicio };
+        }
+      }
+
+      // Caso general para 2 subtemas
+      if (dia === 'Lunes') {
+        return { titulo: `${list[0].titulo} (Saberes Previos y Modelado)`, pagina: list[0].paginaInicio };
+      }
+      if (dia === 'Martes') {
+        const pagM = list[0].paginaFin > list[0].paginaInicio ? list[0].paginaFin : (list[0].paginaInicio + 1);
+        return { titulo: `${list[0].titulo} (Comprensión y Algoritmo)`, pagina: pagM };
+      }
+      if (dia === 'Miércoles') {
+        return { titulo: `${list[1].titulo} (Práctica Autónoma)`, pagina: list[1].paginaInicio };
+      }
+      if (dia === 'Jueves') {
+        const pagJ = list[1].paginaFin > list[1].paginaInicio ? list[1].paginaFin : (list[1].paginaInicio + 1);
+        return { titulo: `${list[1].titulo} (Consolidación y Repaso)`, pagina: pagJ };
+      }
+    }
+
+    // CASO 4: 1 subtema seleccionado
+    const t = list[0];
+    const baseP = t.paginaInicio || pInicio;
+
+    if (isCienciasSociales) {
+      if (dia === 'Lunes' || dia === 'Martes') {
+        return { titulo: `${t.titulo} · Sesión 1: Análisis y Fuentes`, pagina: baseP };
+      } else {
+        const pag2 = t.paginaFin > baseP ? t.paginaFin : (baseP + 1);
+        return { titulo: `${t.titulo} · Sesión 2: Síntesis y Cuaderno`, pagina: pag2 };
+      }
+    }
+
+    if (isCienciasNaturales) {
+      if (dia === 'Lunes' || dia === 'Martes') {
+        return { titulo: `${t.titulo} · Sesión 1: Exploración y Observación`, pagina: baseP };
+      } else {
+        const pag2 = t.paginaFin > baseP ? t.paginaFin : (baseP + 1);
+        return { titulo: `${t.titulo} · Sesión 2: Experimentación y Cuaderno`, pagina: pag2 };
+      }
+    }
+
+    const offset = dia === 'Lunes' ? 0 : dia === 'Martes' ? 1 : dia === 'Miércoles' ? 2 : 3;
+    const pagFinal = baseP + offset;
+    const fases: Record<DiaSemana, string> = {
+      'Lunes': 'Sesión 1: Exploración y Saberes Previos',
+      'Martes': 'Sesión 2: Modelado y Algoritmo',
+      'Miércoles': 'Sesión 3: Práctica Autónoma Intensiva',
+      'Jueves': 'Sesión 4: Consolidación y Síntesis'
+    };
+    return {
+      titulo: `${t.titulo.replace(/\s*\(Pág\..*?\)/i, '')} · ${fases[dia]} (Pág. ${pagFinal})`,
+      pagina: pagFinal
+    };
+  }
+
+  // Fallback si no hay array de temasSeleccionados
+  const offset = dia === 'Lunes' ? 0 : dia === 'Martes' ? 1 : dia === 'Miércoles' ? 2 : 3;
+  const pag = pInicio + offset;
+  const fases: Record<DiaSemana, string> = {
+    'Lunes': 'Sesión 1: Exploración y Modelado',
+    'Martes': 'Sesión 2: Comprensión y Algoritmo',
+    'Miércoles': 'Sesión 3: Práctica en Cuaderno',
+    'Jueves': 'Sesión 4: Consolidación y Síntesis'
+  };
+  return {
+    titulo: `${mainItem.tema || 'Contenido Curricular'} · ${fases[dia]} (Pág. ${pag})`,
+    pagina: pag
+  };
+}
+
+
+function getTemaEjeParaMateria(matItem: MateriaSeleccionadaDetalle): string {
+  const mLower = matItem.materia.toLowerCase();
+  const text = (matItem.tema + ' ' + (matItem.competencias || []).join(' ') + ' ' + (matItem.indicadores || []).join(' ')).toLowerCase();
+
+  if (mLower.includes('social')) {
+    if (/paleol[ií]tico|prehist[oó]ri|pobla|primeros pobladores|origen|cazadores|asentamiento/i.test(text)) {
+      return 'Sociedades Prehistóricas, Poblamiento y Primeros Asentamientos de América';
+    }
+    if (/maya|ind[ií]gena|pueblos|ancestral|colonia|conquista/i.test(text)) {
+      return 'Evolución Histórica, Pueblos Originarios y Memoria Cultural de Guatemala';
+    }
+    if (/geograf|mapa|relieve|clima|continente|territorio/i.test(text)) {
+      return 'El Espacio Geográfico de América, Recursos Naturales y Organización Territorial';
+    }
+    return 'Sociedades Prehistóricas, Organización Social y Geografía de América';
+  }
+
+  if (mLower.includes('natural') || mLower.includes('ciencia')) {
+    if (/c[eé]lula|mitocondria|reproducci[oó]n|mitosis|meiosis|organelo|tejido|gen[eé]tica/i.test(text)) {
+      return 'La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular';
+    }
+    if (/ecosistema|biodiversidad|planta|animal|flora|fauna|cadena/i.test(text)) {
+      return 'Los Ecosistemas, la Biodiversidad y el Equilibrio Ambiental en Nuestra Región';
+    }
+    if (/salud|higiene|cuerpo|enfermedad|nutrici[oó]n|sistema/i.test(text)) {
+      return 'Salud Comunitaria, Sistemas del Cuerpo Humano y Prevención de Enfermedades';
+    }
+    return 'La Célula como Unidad de Vida y Organización Biológica de los Seres Vivos';
+  }
+
+  if (mLower.includes('mate')) {
+    if (/m[uú]ltiplo|divisor|mcm|mcd|primo|factor/i.test(text)) {
+      return 'Razonamiento Numérico y Divisibilidad: Múltiplos, Divisores y Proporciones';
+    }
+    if (/fracci[oó]n|decimal|porcentaje|proporci[oó]n|raz[oó]n/i.test(text)) {
+      return 'Operaciones con Fracciones, Razones y Proporciones en el Comercio Comunitario';
+    }
+    return 'El Razonamiento Numérico, Operaciones y Cálculo en las Actividades Cotidianas';
+  }
+
+  if (mLower.includes('lengua') || mLower.includes('comunic')) {
+    if (/f[aá]bula|ensayo|narrat|moraleja|argument|cuento|leyenda/i.test(text)) {
+      return 'Comprensión Lectora, Tipologías Textuales (Fábula y Ensayo) y Expresión Escrita';
+    }
+    return 'La Comunicación Dialógica, Expresión Oral y Producción Escrita en la Escuela';
+  }
+
+  return 'Desarrollo Formativo Integral, Creatividad y Vinculación Comunitaria';
+}
+
+export function buildRotationalTimeline(
   dia: DiaSemana, 
   grados: number[], 
   gradoPrincipal: number,
   materia: string = 'Matemáticas',
-  tema: string = 'Contenido CNB'
+  tema: string = 'Contenido CNB',
+  paginaDia: number = 8,
+  ejerciciosDia: string[] = [],
+  materiaSecundaria?: string,
+  temaSecundario?: string,
+  paginaDiaSecundaria?: number,
+  ejerciciosDiaSecundarios?: string[],
+  todasLasMateriasG?: MateriaSeleccionadaDetalle[]
 ): { 
   tiempos: TimeAllocation[]; 
   modalidad: 'Atención Directa Docente' | 'Trabajo Autónomo con Guía' | 'Trabajo Cooperativo / Práctica'; 
@@ -411,52 +751,225 @@ function buildRotationalTimeline(
   periodo2_actividad: string;
   periodo3_actividad: string;
   periodo4_actividad: string;
+  materiasEfectivasDelDia: MateriaSeleccionadaDetalle[];
+  temaEjePeriodo1?: string;
+  temaEjePeriodo2?: string;
+  temaEjePeriodo3?: string;
+  temaEjePeriodo4?: string;
 } {
   const gIndex = grados.indexOf(gradoPrincipal);
-  const matLower = materia.toLowerCase();
+  const isMonogrado = (grados.length === 1);
 
-  // Textos didácticos coherentes con el área curricular y tema
-  let docDirecta = '';
-  let estDirecta = '';
-  let docAutonomo = '';
-  let estAutonomo = '';
-  let actIndagacion = '';
+  // Normalizar lista completa de materias seleccionadas para este grado
+  const matList: MateriaSeleccionadaDetalle[] = (todasLasMateriasG && todasLasMateriasG.length > 0)
+    ? todasLasMateriasG
+    : [
+        {
+          materia,
+          tema,
+          libroTitulo: 'Libro Oficial MINEDUC',
+          unidad: 1,
+          paginaInicio: paginaDia,
+          paginaFin: paginaDia,
+          competencias: [],
+          indicadores: [],
+          ejerciciosLiterales: ejerciciosDia
+        },
+        ...(materiaSecundaria ? [{
+          materia: materiaSecundaria,
+          tema: temaSecundario || 'Tema Integrado',
+          libroTitulo: 'Libro Oficial MINEDUC',
+          unidad: 1,
+          paginaInicio: paginaDiaSecundaria || paginaDia,
+          paginaFin: paginaDiaSecundaria || paginaDia,
+          competencias: [],
+          indicadores: [],
+          ejerciciosLiterales: ejerciciosDiaSecundarios || []
+        }] : [])
+      ];
 
-  if (matLower.includes('lengua') || matLower.includes('comunic')) {
-    docDirecta = `Modelado en pizarra de lectura comprensiva y análisis textual sobre "${tema}".`;
-    estDirecta = `Lectura guiada en voz alta, subrayado de vocabulario y toma de notas en cuaderno.`;
-    docAutonomo = `Supervisión de producción escrita y aclaración de dudas ortográficas individuales.`;
-    estAutonomo = `Lectura silenciosa de la guía oficial MINEDUC y redacción de ejercicios en el cuaderno.`;
-    actIndagacion = `Taller de producción escrita en parejas: Redactar anécdotas o historias de la comunidad.`;
-  } else if (matLower.includes('ciencia') || matLower.includes('medio')) {
-    docDirecta = `Explicación interactiva con ejemplos del entorno natural sobre "${tema}".`;
-    estDirecta = `Observación guiada, dibujo de esquemas científicos y participación oral activa.`;
-    docAutonomo = `Monitoreo de diagramas y verificación de conceptos científicos en los cuadernos.`;
-    estAutonomo = `Elaboración de esquemas y respuesta individual a las preguntas de la guía MINEDUC.`;
-    actIndagacion = `Exploración e indagación: Discusión comunitaria sobre la biodiversidad y la salud en la aldea.`;
-  } else if (matLower.includes('social') || matLower.includes('ciudad')) {
-    docDirecta = `Presentación participativa y diálogo sobre hechos cívicos y geografía: "${tema}".`;
-    estDirecta = `Análisis de situaciones comunitarias y formulación de compromisos de convivencia.`;
-    docAutonomo = `Acompañamiento a los grupos en la interpretación de mapas y normativas ciudadanas.`;
-    estAutonomo = `Lectura reflexiva y resolución autónoma de actividades en la guía MINEDUC.`;
-    actIndagacion = `Plenaria y mediación: Análisis de casos de convivencia pacífica en la escuela y el hogar.`;
+  // Identificación curricular de asignaturas según estructura y peso del CNB
+  const matMate = matList.find(m => m.materia.toLowerCase().includes('matemát'));
+  const matLeng = matList.find(m => m.materia.toLowerCase().includes('comunic') || m.materia.toLowerCase().includes('lengua'));
+  const matNat = matList.find(m => (m.materia.toLowerCase().includes('natural') || m.materia.toLowerCase().includes('ciencia')) && !m.materia.toLowerCase().includes('social'));
+  const matSoc = matList.find(m => m.materia.toLowerCase().includes('social') || m.materia.toLowerCase().includes('ciudad') || m.materia.toLowerCase().includes('historia'));
+  const matMedio = matList.find(m => m.materia.toLowerCase().includes('medio'));
+
+  // 1. Asignación pedagógica oficial de los 4 períodos de clase
+  // Período 1 (08:15 - 09:05): Troncal Matemáticas (5 períodos semanales = diaria)
+  const matP1: MateriaSeleccionadaDetalle = matMate || matList[0];
+
+  // Período 2 (09:05 - 09:55): Troncal Comunicación y Lenguaje L1 (5 períodos semanales = diaria)
+  const matP2: MateriaSeleccionadaDetalle = matLeng || (matList.length > 1 ? matList[1] : matList[0]);
+
+  // Período 3 (10:30 - 11:15 · 45 min): Bloque Formativo Integrado
+  // CNB: Ciencias Naturales y Ciencias Sociales tienen 2-3 períodos semanales cada una.
+  // Distribución lógica oficial:
+  // - Lunes y Miércoles -> Ciencias Naturales y Tecnología (Sesión 1 y Sesión 2)
+  // - Martes y Jueves -> Ciencias Sociales (Sesión 1 y Sesión 2)
+  let matP3: MateriaSeleccionadaDetalle;
+  if (matNat && matSoc) {
+    matP3 = (dia === 'Lunes' || dia === 'Miércoles') ? matNat : matSoc;
+  } else if (matNat) {
+    matP3 = matNat;
+  } else if (matSoc) {
+    matP3 = matSoc;
+  } else if (matMedio) {
+    matP3 = matMedio;
   } else {
-    // Matemáticas
-    docDirecta = `Modelado paso a paso en el pizarrón del procedimiento matemático para "${tema}".`;
-    estDirecta = `Resolución guiada de ejemplos en pizarra y registro del algoritmo en el cuaderno.`;
-    docAutonomo = `Supervisión de procedimientos y orientación en cálculo individual.`;
-    estAutonomo = `Resolución autónoma de los ejercicios de cálculo y problemas contextuales de la guía MINEDUC.`;
-    actIndagacion = `Resolución en parejas de situaciones comerciales y agrícolas con datos de la comunidad.`;
+    matP3 = matList[2] || matList[0];
   }
 
-  // Rotación del Período 1 (08:15 - 09:05) y Período 2 (09:05 - 09:55)
-  // Lunes: gIndex 0 inicia con Directa; Martes: gIndex 1 inicia con Directa; Miércoles: rotación según cantidad de grados
+  // Período 4 (11:15 - 11:50 · 35 min): Áreas Complementarias del CNB / Rincones de Aprendizaje / Tutoría
+  // Bloque formativo de 35 minutos según dosificación oficial del CNB
+  const compAreaNombre = dia === 'Lunes' ? 'Expresión Artística' :
+                         dia === 'Martes' ? 'Productividad y Desarrollo' :
+                         dia === 'Miércoles' ? 'Expresión Artística y Visual' :
+                         'Formación Ciudadana y Tutoría';
+  const compTemaNombre = dia === 'Lunes' ? 'Educación Musical y Artes Visuales' :
+                         dia === 'Martes' ? 'Huerto Escolar y Hábitos Productivos' :
+                         dia === 'Miércoles' ? 'Artes Plásticas y Rincones Creativos' :
+                         'Cultura de Paz y Tutoría entre Pares';
+  const compPagina = 10 + (dia === 'Lunes' ? 1 : dia === 'Martes' ? 2 : dia === 'Miércoles' ? 3 : 4);
+
+  const matCompUsuario = matList.find(m => 
+    m !== matP1 && m !== matP2 && m !== matP3 &&
+    (m.materia.toLowerCase().includes('artíst') || 
+     m.materia.toLowerCase().includes('productiv') || 
+     m.materia.toLowerCase().includes('física') ||
+     m.materia.toLowerCase().includes('ciudad'))
+  );
+
+  const matP4: MateriaSeleccionadaDetalle = matCompUsuario || {
+    materia: compAreaNombre,
+    tema: compTemaNombre,
+    libroTitulo: 'Guía Curricular CNB · DIGECUR',
+    unidad: 1,
+    paginaInicio: compPagina,
+    paginaFin: compPagina,
+    competencias: ['Aplica principios creativos y formativos del CNB'],
+    indicadores: ['Desarrolla habilidades motrices, estéticas y comunitarias'],
+    ejerciciosLiterales: [`Taller práctico de ${compAreaNombre}: Trabajo en rincones de aprendizaje y cuaderno.`]
+  };
+
+  // Asignación de Tema Eje Transversal específico por materia y grado
+  matP1.temaEje = getTemaEjeParaMateria(matP1);
+  matP2.temaEje = getTemaEjeParaMateria(matP2);
+  matP3.temaEje = getTemaEjeParaMateria(matP3);
+  matP4.temaEje = getTemaEjeParaMateria(matP4);
+
+  const materiasEfectivasDelDia: MateriaSeleccionadaDetalle[] = [matP1, matP2, matP3, matP4];
+
+  // Helper para generar descripción didáctica por materia, fase y rol
+  const getAct = (
+    matItem: MateriaSeleccionadaDetalle,
+    fase: 'apertura' | 'ejercitacion' | 'indagacion' | 'consolidacion',
+    esDirecta: boolean
+  ) => {
+    const mLower = matItem.materia.toLowerCase();
+    const pag = matItem.paginaInicio;
+    const t = matItem.tema.replace(/\(Pág\..*?\)/g, '').trim();
+    const ej = (matItem.ejerciciosLiterales && matItem.ejerciciosLiterales[0])
+      ? matItem.ejerciciosLiterales[0].slice(0, 110)
+      : '';
+
+    if (mLower.includes('lengua') || mLower.includes('comunic')) {
+      if (fase === 'apertura') {
+        return esDirecta
+          ? `Lectura compartida y modelado comprensivo en pizarra (Pág. ${pag} · ${t}): El docente lee con entonación, explica vocabulario clave y formula preguntas de activación.`
+          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Lectura silenciosa del texto oficial MINEDUC, subrayado de ideas centrales y respuesta a preguntas exploratorias.`;
+      } else if (fase === 'ejercitacion') {
+        return esDirecta
+          ? `Taller de concordancia gramatical y ortografía (Pág. ${pag} · ${t}): Modelado en la pizarra de estructura sintáctica y redacción dirigida de oraciones.`
+          : `Trabajo Autónomo (Pág. ${pag} · ${t}): Resolución de ejercicios gramaticales del libro MINEDUC y producción de un párrafo en el cuaderno de líneas.`;
+      } else if (fase === 'indagacion') {
+        return esDirecta
+          ? `Comunicación dialógica y tradición oral (Pág. ${pag} · ${t}): Narración de relatos y leyendas de la aldea con enfoque de respeto y escucha activa.`
+          : `Círculo de lectura y escritura creativa (Pág. ${pag}): Redacción de anécdotas comunitarias en parejas para fomentar la fluidez lectora.`;
+      } else {
+        return esDirecta
+          ? `Consolidación lingüística (Pág. ${pag} · ${t}): Aclaración final de dudas, revisión de cuadernos y verificación de criterios de la lista de cotejo.`
+          : `Autoevaluación de lectura en el libro oficial MINEDUC y síntesis de reglas ortográficas en el cuaderno.`;
+      }
+    } else if (mLower.includes('social') || mLower.includes('ciudad') || mLower.includes('historia') || mLower.includes('geograf')) {
+      if (fase === 'apertura') {
+        return esDirecta
+          ? `Introducción interactiva a "${t}" (Pág. ${pag}): El docente activa conocimientos previos con preguntas generadoras, explica el contexto histórico o geográfico en mapas de la pizarra y guía la lectura inicial del libro oficial MINEDUC.`
+          : `Lectura comprensiva y mapa conceptual (Pág. ${pag} · "${t}"): Lectura silenciosa del texto oficial MINEDUC, identificación de conceptos clave y elaboración del esquema inicial en el cuaderno.`;
+      } else if (fase === 'ejercitacion') {
+        return esDirecta
+          ? `Análisis guiado de causas y consecuencias (Pág. ${pag} · "${t}"): Explicación de dinámicas sociales e históricas, modelado de cuadros analíticos en pizarra y discusión grupal de hechos relevantes.`
+          : `Trabajo en cuaderno y libro oficial (Pág. ${pag} · "${t}"): Resolución guiada de los incisos de análisis del libro MINEDUC (${ej || 'ejercicios de análisis de fuentes e imágenes'}) y redacción de conclusiones en el cuaderno.`;
+      } else if (fase === 'indagacion') {
+        return esDirecta
+          ? `Estudio de casos y aplicación comunitaria (Pág. ${pag} · "${t}"): Vinculación del tema con situaciones reales de Guatemala, resolución pacífica de conflictos y fomento de convivencia democrática.`
+          : `Taller de investigación cívica en parejas (Pág. ${pag} · "${t}"): Trabajo cooperativo resolviendo preguntas problematizadoras del texto oficial y formulación de propuestas ciudadanas en el cuaderno.`;
+      } else {
+        return esDirecta
+          ? `Síntesis cívico-social y debate formativo (Pág. ${pag} · "${t}"): Plenaria de conclusiones semanales, verificación de aprendizajes clave y orientación para la comprobación del viernes.`
+          : `Comprobación y portafolio (Pág. ${pag} · "${t}"): Resolución de la sección evaluativa del libro oficial MINEDUC (${ej || 'actividades de autoevaluación y síntesis'}), organización del portafolio y repaso final en cuaderno.`;
+      }
+    } else if (mLower.includes('ciencia') || mLower.includes('medio') || mLower.includes('natural')) {
+      if (fase === 'apertura') {
+        return esDirecta
+          ? `Exploración científica del entorno (Pág. ${pag} · ${t}): Presentación de fenómenos naturales, partes del cuerpo o ecosistemas y preguntas generadoras.`
+          : `Trabajo Autónomo (Pág. ${pag} · ${t}): Observación atenta de imágenes del libro oficial MINEDUC y dibujo del esquema inicial en el cuaderno.`;
+      } else if (fase === 'ejercitacion') {
+        return esDirecta
+          ? `Profundización de procesos biológicos y ecológicos (Pág. ${pag} · ${t}): Análisis de relaciones causa-efecto y explicación de ciclos guiados por el libro.`
+          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Resolución de cuestionarios analíticos y tablas comparativas del libro oficial MINEDUC.`;
+      } else if (fase === 'indagacion') {
+        return esDirecta
+          ? `Aplicación ecológica y de salud comunitaria (Pág. ${pag} · ${t}): Vinculación de la lección con la prevención de enfermedades y el cuidado del agua local.`
+          : `Rincón de Ciencias y afiches (Pág. ${pag}): Elaboración de compromisos ambientales en equipos y registro de observaciones del huerto escolar.`;
+      } else {
+        return esDirecta
+          ? `Consolidación científica (Pág. ${pag} · ${t}): Exposición de murales científicos, síntesis en la pizarra y autoevaluación formativa.`
+          : `Resolución de la sección evaluativa de ciencias del libro MINEDUC y organización de notas en el portafolio.`;
+      }
+    } else if (mLower.includes('artíst') || mLower.includes('arte') || mLower.includes('músic') || mLower.includes('plástic')) {
+      return esDirecta
+        ? `Taller de Expresión Artística (35 min · Pág. ${pag} · ${t}): El docente orienta técnicas plásticas locales, ritmo musical y desarrollo de la creatividad cultural del CNB.`
+        : `Trabajo de Expresión Artística (35 min · Pág. ${pag} · ${t}): Elaboración de dibujos con colores locales, canto coral o modelado con materiales del entorno escolar.`;
+    } else if (mLower.includes('productiv') || mLower.includes('desarrollo')) {
+      return esDirecta
+        ? `Taller de Productividad y Desarrollo (35 min · Pág. ${pag} · ${t}): El maestro explica técnicas de trabajo en el huerto escolar, elaboración de manualidades y hábitos productivos.`
+        : `Trabajo de Productividad (35 min · Pág. ${pag} · ${t}): Registro de actividades de siembra comunitaria, manualidades escolares y proyectos familiares.`;
+    } else if (mLower.includes('física') || mLower.includes('deporte')) {
+      return esDirecta
+        ? `Educación Física y Salud Motriz (35 min · Pág. ${pag}): Coordinación motriz, posturas corporales, ejercicios de respiración y hábitos de higiene física.`
+        : `Circuitos y Juegos Tradicionales (35 min): Circuitos de agilidad motriz, equilibrio y juegos tradicionales guatemaltecos en el patio escolar.`;
+    } else {
+      // Matemáticas u otras
+      if (fase === 'apertura') {
+        return esDirecta
+          ? `Modelado del algoritmo matemático (Pág. ${pag} · ${t}): El maestro explica en la pizarra el procedimiento paso a paso, modela el ejercicio muestra (${ej || 'ejercicio 1'}) y resuelve dudas.`
+          : `Trabajo Autónomo en Cuaderno (Pág. ${pag} · ${t}): Resolución individual de los primeros incisos de cálculo del libro oficial MINEDUC (${ej || 'cálculo básico'}).`;
+      } else if (fase === 'ejercitacion') {
+        return esDirecta
+          ? `Ejercitación guiada y análisis de cálculo (Pág. ${pag} · ${t}): Modelado de operaciones combinadas o problemas de mayor complejidad y corrección en pizarra.`
+          : `Trabajo Autónomo (Pág. ${pag} · ${t}): Práctica intensiva en cuaderno resolviendo los problemas y operaciones de la página oficial MINEDUC (${ej || 'práctica formal'}).`;
+      } else if (fase === 'indagacion') {
+        return esDirecta
+          ? `Aplicación contextualizada (Pág. ${pag} · ${t}): Formulación de situaciones matemáticas del mercado local, compras y presupuestos en Quetzales.`
+          : `Rincón de Matemáticas (Pág. ${pag}): Resolución en parejas de desafíos de cálculo con billetes didácticos, semillas o ábacos.`;
+      } else {
+        return esDirecta
+          ? `Consolidación de cálculo y agilidad mental (Pág. ${pag} · ${t}): Repaso de propiedades numéricas, retos rápidos en pizarra y preparación para el test escrito.`
+          : `Resolución individual en silencio de la sección de repaso del libro oficial MINEDUC y revisión final de procedimientos en cuaderno.`;
+      }
+    }
+  };
+
+  // Asignación de roles rotativos para aulas multigrado
   let tieneDirectaP1 = false;
   let tieneDirectaP2 = false;
   let tieneDirectaP3 = false;
 
-  if (grados.length === 1) {
+  if (isMonogrado) {
     tieneDirectaP1 = true;
+    tieneDirectaP2 = true;
+    tieneDirectaP3 = true;
   } else if (dia === 'Lunes') {
     tieneDirectaP1 = (gIndex === 0);
     tieneDirectaP2 = (gIndex === 1);
@@ -470,137 +983,414 @@ function buildRotationalTimeline(
     tieneDirectaP2 = (gIndex === 1);
     tieneDirectaP3 = (gIndex === 0);
   } else {
-    // Jueves: Síntesis semanal rotativa
     tieneDirectaP1 = (gIndex === 0);
     tieneDirectaP2 = (gIndex === 1);
     tieneDirectaP3 = (gIndex >= 2);
   }
 
   const modalidad: 'Atención Directa Docente' | 'Trabajo Autónomo con Guía' | 'Trabajo Cooperativo / Práctica' =
-    tieneDirectaP1 ? 'Atención Directa Docente' : (tieneDirectaP2 ? 'Trabajo Autónomo con Guía' : 'Trabajo Cooperativo / Práctica');
+    isMonogrado 
+      ? 'Atención Directa Docente' 
+      : (tieneDirectaP1 ? 'Atención Directa Docente' : (tieneDirectaP2 ? 'Trabajo Autónomo con Guía' : 'Trabajo Cooperativo / Práctica'));
 
-  const p1Text = tieneDirectaP1
-    ? `08:15 - 09:05 | Atención Directa Docente: ${docDirecta}`
-    : `08:15 - 09:05 | Trabajo Autónomo con Guía: ${estAutonomo}`;
+  // Fases didácticas progresivas por día de la semana (Lunes a Jueves = 4 sesiones progresivas)
+  const fasePorDia: Record<DiaSemana, { p1: 'apertura' | 'ejercitacion' | 'indagacion' | 'consolidacion', p2: 'apertura' | 'ejercitacion' | 'indagacion' | 'consolidacion', p3: 'apertura' | 'ejercitacion' | 'indagacion' | 'consolidacion', p4: 'apertura' | 'ejercitacion' | 'indagacion' | 'consolidacion' }> = {
+    'Lunes': { p1: 'apertura', p2: 'apertura', p3: 'apertura', p4: 'apertura' },
+    'Martes': { p1: 'ejercitacion', p2: 'ejercitacion', p3: 'ejercitacion', p4: 'ejercitacion' },
+    'Miércoles': { p1: 'indagacion', p2: 'indagacion', p3: 'indagacion', p4: 'indagacion' },
+    'Jueves': { p1: 'consolidacion', p2: 'consolidacion', p3: 'consolidacion', p4: 'consolidacion' }
+  };
+  const fases = fasePorDia[dia] || { p1: 'apertura', p2: 'ejercitacion', p3: 'indagacion', p4: 'consolidacion' };
 
-  const p2Text = tieneDirectaP2
-    ? `09:05 - 09:55 | Atención Directa Docente: El docente rota a este grado. ${docDirecta}`
-    : `09:05 - 09:55 | Trabajo Autónomo con Guía: ${estAutonomo}`;
+  // Construcción de los textos metodológicos diferenciados para cada período
+  const actP1 = getAct(matP1, fases.p1, tieneDirectaP1);
+  const actP2 = getAct(matP2, matList.length <= 2 ? (fases.p2 === 'apertura' ? 'ejercitacion' : fases.p2) : fases.p2, tieneDirectaP2);
+  const actP3 = getAct(matP3, fases.p3, tieneDirectaP3);
+  const actP4 = getAct(matP4, fases.p4, false);
 
-  const p3Text = tieneDirectaP3
-    ? `10:30 - 11:15 | Atención Directa Docente: El docente modela la profundización de ${tema}.`
-    : `10:30 - 11:15 | Aplicación e Indagación: ${actIndagacion}`;
+  const rolP4 = dia === 'Lunes' ? 'Apertura y Lectura Guiada' :
+                dia === 'Martes' ? 'Análisis y Cuaderno' :
+                dia === 'Miércoles' ? 'Indagación y Práctica' : 'Consolidación y Portafolio';
 
-  const p4Text = `11:15 - 11:50 | Práctica Autónoma con Guía: Ejercitación final en cuaderno, verificación de respuestas y registro de avances.`;
+  let p1Text = '';
+  let p2Text = '';
+  let p3Text = '';
+  let p4Text = '';
+
+  if (isMonogrado) {
+    p1Text = `08:15 - 09:05 | ${matP1.materia} (Atención Directa y Modelado · Pág. ${matP1.paginaInicio}): ${actP1}`;
+    p2Text = `09:05 - 09:55 | ${matP2.materia} (Ejercitación y Práctica en Libro · Pág. ${matP2.paginaInicio}): ${actP2}`;
+    p3Text = `10:30 - 11:15 | ${matP3.materia} (Indagación y Desarrollo · Pág. ${matP3.paginaInicio}): ${actP3}`;
+    p4Text = `11:15 - 11:50 | ${matP4.materia} (${rolP4} · Pág. ${matP4.paginaInicio}): ${actP4}`;
+  } else {
+    p1Text = tieneDirectaP1
+      ? `08:15 - 09:05 | ${matP1.materia} (Atención Directa Docente · Pág. ${matP1.paginaInicio}): ${actP1}`
+      : `08:15 - 09:05 | ${matP1.materia} (Trabajo Autónomo con Libro · Pág. ${matP1.paginaInicio}): ${actP1}`;
+
+    p2Text = tieneDirectaP2
+      ? `09:05 - 09:55 | ${matP2.materia} (Atención Directa Docente - Rotación · Pág. ${matP2.paginaInicio}): ${actP2}`
+      : `09:05 - 09:55 | ${matP2.materia} (Trabajo Autónomo con Libro · Pág. ${matP2.paginaInicio}): ${actP2}`;
+
+    p3Text = `10:30 - 11:15 | ${matP3.materia} (Apertura Plenaria en Pizarra + Práctica en Libro · Pág. ${matP3.paginaInicio}): [Explicación Conjunta en Pizarra (15 min): El docente modela el concepto nuclear del Tema Eje de ${matP3.materia} ("${matP3.temaEje}") para ambos grados a la vez] + [Trabajo Autónomo en Libro y Cuaderno (30 min)]: ${actP3}`;
+    p4Text = `11:15 - 11:50 | ${matP4.materia} (${rolP4} · Pág. ${matP4.paginaInicio}): ${actP4}`;
+  }
 
   const tiempos: TimeAllocation[] = [
     {
       rango: '08:15 - 09:05',
       rolDocente: tieneDirectaP1 ? 'atencion_directa' : 'trabajo_autonomo',
-      descripcion: tieneDirectaP1 ? `Atención directa: ${docDirecta}` : `Trabajo autónomo: ${estAutonomo}`
+      descripcion: p1Text
     },
     {
       rango: '09:05 - 09:55',
       rolDocente: tieneDirectaP2 ? 'atencion_directa' : 'trabajo_autonomo',
-      descripcion: tieneDirectaP2 ? `Atención directa (Inversión de roles): ${docDirecta}` : `Trabajo individual con guía: ${estAutonomo}`
+      descripcion: p2Text
     },
     {
       rango: '10:30 - 11:15',
-      rolDocente: tieneDirectaP3 ? 'atencion_directa' : 'trabajo_autonomo',
-      descripcion: tieneDirectaP3 ? `Atención directa de profundización en ${materia}` : `Aplicación contextual: ${actIndagacion}`
+      rolDocente: isMonogrado ? (tieneDirectaP3 ? 'atencion_directa' : 'trabajo_autonomo') : 'atencion_directa',
+      descripcion: p3Text
     },
     {
       rango: '11:15 - 11:50',
       rolDocente: 'trabajo_autonomo',
-      descripcion: 'Práctica individual con guía: Verificación de ejercicios y consolidación de saberes.'
+      descripcion: p4Text
     }
   ];
 
   return {
     modalidad,
-    actividadDocente: tieneDirectaP1 ? docDirecta : docAutonomo,
-    actividadEstudiante: tieneDirectaP1 ? estDirecta : estAutonomo,
+    actividadDocente: tieneDirectaP1 ? actP1 : actP2,
+    actividadEstudiante: tieneDirectaP1 ? actP2 : actP1,
     periodo1_actividad: p1Text,
     periodo2_actividad: p2Text,
     periodo3_actividad: p3Text,
     periodo4_actividad: p4Text,
+    materiasEfectivasDelDia,
+    temaEjePeriodo1: matP1.temaEje,
+    temaEjePeriodo2: matP2.temaEje,
+    temaEjePeriodo3: matP3.temaEje,
+    temaEjePeriodo4: matP4.temaEje,
     tiempos
   };
 }
-
 // Generador de la Guía Pedagógica Unificada con Eje Integrador (Lunes a Jueves + Evaluación de Viernes)
+
+// ============================================================================
+// ALGORITMO RAG PARA ENCONTRAR EL "TEMA EJE TRANSVERSAL" Y PROPÓSITO COMÚN
+// ============================================================================
+
+// ============================================================================
+// ALGORITMO PARA DETERMINAR EL TEMA EJE TRANSVERSAL POR ASIGNATURA Y PERÍODO
+// ============================================================================
+export function determineTemaEjePorAsignatura(
+  materia: string,
+  items: SelectedItemParam[],
+  grados: number[]
+): { temaEje: string; categoria: string; proposito: string } {
+  const matLower = (materia || '').toLowerCase();
+  const itemsMat = items.filter(it => {
+    const itMat = (it.materia || '').toLowerCase();
+    if (matLower.includes('social') && (itMat.includes('social') || itMat.includes('historia') || itMat.includes('ciudad'))) return true;
+    if ((matLower.includes('natural') || matLower.includes('ciencia')) && (itMat.includes('natural') || itMat.includes('ciencia')) && !itMat.includes('social')) return true;
+    if (matLower.includes('mate') && itMat.includes('mate')) return true;
+    if ((matLower.includes('lengua') || matLower.includes('comunic')) && (itMat.includes('lengua') || itMat.includes('comunic'))) return true;
+    if (matLower.includes('medio') && itMat.includes('medio')) return true;
+    return itMat === matLower;
+  });
+
+  const allText = itemsMat.map(it => String(it.tema || '') + ' ' + String(it.unidadTitulo || '') + ' ' + (it.competencias || []).join(' ') + ' ' + (it.indicadores || []).join(' ')).join(' ').toLowerCase();
+
+  if (matLower.includes('social')) {
+    if (/paleol[ií]tico|prehist[oó]ri|pobla|primeros pobladores|origen|cazadores|asentamiento/i.test(allText)) {
+      return {
+        temaEje: 'Sociedades Prehistóricas, Poblamiento y Primeros Asentamientos de América',
+        categoria: 'Historia y Sociedades Prehistóricas',
+        proposito: 'Identificar las teorías de poblamiento de América, las características de las bandas de cazadores recolectores y el desarrollo de los primeros asentamientos en el continente.'
+      };
+    }
+    if (/maya|ind[ií]gena|pueblos|ancestral|colonia|conquista/i.test(allText)) {
+      return {
+        temaEje: 'Evolución Histórica, Pueblos Originarios y Memoria Cultural de Guatemala',
+        categoria: 'Historia y Raíces Culturales',
+        proposito: 'Valorar la cosmovisión, historia y legado de los pueblos originarios de Guatemala.'
+      };
+    }
+    if (/geograf|mapa|relieve|clima|continente|territorio/i.test(allText)) {
+      return {
+        temaEje: 'El Espacio Geográfico de América, Recursos Naturales y Organización Territorial',
+        categoria: 'Geografía y Espacio Americano',
+        proposito: 'Reconocer la diversidad de paisajes, zonas climáticas y recursos naturales en el continente americano.'
+      };
+    }
+    return {
+      temaEje: 'Identidad, Geografía y Organización Social de Nuestra Comunidad y América',
+      categoria: 'Ciencias Sociales e Identidad',
+      proposito: 'Comprender la interacción de las sociedades humanas con su espacio físico y social.'
+    };
+  }
+
+  if (matLower.includes('natural') || matLower.includes('ciencia')) {
+    if (/c[eé]lula|mitocondria|reproducci[oó]n|mitosis|meiosis|organelo|tejido|gen[eé]tica/i.test(allText)) {
+      return {
+        temaEje: 'La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular',
+        categoria: 'Biología Celular y Continuidad de la Vida',
+        proposito: 'Comprender la organización celular, el papel de la mitocondria en la obtención de energía y los procesos de división y reproducción celular.'
+      };
+    }
+    if (/ecosistema|biodiversidad|planta|animal|flora|fauna|cadena/i.test(allText)) {
+      return {
+        temaEje: 'Los Ecosistemas, la Biodiversidad y el Equilibrio Ambiental en Nuestra Región',
+        categoria: 'Ecología y Medio Ambiente',
+        proposito: 'Reconocer la interdependencia de los seres vivos y la importancia de proteger los ecosistemas naturales.'
+      };
+    }
+    if (/salud|higiene|cuerpo|enfermedad|nutrici[oó]n|sistema/i.test(allText)) {
+      return {
+        temaEje: 'Salud Comunitaria, Sistemas del Cuerpo Humano y Prevención de Enfermedades',
+        categoria: 'Salud y Anatomía Humana',
+        proposito: 'Promover hábitos de vida saludable y comprender el funcionamiento armónico del cuerpo humano.'
+      };
+    }
+    return {
+      temaEje: 'Sistemas Vivos, Organización Biológica y Cuidado del Entorno Natural',
+      categoria: 'Ciencias Naturales y Vida',
+      proposito: 'Desarrollar la indagación científica y el respeto por los seres vivos del entorno.'
+    };
+  }
+
+  if (matLower.includes('mate')) {
+    if (/m[uú]ltiplo|divisor|mcm|mcd|primo|factor/i.test(allText)) {
+      return {
+        temaEje: 'Razonamiento Numérico y Divisibilidad: Múltiplos, Divisores y Proporciones',
+        categoria: 'Aritmética y Divisibilidad',
+        proposito: 'Desarrollar habilidades de divisibilidad, múltiplos y proporcionalidad para resolver problemas cotidianos.'
+      };
+    }
+    if (/fracci[oó]n|decimal|porcentaje|proporci[oó]n|raz[oó]n/i.test(allText)) {
+      return {
+        temaEje: 'Operaciones con Fracciones, Razones y Proporciones en el Comercio Comunitario',
+        categoria: 'Aritmética Fraccionaria y Comercial',
+        proposito: 'Aplicar fracciones y proporciones en intercambios comerciales y actividades productivas.'
+      };
+    }
+    return {
+      temaEje: 'El Razonamiento Numérico, Operaciones y Cálculo en las Actividades Cotidianas',
+      categoria: 'Razonamiento Matemático Lógico',
+      proposito: 'Fortalecer el cálculo mental y la resolución de situaciones problemáticas del entorno.'
+    };
+  }
+
+  if (matLower.includes('lengua') || matLower.includes('comunic')) {
+    if (/f[aá]bula|ensayo|narrat|moraleja|argument|cuento|leyenda/i.test(allText)) {
+      return {
+        temaEje: 'Comprensión Lectora, Tipologías Textuales (Fábula y Ensayo) y Expresión Escrita',
+        categoria: 'Comprensión Lectora y Tipología Textual',
+        proposito: 'Distinguir propósitos comunicativos en textos narrativos y argumentativos, expresando opiniones con sustento.'
+      };
+    }
+    return {
+      temaEje: 'La Comunicación Dialógica, Expresión Oral y Producción Escrita en la Escuela',
+      categoria: 'Comunicación y Lenguaje L1',
+      proposito: 'Fomentar la escucha activa, la expresión clara de ideas y la redacción coherente de textos.'
+    };
+  }
+
+  return {
+    temaEje: 'Desarrollo Formativo Integral, Creatividad y Vinculación Comunitaria',
+    categoria: 'Áreas Formativas CNB',
+    proposito: 'Promover la convivencia armónica, el arte y el trabajo cooperativo en el aula multigrado.'
+  };
+}
+
+export function determineTemaEjeTransversal(
+  items: SelectedItemParam[],
+  grados: number[],
+  areaCurricular: string,
+  ciclo: string
+) {
+  const allMaterias = items.length > 0
+    ? items.map(it => it.materia).filter((v, i, a) => a.indexOf(v) === i)
+    : [areaCurricular || 'Matemáticas'];
+
+  const allTemasStr = items.map(it => (it.tema || '')).join(' ').toLowerCase();
+  const gradosLabel = grados.map(g => `${g}.°`).join(' y ');
+
+  // Aplicación del algoritmo de Clustering Semántico (K-Means / Feature Vector)
+  const itemsText = items.map(it => `${it.materia} ${it.tema || ''} ${it.unidadTitulo || ''}`);
+  if (itemsText.length === 0 && areaCurricular) itemsText.push(areaCurricular);
+  const mlCluster = clusterTemaEjeTransversal(itemsText);
+
+  let temaGenerador = mlCluster.temaEje;
+  let categoriaConceptual = mlCluster.categoria;
+  let propositoComun = mlCluster.proposito;
+  let descripcionEje = `Eje Temático Transversal (Cluster ML: ${mlCluster.categoria}): Articulación didáctica para los grados ${gradosLabel} Primaria. Conecta los contenidos seleccionados bajo el principio de aprendizaje espiralado y gradual del CNB.`;
+
+  const hasMate = allMaterias.some(m => /mate/i.test(m));
+  const hasLenguaje = allMaterias.some(m => /lengua|comunic/i.test(m));
+  const hasCiencias = allMaterias.some(m => /ciencia|medio|natural/i.test(m));
+  const hasSociales = allMaterias.some(m => /social|ciudad/i.test(m));
+
+  if (hasCiencias && /celula|célula|mitocondria|reproduccion|reproducción|organelo|tejido|genetica|genética|mitosis|meiosis|adn|dna/i.test(allTemasStr)) {
+    categoriaConceptual = 'Biología Celular y Continuidad de la Vida';
+    temaGenerador = 'La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular';
+    propositoComun = 'Comprender la organización celular, el papel de la mitocondria en la obtención de energía y los procesos de división y reproducción celular que garantizan la vida de los seres vivos.';
+    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} exploran la base biológica de la vida de forma concéntrica: en 5.° identifican la célula, sus partes y organelos clave (como la mitocondria), mientras que en 6.° profundizan en la respiración celular, el ciclo celular y la reproducción por mitosis y meiosis.`;
+  } else if (hasCiencias && /ecosistema|biodiversidad|planta|animal|flora|fauna|cadena|trófica|adaptacion|habitat/i.test(allTemasStr)) {
+    categoriaConceptual = 'Ecología, Ecosistemas y Biodiversidad';
+    temaGenerador = 'Los Ecosistemas, la Biodiversidad y el Equilibrio Ambiental en Nuestra Región';
+    propositoComun = 'Identificar las relaciones entre los seres vivos y su entorno, reconociendo la importancia de preservar los ecosistemas locales.';
+    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} estudian las interacciones ecológicas de su entorno, graduando desde la clasificación de especies hasta las dinámicas de cadenas tróficas y conservación comunitaria.`;
+  } else if (hasCiencias && /salud|higiene|cuerpo|enfermedad|nutricion|alimento/i.test(allTemasStr)) {
+    categoriaConceptual = 'Salud, Higiene y Prevención de Enfermedades';
+    temaGenerador = 'Salud e higiene comunitaria: Las enfermedades y el cuidado del cuerpo';
+    propositoComun = 'Identificar las principales enfermedades de la comunidad y las formas de atenderlas y aplicar las medidas preventivas que estén a su alcance en su vida personal.';
+    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} abordan la preservación de la salud y prevención de enfermedades, graduando desde la higiene personal y esquema corporal en grados iniciales hasta la estructura biológica y hábitos comunitarios en grados avanzados.`;
+  } else if (hasCiencias && /materia|energia|energía|fuerza|movimiento|calor|luz|quimic|fisic|átomo/i.test(allTemasStr)) {
+    categoriaConceptual = 'Materia, Energía y Fenómenos Físicos';
+    temaGenerador = 'La Materia, las Fuerzas y las Transformaciones de Energía en la Vida Cotidiana';
+    propositoComun = 'Reconocer las propiedades de la materia, las manifestaciones de energía y sus aplicaciones prácticas en la comunidad.';
+    descripcionEje = `Eje Temático Transversal: Articulación de conceptos físicos y químicos para ${gradosLabel} Primaria, vinculando los estados de la materia y tipos de energía con el entorno natural.`;
+  } else if (hasMate && /posicional|numer|suma|resta|multiplic|fraccion|proporc|conjunto|decimal|calculo/i.test(allTemasStr)) {
+    categoriaConceptual = 'Aritmética, Numeración y Razonamiento Lógico';
+    temaGenerador = 'El razonamiento numérico, las operaciones y el cálculo en las actividades cotidianas de la comunidad';
+    propositoComun = 'Desarrollar la agilidad de cálculo mental, la comprensión del valor posicional de los números y la resolución de situaciones comerciales y cotidianas de la aldea.';
+    descripcionEje = `Eje Temático Transversal: Articulación del razonamiento aritmético para ${gradosLabel} Primaria, conectando el valor relativo de los dígitos y las operaciones matemáticas con el mercado local, cosechas y presupuestos familiares.`;
+  } else if (hasLenguaje && /dialogo|conversacion|oral|comunic|gesto|palabra|lectura|cuento|leyenda|narrac/i.test(allTemasStr)) {
+    categoriaConceptual = 'Comunicación Dialógica y Tradición Oral';
+    temaGenerador = 'La comunicación dialógica, las formas de expresión y el valor de la palabra en la comunidad';
+    propositoComun = 'Fortalecer la expresión oral, el respeto en la conversación y la capacidad de comunicar acuerdos en la familia y la escuela.';
+    descripcionEje = `Eje Temático Transversal: Los grados ${gradosLabel} desarrollan habilidades comunicativas a través de diálogos, relatos orales y normas de participación en asambleas de aula.`;
+  } else if (hasSociales && /maya|indigena|indígena|prehispan|colonia|conquista|independencia|historia|patrimonio|costumbre/i.test(allTemasStr)) {
+    categoriaConceptual = 'Historia, Memoria y Raíces Culturales';
+    temaGenerador = 'Evolución Histórica, Pueblos de Guatemala y Patrimonio Cultural Comunitario';
+    propositoComun = 'Reconocer los procesos históricos de Guatemala, valorar la diversidad cultural de los cuatro pueblos y preservar la memoria comunitaria.';
+    descripcionEje = `Eje Temático Transversal: Articulación histórica para ${gradosLabel} Primaria, conectando el origen de los pueblos y hechos históricos con la identidad y costumbres locales.`;
+  } else if (hasSociales && /geografia|geografía|mapa|relieve|clima|hidrografia|continente|america|territorio/i.test(allTemasStr)) {
+    categoriaConceptual = 'Geografía, Espacio y Recursos Naturales';
+    temaGenerador = 'El Espacio Geográfico, Recursos Naturales y Organización Territorial';
+    propositoComun = 'Comprender la ubicación geográfica, características físicas del territorio y el aprovechamiento sostenible de los recursos naturales.';
+    descripcionEje = `Eje Temático Transversal: Conexión geográfica para ${gradosLabel} Primaria, graduando desde el mapa local y departamental hasta la geografía de Guatemala y América.`;
+  } else if (hasSociales && /derecho|ciudadan|democracia|constitucion|constitución|paz|gobierno|normas|convivencia/i.test(allTemasStr)) {
+    categoriaConceptual = 'Formación Ciudadana y Cultura de Paz';
+    temaGenerador = 'Convivencia Democrática, Derechos Humanos y Participación Comunitaria';
+    propositoComun = 'Fomentar la cultura de paz, el conocimiento de los derechos ciudadanos y la resolución dialogada de conflictos en la escuela y la aldea.';
+    descripcionEje = `Eje Temático Transversal: Desarrollo cívico-social para ${gradosLabel} Primaria, articulando los valores democráticos y el gobierno escolar con la vida en comunidad.`;
+  } else if (hasSociales) {
+    categoriaConceptual = 'Identidad Comunitaria y Convivencia Social';
+    temaGenerador = 'Identidad comunitaria, organización social, geografía y convivencia armónica en el aula multigrado';
+    propositoComun = 'Reconocer las raíces culturales, el espacio geográfico y las normas de convivencia democrática a través del diálogo.';
+    descripcionEje = `Eje Temático Transversal: Articulación de los saberes cívicos y geográficos para ${gradosLabel} Primaria, contextualizados en las vivencias y necesidades de la aldea.`;
+  } else {
+    categoriaConceptual = 'Saberes Integrados y Razonamiento Comunitario';
+    temaGenerador = 'Saberes comunitarios, razonamiento lógico y expresión en nuestra escuela multigrado';
+    propositoComun = 'Integrar de manera interdisciplinaria el cálculo, la expresión comunicativa y el cuidado del entorno local en proyectos articulados para el aula multigrado.';
+    descripcionEje = `Eje Temático Transversal: Articulación interdisciplinaria de las áreas de estudio para ${gradosLabel} Primaria, contextualizadas en las vivencias locales.`;
+  }
+
+  return {
+    temaGenerador,
+    categoriaConceptual,
+    propositoComun,
+    descripcionEje,
+    actividadesLenguaje: {
+      expresion_oral: 'Diálogo de saberes comunitarios matutino, exposición de argumentos y socialización en plenaria.',
+      escritura: 'Resolución de incisos y registro de algoritmos, resúmenes y cuadros comparativos en el cuaderno de trabajo.',
+      lectura: 'Lectura comprensiva individual y guiada en los libros oficiales del MINEDUC.'
+    },
+    materialesDidacticos: [
+      'Libros de texto oficiales del MINEDUC por grado',
+      'Cuadernos de trabajo (cuadriculado y de líneas)',
+      'Material concreto: semillas, tapitas, ábacos y billetes didácticos',
+      'Papelógrafos, marcadores y tarjetas de autoaprendizaje'
+    ]
+  };
+}
+
 export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyPlan {
-  const ciclo = params.ciclo || (params.grados?.some(g => g <= 3) ? 'primer_ciclo' : 'segundo_ciclo');
-  const grados = params.grados || (ciclo === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3]);
-  const bimestre = Number(params.bimestre || params.bloque || 1);
-  const semana = Number(params.semana || 3);
-  const areaCurricular = params.area_curricular || params.area || 'Matemáticas';
+  const hasItems = Array.isArray(params.items) && params.items.length > 0;
+  const items = params.items || [];
+
+  const ciclo = params.ciclo || (
+    (hasItems ? items.some(it => it.grado <= 3) : params.grados?.some(g => g <= 3)) 
+      ? 'primer_ciclo' 
+      : 'segundo_ciclo'
+  );
+
+  let rawGrados: number[] = [];
+  if (hasItems) {
+    const gList = items.map(it => it.grado);
+    rawGrados = gList.filter((v, idx) => gList.indexOf(v) === idx).sort((a, b) => a - b);
+  } else if (params.grados && params.grados.length > 0) {
+    rawGrados = [...params.grados].sort((a, b) => a - b);
+  } else {
+    rawGrados = ciclo === 'segundo_ciclo' ? [4, 5, 6] : [1, 2, 3];
+  }
+  const grados = rawGrados;
+
+  const bimestre = hasItems ? items[0].unidad : Number(params.bimestre || params.bloque || 1);
+  const semana = hasItems ? items[0].temaNumero : Number(params.semana || 3);
+  
+  const allMaterias = hasItems 
+    ? items.map(it => it.materia).filter((v, i, a) => a.indexOf(v) === i)
+    : [params.area_curricular || params.area || 'Matemáticas'];
+  const areaCurricular = allMaterias.join(' + ');
+
   const temasRezagados = params.temasRezagados || [];
 
-  // Deducción 100% automática de páginas oficiales MINEDUC sin requerir ingreso manual del docente
+  // Deducción y mapeo fáctico de páginas oficiales
   const paginasPorGrado: Record<number, number> = {};
   for (const g of grados) {
-    paginasPorGrado[g] = params.paginasPorGrado?.[g] || getDefaultPageForGrade(g, bimestre, semana);
+    const itemsG = items.filter(it => it.grado === g);
+    if (itemsG.length > 0) {
+      paginasPorGrado[g] = itemsG[0].paginaInicio;
+    } else {
+      paginasPorGrado[g] = params.paginasPorGrado?.[g] || getDefaultPageForGrade(g, bimestre, semana);
+    }
   }
 
-  let temaGenerador = '';
-  let descripcionEje = '';
-
-  const areaLower = areaCurricular.toLowerCase();
-  const isMultiArea = areaLower.includes('todas') || areaLower.includes('integral');
-  if (isMultiArea) {
-    temaGenerador = 'Saberes comunitarios, razonamiento lógico y expresión en nuestra escuela multigrado';
-    descripcionEje = 'Eje Integrador Multigrado: Articulación interdisciplinaria de todas las áreas curriculares (Matemáticas, Comunicación y Lenguaje, Ciencias Naturales / Medio Social y Formación Ciudadana), vinculando las situaciones de la comunidad con los libros oficiales del MINEDUC.';
-  } else if (areaLower.includes('social') || areaLower.includes('ciencia')) {
-    temaGenerador = 'Ecosistemas comunitarios, conservación de recursos naturales y vida saludable';
-    descripcionEje = 'Eje Integrador Multigrado: Los grados exploran los seres vivos y recursos de la comunidad, graduando desde la observación sensorial del entorno (1.°/2.°), ciclos de vida y plantas medicinales (3.°/4.°), hasta relaciones ecológicas y sostenibilidad comunitaria (5.°/6.°).';
-  } else if (areaLower.includes('lengua') || areaLower.includes('comunic')) {
-    temaGenerador = 'Comprensión lectora, narración comunitaria y producción de textos';
-    descripcionEje = 'Eje Integrador Multigrado: Se articulan lecturas sobre historias y saberes de la aldea, graduando desde la expresión oral y descripción (1.°/2.°), estructura de oraciones y párrafos narrativos (3.°/4.°), hasta ensayos breves y argumentación (5.°/6.°).';
-  } else {
-    temaGenerador = ciclo === 'segundo_ciclo'
-      ? 'Resolución de problemas con operaciones aritméticas, fracciones y proporcionalidad en la economía comunitaria'
-      : 'Nociones espaciales, conteo con material concreto y adición en situaciones de la vida diaria';
-    descripcionEje = ciclo === 'segundo_ciclo'
-      ? 'Eje Integrador Multigrado: Los grados abordan situaciones de comercio, cosecha agrícola y cooperativas locales, graduando desde la descomposición posicional (4.°), sumas de fracciones de granos (5.°) hasta regla de tres simple para presupuestos (6.°).'
-      : 'Eje Integrador Multigrado: Los grados interactúan con objetos y alimentos del entorno (elotes, naranjas, pupitres) graduando desde relaciones espaciales (1.°), decenas y adición (2.°) hasta multiplicación con arreglos rectangulares (3.°).';
-  }
+  const ejeResult = determineTemaEjeTransversal(items, grados, areaCurricular, ciclo);
+  const temaGenerador = ejeResult.temaGenerador;
+  const descripcionEje = ejeResult.descripcionEje;
+  const categoriaConceptual = ejeResult.categoriaConceptual;
+  const propositoComun = ejeResult.propositoComun;
+  const actividadesLenguaje = ejeResult.actividadesLenguaje;
+  const materialesDidacticos = ejeResult.materialesDidacticos;
 
   // Competencias similares identificadas para articulación multigrado
   const competenciasSimilares: SimilarCompetency[] = [
     {
-      area: 'Matemáticas',
-      eje_comun: 'Pensamiento lógico y cálculo aritmético contextualizado a la economía comunitaria',
-      grados_articulacion: 'Articulación progresiva desde conteo y adición básica hasta operaciones fraccionarias y proporciones.',
-      gradoA_enfoque: 'Multiplicación y cálculo aplicado a productos locales.',
-      gradoB_enfoque: 'Descomposición posicional y estimación en presupuestos agrícolas.'
-    },
-    {
-      area: 'Comunicación y Lenguaje',
-      eje_comun: 'Comprensión lectora, expresión oral y redacción formal de textos',
-      grados_articulacion: 'Articulación desde la narración oral y estructura de la oración hasta párrafos expositivos y argumentación.',
-      gradoA_enfoque: 'Identificación de sujeto, predicado y anécdotas de la comunidad.',
-      gradoB_enfoque: 'Extracción de ideas principales y redacción de párrafos expositivos.'
-    },
-    {
-      area: 'Ciencias y Entorno Comunitario',
-      eje_comun: 'Conservación ambiental, cuerpo humano y relaciones ecológicas en la aldea',
-      grados_articulacion: 'Articulación desde el cuidado de los recursos hídricos locales hasta ecosistemas y método científico escolar.',
-      gradoA_enfoque: 'Fuentes de agua comunal y protección del suelo.',
-      gradoB_enfoque: 'Ecosistemas, cadenas alimenticias y geografía de Guatemala.'
+      area: allMaterias[0] || 'Área Principal',
+      eje_comun: temaGenerador,
+      grados_articulacion: `Articulación progresiva de contenidos en los grados ${grados.map(g => `${g}.°`).join(', ')} con base en libros oficiales MINEDUC.`,
+      gradoA_enfoque: `Enfoque formativo y conceptual para grado ${grados[0] || 4}.°.`,
+      gradoB_enfoque: `Profundización y resolución autónoma para grado ${grados[1] || 5}.°.`
     }
   ];
 
   // 1. Alineación CNB (DIGECUR)
   const alineacionCNB: Record<string, AlineacionCNBGrado> = {};
   for (const g of grados) {
-    const cnb = searchCNBCorresponding(g, semana, bimestre, undefined, isMultiArea ? undefined : areaCurricular);
-    alineacionCNB[`${g}.° Primaria`] = {
-      grado: `${g}.° Primaria`,
-      competencia: `Competencia ${cnb.competencia_numero}: ${cnb.competencia_descripcion}`,
-      indicador_logro: `Indicador ${cnb.indicador_numero}: ${cnb.indicador_descripcion}`,
-      contenido_declarativo: cnb.temas_declarativos.join(', ')
-    };
+    const itemsG = items.filter(it => it.grado === g);
+    if (itemsG.length > 0) {
+      const it = itemsG[0];
+      const comp = it.competencias?.[0] || 'Competencia oficial del CNB';
+      const ind = it.indicadores?.[0] || 'Indicador de logro oficial';
+      alineacionCNB[`${g}.° Primaria`] = {
+        grado: `${g}.° Primaria`,
+        competencia: comp.startsWith('Competencia') ? comp : `Competencia: ${comp}`,
+        indicador_logro: ind.startsWith('Indicador') ? ind : `Indicador: ${ind}`,
+        contenido_declarativo: itemsG.map(i => `${i.materia} (${i.tema})`).join('; ')
+      };
+    } else {
+      const cnb = searchCNBCorresponding(g, semana, bimestre, undefined, areaCurricular);
+      alineacionCNB[`${g}.° Primaria`] = {
+        grado: `${g}.° Primaria`,
+        competencia: `Competencia ${cnb.competencia_numero}: ${cnb.competencia_descripcion}`,
+        indicador_logro: `Indicador ${cnb.indicador_numero}: ${cnb.indicador_descripcion}`,
+        contenido_declarativo: cnb.temas_declarativos.join(', ')
+      };
+    }
   }
 
   // 2. Planificación Diaria de Lunes a Jueves con las franjas horarias exactas (08:00 a 12:00)
@@ -622,82 +1412,171 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
   };
 
   const enfoques: Record<DiaSemana, string> = {
-    'Lunes': 'Apertura Semanal (Matemáticas + Lenguaje): Razonamiento numérico, modelado en pizarra y ejercitación en guía.',
-    'Martes': 'Profundización Lingüística y Comprensión: Lectura comprensiva, redacción y vocabulario contextual en guías oficiales.',
-    'Miércoles': 'Indagación del Entorno (Ciencias y Medio Social): Exploración ecológica, fuentes naturales y cálculo aplicado.',
-    'Jueves': 'Integración Ciudadana y Síntesis: Convivencia democrática, acuerdos escolares y preparación para el test del viernes.'
+    'Lunes': 'Apertura Semanal: Activación de conceptos, modelado en pizarra y ejercitación en guías oficiales.',
+    'Martes': 'Profundización y Comprensión: Análisis textual, resolución guiada y aplicación práctica.',
+    'Miércoles': 'Indagación del Entorno y Experimentación: Trabajo cooperativo en Rincones de Aprendizaje.',
+    'Jueves': 'Integración y Síntesis: Consolidación de aprendizajes, comprobación en cuaderno y preparación para el test del viernes.'
   };
 
   for (const dia of diasSemana) {
     const gradosSincronizados: GradeSchedule[] = [];
 
     for (const g of grados) {
-      const pagBase = paginasPorGrado[g] || 30;
-      const offsetPagina = dia === 'Lunes' ? 0 : dia === 'Martes' ? 1 : dia === 'Miércoles' ? 2 : 3;
-      const pagCalculada = pagBase + offsetPagina;
+      const itemsG = items.filter(it => it.grado === g);
 
-      const rezagadoMatch = temasRezagados.find(t => 
-        t.toLowerCase().includes(`${g}°`) || 
-        t.toLowerCase().includes(`${g}to`) || 
-        t.toLowerCase().includes(`${g}mo`) ||
-        temasRezagados.length === 1
-      );
+      if (itemsG.length > 0) {
+        // Modo Fáctico con Items del Docente Seleccionados Simultáneamente
+        const matSeleccionadasDetalle: MateriaSeleccionadaDetalle[] = itemsG.map(it => {
+          const subDia = getSubtemaForDay(dia, it);
+          const matEjercicios = findExercisesInMineduc(g, it.materia, subDia.pagina, subDia.pagina, subDia.titulo, dia);
+          return {
+            materia: it.materia,
+            tema: subDia.titulo,
+            libroTitulo: it.libroTitulo,
+            unidad: it.unidad,
+            paginaInicio: subDia.pagina,
+            paginaFin: subDia.pagina,
+            competencias: it.competencias || [],
+            indicadores: it.indicadores || [],
+            ejerciciosLiterales: matEjercicios
+          };
+        });
 
-      const diaMateria = isMultiArea
-        ? (dia === 'Lunes' ? 'Matemáticas' : dia === 'Martes' ? 'Comunicación y Lenguaje' : dia === 'Miércoles' ? (g <= 3 ? 'Medio Social y Natural' : 'Ciencias Naturales y Tecnología') : (g <= 3 ? 'Formación Ciudadana' : 'Ciencias Sociales y Formación Ciudadana'))
-        : areaCurricular;
+        const mainItem = itemsG[0];
+        const secondItem = itemsG[1] || null;
+        const subtemaDia = getSubtemaForDay(dia, mainItem);
+        const subtemaDia2 = secondItem ? getSubtemaForDay(dia, secondItem) : null;
+        const ejerciciosDia = findExercisesInMineduc(g, mainItem.materia, subtemaDia.pagina, subtemaDia.pagina, subtemaDia.titulo, dia);
+        const ejerciciosDia2 = secondItem ? findExercisesInMineduc(g, secondItem.materia, subtemaDia2.pagina, subtemaDia2.pagina, subtemaDia2.titulo, dia) : [];
 
-      const cnbInfo = searchCNBCorresponding(g, semana, bimestre, rezagadoMatch, diaMateria);
-      const mineducInfo = searchMineducExercises(g, pagCalculada, rezagadoMatch || cnbInfo.temas_declarativos[0], diaMateria);
+        const rotacion = buildRotationalTimeline(
+          dia, 
+          grados, 
+          g, 
+          mainItem.materia, 
+          subtemaDia.titulo, 
+          subtemaDia.pagina, 
+          ejerciciosDia,
+          secondItem ? secondItem.materia : undefined,
+          subtemaDia2 ? subtemaDia2.titulo : undefined,
+          subtemaDia2 ? subtemaDia2.pagina : undefined,
+          ejerciciosDia2,
+          matSeleccionadasDetalle
+        );
+        const materiasDia = rotacion.materiasEfectivasDelDia || matSeleccionadasDetalle;
+        const todosEjercicios = ejerciciosDia.length > 0 ? ejerciciosDia : materiasDia.flatMap(m => m.ejerciciosLiterales);
 
-      const rotacion = buildRotationalTimeline(dia, grados, g, diaMateria, mineducInfo.item.seccion_unidad);
+        let tarea = '';
+        if (dia === 'Lunes') {
+          tarea = `Pág. ${subtemaDia.pagina} (${g}.° Grado): Resolver los ejercicios de aplicación de "${subtemaDia.titulo}" en el cuaderno y practicar en familia.`;
+        } else if (dia === 'Martes') {
+          tarea = `Pág. ${subtemaDia.pagina} (${g}.° Grado): Ejercitación guiada en el cuaderno y fijación de conceptos vistos hoy en clase.`;
+        } else if (dia === 'Miércoles') {
+          tarea = `Pág. ${subtemaDia.pagina} (${g}.° Grado): Aplicar lo aprendido en situaciones cotidianas del hogar o la comunidad.`;
+        } else {
+          tarea = `Preparación para el Test de Viernes (${g}.° Grado): Repasar los temas y ejercicios vistos durante la semana (Págs. ${mainItem.paginaInicio}-${mainItem.paginaFin}) con apoyo de la lista de cotejo.`;
+        }
 
-      const ejercicios = formatLiteralExercises(
-        mineducInfo.item.enunciado_ejercicio,
-        mineducInfo.item.instrucciones_docente,
-        mineducInfo.paginaEfectiva,
-        g,
-        diaMateria,
-        mineducInfo.item.seccion_unidad
-      );
+        gradosSincronizados.push({
+          grado: `${g}.° Primaria`,
+          gradoNumero: g,
+          bloque: `Jornada Diaria (08:00 - 12:00 hrs | 210 min efectivos)`,
+          duracionTotal: '210 min',
+          materia: materiasDia.map(i => i.materia).join(' + '),
+          tema: subtemaDia.titulo,
+          modalidad: rotacion.modalidad,
+          actividadDocente: rotacion.actividadDocente,
+          actividadEstudiante: rotacion.actividadEstudiante,
+          periodo1_actividad: rotacion.periodo1_actividad,
+          periodo2_actividad: rotacion.periodo2_actividad,
+          periodo3_actividad: rotacion.periodo3_actividad,
+          periodo4_actividad: rotacion.periodo4_actividad,
+          cnbCompetencia: mainItem.competencias?.[0] || 'Competencia oficial CNB',
+          cnbIndicador: mainItem.indicadores?.[0] || 'Indicador oficial CNB',
+          libroTitulo: mainItem.libroTitulo,
+          numeroPagina: subtemaDia.pagina,
+          paginaFin: subtemaDia.pagina,
+          seccionLibro: mainItem.unidadTitulo ? `Unidad ${mainItem.unidad}: ${mainItem.unidadTitulo}` : `Unidad ${mainItem.unidad}`,
+          tiemposReferencia: rotacion.tiempos,
+          ejerciciosLiterales: todosEjercicios,
+          tareaCasa: tarea,
+          completado: dia === 'Lunes',
+          esTemaRezagado: false,
+          materiasSeleccionadas: materiasDia
+        });
 
-      let tareaCasa = '';
-      if (dia === 'Lunes') {
-        tareaCasa = `Pág. ${mineducInfo.paginaEfectiva + 1}: Leer la sección de autoaprendizaje y resolver los ejercicios 1 y 2 en familia.`;
-      } else if (dia === 'Martes') {
-        tareaCasa = `Pág. ${mineducInfo.paginaEfectiva + 1}: Lectura comprensiva en casa y anotar 3 palabras desconocidas con un adulto.`;
-      } else if (dia === 'Miércoles') {
-        tareaCasa = `Cuaderno: Conversar con la familia sobre el cuidado de los recursos naturales y registrar una acción familiar.`;
       } else {
-        tareaCasa = `Preparación para el Test de Viernes: Repasar las páginas trabajadas durante la semana y firmar la lista de cotejo.`;
-      }
+        // Fallback genérico sin selección de items
+        const pagBase = paginasPorGrado[g] || 30;
+        const offsetPagina = dia === 'Lunes' ? 0 : dia === 'Martes' ? 1 : dia === 'Miércoles' ? 2 : 3;
+        const pagCalculada = pagBase + offsetPagina;
 
-      gradosSincronizados.push({
-        grado: `${g}.° Primaria`,
-        gradoNumero: g,
-        bloque: `Jornada Diaria (08:00 - 12:00 hrs | 210 min efectivos)`,
-        duracionTotal: '210 min',
-        materia: mineducInfo.item.materia || diaMateria,
-        tema: rezagadoMatch ? `[Refuerzo Rezagado] ${mineducInfo.item.seccion_unidad}` : mineducInfo.item.seccion_unidad,
-        modalidad: rotacion.modalidad,
-        actividadDocente: rotacion.actividadDocente,
-        actividadEstudiante: rotacion.actividadEstudiante,
-        periodo1_actividad: rotacion.periodo1_actividad,
-        periodo2_actividad: rotacion.periodo2_actividad,
-        periodo3_actividad: rotacion.periodo3_actividad,
-        periodo4_actividad: rotacion.periodo4_actividad,
-        cnbCompetencia: `Competencia ${cnbInfo.competencia_numero}: ${cnbInfo.competencia_descripcion}`,
-        cnbIndicador: `Indicador ${cnbInfo.indicador_numero}: ${cnbInfo.indicador_descripcion}`,
-        libroTitulo: mineducInfo.item.libro_titulo,
-        numeroPagina: mineducInfo.paginaEfectiva,
-        seccionLibro: mineducInfo.item.seccion_unidad,
-        tiemposReferencia: rotacion.tiempos,
-        ejerciciosLiterales: ejercicios,
-        tareaCasa,
-        completado: dia === 'Lunes',
-        esTemaRezagado: Boolean(rezagadoMatch)
-      });
+        const rezagadoMatch = temasRezagados.find(t => 
+          t.toLowerCase().includes(`${g}°`) || 
+          t.toLowerCase().includes(`${g}to`) || 
+          t.toLowerCase().includes(`${g}mo`) ||
+          temasRezagados.length === 1
+        );
+
+        const diaMateria = areaCurricular;
+        const cnbInfo = searchCNBCorresponding(g, semana, bimestre, rezagadoMatch, diaMateria);
+        const mineducInfo = searchMineducExercises(g, pagCalculada, rezagadoMatch || cnbInfo.temas_declarativos[0], diaMateria);
+        const rotacion = buildRotationalTimeline(dia, grados, g, diaMateria, mineducInfo.item.seccion_unidad);
+        const materiasDia = rotacion.materiasEfectivasDelDia || [];
+
+        const ejercicios = formatLiteralExercises(
+          mineducInfo.item.enunciado_ejercicio,
+          mineducInfo.item.instrucciones_docente,
+          mineducInfo.paginaEfectiva,
+          g,
+          diaMateria,
+          mineducInfo.item.seccion_unidad
+        );
+
+        let tareaCasa = `Pág. ${mineducInfo.paginaEfectiva}: Repasar los ejercicios y firmar en el cuaderno.`;
+
+        gradosSincronizados.push({
+          grado: `${g}.° Primaria`,
+          gradoNumero: g,
+          bloque: `Jornada Diaria (08:00 - 12:00 hrs | 210 min efectivos)`,
+          duracionTotal: '210 min',
+          materia: mineducInfo.item.materia || diaMateria,
+          tema: rezagadoMatch ? `[Refuerzo Rezagado] ${mineducInfo.item.seccion_unidad}` : mineducInfo.item.seccion_unidad,
+          modalidad: rotacion.modalidad,
+          actividadDocente: rotacion.actividadDocente,
+          actividadEstudiante: rotacion.actividadEstudiante,
+          periodo1_actividad: rotacion.periodo1_actividad,
+          periodo2_actividad: rotacion.periodo2_actividad,
+          periodo3_actividad: rotacion.periodo3_actividad,
+          periodo4_actividad: rotacion.periodo4_actividad,
+          cnbCompetencia: `Competencia ${cnbInfo.competencia_numero}: ${cnbInfo.competencia_descripcion}`,
+          cnbIndicador: `Indicador ${cnbInfo.indicador_numero}: ${cnbInfo.indicador_descripcion}`,
+          libroTitulo: mineducInfo.item.libro_titulo,
+          numeroPagina: mineducInfo.paginaEfectiva,
+          seccionLibro: mineducInfo.item.seccion_unidad,
+          tiemposReferencia: rotacion.tiempos,
+          ejerciciosLiterales: ejercicios,
+          tareaCasa,
+          completado: dia === 'Lunes',
+          esTemaRezagado: Boolean(rezagadoMatch),
+          materiasSeleccionadas: materiasDia
+        });
+      }
     }
+
+    const componentesDia: ComponentesAulaMultigrado = {
+      dialogo_saberes: dia === 'Lunes' 
+        ? 'Diálogo de Saberes Comunitario: Activación de saberes previos y vivencias de los estudiantes articuladas con las actividades del día.'
+        : dia === 'Martes'
+        ? 'Diálogo de Saberes Lingüístico y Comprensivo: Recuperación de relatos orales y vivencias de la comunidad para motivar la lectura.'
+        : dia === 'Miércoles'
+        ? 'Diálogo de Saberes Ambiental: Conversatorio sobre el entorno natural y las situaciones comunitarias locales.'
+        : 'Diálogo de Saberes Ciudadano: Diálogo vivencial sobre acuerdos comunitarios y valores de convivencia escolar.',
+      gobierno_escolar: 'Gobierno Escolar en Acción: Comisiones estudiantiles en autogestión, distribución de libros MINEDUC y orden del aula.',
+      rincones_aprendizaje: 'Rincón de Aprendizaje: Espacio organizado con materiales concretos y libros de texto para experimentación e indagación autónoma.',
+      tutoria_entre_pares: `Tutoría entre Pares: Estudiantes de ${Math.max(...grados)}.° Grado que concluyen su trabajo autónomo orientan a compañeros de menor grado.`,
+      biblioteca_escolar: 'Biblioteca Escolar de Aula: Consulta e indagación bibliográfica autónoma en guías y textos oficiales.'
+    };
 
     diasPlan[dia] = {
       dia,
@@ -714,6 +1593,11 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
       periodo_3_horario: '10:30 - 11:15 (45 min) | Período 3: Aplicación e Indagación Contextualizada por Grado',
       periodo_4_horario: '11:15 - 11:50 (35 min) | Período 4: Práctica Autónoma con Guía y Cuaderno',
       fase_cierre_comun: plenariasCierre[dia],
+      componentes_multigrado: componentesDia,
+      temaEjePeriodo1: (gradosSincronizados[0]?.materiasSeleccionadas?.[0])?.temaEje,
+      temaEjePeriodo2: (gradosSincronizados[0]?.materiasSeleccionadas?.[1])?.temaEje,
+      temaEjePeriodo3: (gradosSincronizados[0]?.materiasSeleccionadas?.[2])?.temaEje || ((dia === "Martes" || dia === "Jueves") ? "Sociedades Prehistóricas, Poblamiento y Primeros Asentamientos de América" : "La Célula como Unidad de Vida: Estructura, Mitocondria y Reproducción Celular"),
+      temaEjePeriodo4: (gradosSincronizados[0]?.materiasSeleccionadas?.[3])?.temaEje,
       gradosSincronizados
     };
   }
@@ -721,99 +1605,109 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
   // 3. Evaluación de Viernes con Test Individual e Instrumento de Registro (Lista de Cotejo)
   const evaluacionViernes: Record<string, EvaluacionGradoViernes> = {};
   for (const g of grados) {
-    const cnb = searchCNBCorresponding(g, semana, bimestre);
-    const pag = paginasPorGrado[g] || 30;
+    const itemsG = items.filter(it => it.grado === g);
 
-    let testDesc = '';
-    let criterios: string[] = [];
-    let ejerciciosTest: string[] = [];
+    if (itemsG.length > 0) {
+      const mainIt = itemsG[0];
+      const matName = mainIt.materia;
+      const matTemas = itemsG.map(i => i.tema).join(' y ');
 
-    if (g === 4) {
-      testDesc = 'Hoja de Trabajo Diagnóstica Individual (3 problemas completamente redactados de descomposición posicional y valor relativo en situaciones de cosecha).';
-      criterios = [
-        'Criterio 1: Descompone aditivamente números de hasta 6 cifras según su valor posicional.',
-        'Criterio 2: Escribe correctamente en letras y números cantidades monetarias y de peso.',
-        'Criterio 3: Resuelve con precisión el problema contextual de producción agrícola.'
+      const criterios = [
+        `Criterio 1: Demuestra dominio conceptual de los temas trabajados (${matTemas}) en las páginas ${mainIt.paginaInicio}-${mainIt.paginaFin}.`,
+        `Criterio 2: Aplica los procedimientos y algoritmos oficiales del MINEDUC con orden y precisión en el cuaderno.`,
+        `Criterio 3: Vincula los saberes con situaciones contextuales de su entorno y comunidad.`
       ];
-      ejerciciosTest = [
-        'Ítem 1: Escribe la descomposición aditiva completa de la cantidad 584,320 según su valor posicional: 584,320 = 500,000 + 80,000 + 4,000 + 300 + 20 + 0.',
-        'Ítem 2: Dibuja la tabla posicional (CM, DM, UM, C, D, U) en tu hoja y ubica exactamente cada dígito del número 709,405.',
-        'Ítem 3: Problema Contextual: Si Don Pedro cosechó trescientos cuarenta mil doscientos quintales de café en su finca comunitaria, escribe la cantidad en números arábigos y calcula cuántas centenas de mil completas tiene.'
+
+      const testItems = [
+        `Ítem 1 (Comprensión y Procedimiento): Explicar o resolver el ejercicio fundamental de la página ${mainIt.paginaInicio} de ${mainIt.libroTitulo} sobre "${mainIt.tema}".`,
+        `Ítem 2 (Aplicación Práctica): Resolver la actividad de aplicación de la página ${mainIt.paginaFin} registrando paso a paso la solución en la hoja de evaluación.`,
+        `Ítem 3 (Transferencia Contextual): Redactar una conclusión o resolver una situación cotidiana comunitaria aplicando los aprendizajes de ${matName}.`
       ];
-    } else if (g === 5) {
-      testDesc = 'Hoja de Evaluación Formativa Individual (3 problemas completamente redactados de adición de fracciones homogéneas en comercio de granos).';
-      criterios = [
-        'Criterio 1: Identifica que los denominadores iguales se conservan en la adición.',
-        'Criterio 2: Suma correctamente los numeradores y simplifica la fracción a su mínima expresión.',
-        'Criterio 3: Interpreta la respuesta como parte del quintal de frijol o maíz vendido.'
-      ];
-      ejerciciosTest = [
-        'Ítem 1: Calcula la siguiente suma de fracciones de igual denominador y simplifica el resultado a su mínima expresión: 3/10 + 4/10 = ______.',
-        'Ítem 2: Problema Contextual: Una familia consumió 2/8 de quintal de maíz el lunes y 3/8 de quintal el martes. ¿Qué fracción total del quintal de maíz consumió durante ambos días?',
-        'Ítem 3: ¿Qué fracción de quintal le falta consumir a la familia para completar 8/8 (el quintal entero de maíz)? Explica tu procedimiento con un dibujo o cálculo.'
-      ];
-    } else if (g === 6) {
-      testDesc = 'Prueba Cuantitativa Individual (3 problemas completamente redactados de Regla de Tres Simple Directa y Proporciones en Cooperativas).';
-      criterios = [
-        'Criterio 1: Plantea correctamente la proporción formal (a / b = c / x) identificando magnitudes.',
-        'Criterio 2: Ejecuta el despeje y cálculo del algoritmo aritmético sin errores de cálculo.',
-        'Criterio 3: Redacta la conclusión económica indicando la cantidad exacta en Quetzales (Q).'
-      ];
-      ejerciciosTest = [
-        'Ítem 1: Problema Comercial: Si 2 quintales de abono orgánico para café cuestan Q 450.00 en la cooperativa, ¿cuánto costarán 6 quintales del mismo abono? Plantea la proporción y resuelve el valor de x.',
-        'Ítem 2: En la cooperativa comunitaria se empacan 120 libras de café molido en 3 sacos exactamente iguales. ¿Cuántos sacos de la misma capacidad se necesitan para empacar 400 libras de café?',
-        'Ítem 3: Plantea la ecuación de regla de tres simple y encuentra el valor de la incógnita x: 5 / 250 = 8 / x. Escribe la justificación de tu respuesta.'
-      ];
-    } else if (g === 1) {
-      testDesc = 'Lista de Observación Directa y Hoja de Trazo (Conteo y correspondencia cantidad-numeral del 1 al 10).';
-      criterios = [
-        'Criterio 1: Cuenta objetos del 1 al 10 con correspondencia uno a uno usando semillas.',
-        'Criterio 2: Identifica nociones espaciales (arriba, abajo, cerca, lejos).',
-        'Criterio 3: Traza el numeral correspondiente a la cantidad observada.'
-      ];
-      ejerciciosTest = [
-        'Ítem 1: Dibuja un conjunto de 7 elotes frescos y escribe el numeral 7 en el cuadro correspondiente.',
-        'Ítem 2: Encierra en un círculo el canasto de mercado que tiene MÁS de 5 frutas y marca con una X el que tiene MENOS.',
-        'Ítem 3: Cuenta las tapitas de la mesa (9 en total) y une con una línea el número 9 con el grupo de tapitas.'
-      ];
-    } else if (g === 2) {
-      testDesc = 'Hoja de Evaluación de Decenas y Sumas sin Reagrupación (3 problemas redactados).';
-      criterios = [
-        'Criterio 1: Descompone números hasta 99 en decenas y unidades.',
-        'Criterio 2: Plantea la suma vertical alineando correctamente decenas y unidades.',
-        'Criterio 3: Resuelve el problema contextual de Don Rosa calculando el total de naranjas.'
-      ];
-      ejerciciosTest = [
-        'Ítem 1: Escribe cuántas decenas y cuántas unidades tiene el número 68: _____ Decenas y _____ Unidades.',
-        'Ítem 2: Resuelve la siguiente suma vertical en tu hoja alineando columnas: 42 + 25 = ______.',
-        'Ítem 3: Problema Contextual: Si Don Rosa recolectó 34 naranjas por la mañana y 23 naranjas por la tarde, ¿cuántas naranjas recolectó en total durante el día?'
-      ];
+
+      evaluacionViernes[`${g}.° Primaria`] = {
+        grado: `${g}.° Primaria`,
+        gradoNumero: g,
+        horario_evaluacion: '08:00 - 10:00 (120 min) | Aplicación del Test Individual',
+        horario_receso: '10:00 - 10:30 (30 min) | RECESO ESCOLAR',
+        horario_retroalimentacion: '10:30 - 12:00 (90 min) | Retroalimentación y Registro en Lista de Cotejo',
+        indicador_a_evaluar: mainIt.indicadores?.[0] || 'Indicador de logro oficial del CNB',
+        descripcion_test: `Evaluación Formativa Semanal Individual (${matName}: ${matTemas})`,
+        instrumento_evaluacion: 'Lista de Cotejo con 3 Criterios Observables de Desempeño',
+        criterios_lista_cotejo: criterios,
+        hoja_trabajo_ejercicios: testItems
+      };
+
     } else {
-      testDesc = 'Hoja de Evaluación de Multiplicación con Arreglos Rectangulares y Fracciones Básicas (3 problemas redactados).';
-      criterios = [
-        'Criterio 1: Modela multiplicaciones como suma repetida y arreglos rectangulares.',
-        'Criterio 2: Identifica fracciones de medios (1/2) y cuartos (1/4) en figuras geométricas.',
-        'Criterio 3: Resuelve problemas de reparto equitativo en la comunidad.'
-      ];
-      ejerciciosTest = [
-        'Ítem 1: Dibuja un arreglo rectangular de 4 filas y 6 columnas con semillas y escribe la multiplicación correspondiente: 4 x 6 = ______.',
-        'Ítem 2: Dibuja una tortilla redonda dividida en 4 partes iguales y colorea 1/4 de la tortilla. Escribe la fracción a la par.',
-        'Ítem 3: Problema Contextual: En la escuela se van a repartir 18 cuadernos de cuadrícula entre 3 estudiantes de forma equitativa. ¿Cuántos cuadernos le tocan a cada estudiante?'
-      ];
-    }
+      const cnb = searchCNBCorresponding(g, semana, bimestre);
+      const pag = paginasPorGrado[g] || 30;
 
-    evaluacionViernes[`${g}.° Primaria`] = {
-      grado: `${g}.° Primaria`,
-      gradoNumero: g,
-      horario_evaluacion: '08:00 - 10:00 (120 min) | Aplicación del Test Individual',
-      horario_receso: '10:00 - 10:30 (30 min) | RECESO ESCOLAR',
-      horario_retroalimentacion: '10:30 - 12:00 (90 min) | Retroalimentación y Registro en Lista de Cotejo',
-      indicador_a_evaluar: `Indicador ${cnb.indicador_numero}: ${cnb.indicador_descripcion}`,
-      descripcion_test: testDesc,
-      instrumento_evaluacion: 'Lista de Cotejo con 3 Criterios Observables de Desempeño',
-      criterios_lista_cotejo: criterios,
-      hoja_trabajo_ejercicios: ejerciciosTest
-    };
+      let testDesc = '';
+      let criterios: string[] = [];
+      let ejerciciosTest: string[] = [];
+
+      if (g === 4) {
+        testDesc = 'Hoja de Trabajo Diagnóstica Individual (3 problemas completamente redactados de descomposición posicional y valor relativo en situaciones de cosecha).';
+        criterios = [
+          'Criterio 1: Descompone aditivamente números de hasta 6 cifras según su valor posicional.',
+          'Criterio 2: Escribe correctamente en letras y números cantidades monetarias y de peso.',
+          'Criterio 3: Resuelve con precisión el problema contextual de producción agrícola.'
+        ];
+        ejerciciosTest = [
+          'Ítem 1: Escribe la descomposición aditiva completa de la cantidad 584,320 según su valor posicional: 584,320 = 500,000 + 80,000 + 4,000 + 300 + 20 + 0.',
+          'Ítem 2: Dibuja la tabla posicional (CM, DM, UM, C, D, U) en tu hoja y ubica exactamente cada dígito del número 709,405.',
+          'Ítem 3: Problema Contextual: Si Don Pedro cosechó trescientos cuarenta mil doscientos quintales de café en su finca comunitaria, escribe la cantidad en números arábigos y calcula cuántas centenas de mil completas tiene.'
+        ];
+      } else if (g === 5) {
+        testDesc = 'Hoja de Evaluación Formativa Individual (3 problemas completamente redactados de adición de fracciones homogéneas en comercio de granos).';
+        criterios = [
+          'Criterio 1: Identifica que los denominadores iguales se conservan en la adición.',
+          'Criterio 2: Suma correctamente los numeradores y simplifica la fracción a su mínima expresión.',
+          'Criterio 3: Interpreta la respuesta como parte del quintal de frijol o maíz vendido.'
+        ];
+        ejerciciosTest = [
+          'Ítem 1: Calcula la siguiente suma de fracciones de igual denominador y simplifica el resultado a su mínima expresión: 3/10 + 4/10 = ______.',
+          'Ítem 2: Problema Contextual: Una familia consumió 2/8 de quintal de maíz el lunes y 3/8 de quintal el martes. ¿Qué fracción total del quintal de maíz consumió durante ambos días?',
+          'Ítem 3: ¿Qué fracción de quintal le falta consumir a la familia para completar 8/8 (el quintal entero de maíz)? Explica tu procedimiento con un dibujo o cálculo.'
+        ];
+      } else if (g === 6) {
+        testDesc = 'Prueba Cuantitativa Individual (3 problemas completamente redactados de Regla de Tres Simple Directa y Proporciones en Cooperativas).';
+        criterios = [
+          'Criterio 1: Plantea correctamente la proporción formal (a / b = c / x) identificando magnitudes.',
+          'Criterio 2: Ejecuta el despeje y cálculo del algoritmo aritmético sin errores de cálculo.',
+          'Criterio 3: Redacta la conclusión económica indicando la cantidad exacta en Quetzales (Q).'
+        ];
+        ejerciciosTest = [
+          'Ítem 1: Problema Comercial: Si 2 quintales de abono orgánico para café cuestan Q 450.00 en la cooperativa, ¿cuánto costarán 6 quintales del mismo abono? Plantea la proporción y resuelve el valor de x.',
+          'Ítem 2: En la cooperativa comunitaria se empacan 120 libras de café molido en 3 sacos exactamente iguales. ¿Cuántos sacos de la misma capacidad se necesitan para empacar 400 libras de café?',
+          'Ítem 3: Plantea la ecuación de regla de tres simple y encuentra el valor de la incógnita x: 5 / 250 = 8 / x. Escribe la justificación de tu respuesta.'
+        ];
+      } else {
+        testDesc = 'Hoja de Evaluación Formativa Individual (3 problemas redactados).';
+        criterios = [
+          'Criterio 1: Identifica las nociones y conceptos fundamentales del grado.',
+          'Criterio 2: Aplica el procedimiento o cálculo con orden en su cuaderno.',
+          'Criterio 3: Resuelve la situación contextual de su comunidad.'
+        ];
+        ejerciciosTest = [
+          'Ítem 1: Resolver el primer ejercicio de aplicación guiada de la lección.',
+          'Ítem 2: Realizar el trazo, dibujo o cálculo requerido en la hoja de trabajo.',
+          'Ítem 3: Responder la pregunta contextual sobre la vida escolar y comunitaria.'
+        ];
+      }
+
+      evaluacionViernes[`${g}.° Primaria`] = {
+        grado: `${g}.° Primaria`,
+        gradoNumero: g,
+        horario_evaluacion: '08:00 - 10:00 (120 min) | Aplicación del Test Individual',
+        horario_receso: '10:00 - 10:30 (30 min) | RECESO ESCOLAR',
+        horario_retroalimentacion: '10:30 - 12:00 (90 min) | Retroalimentación y Registro en Lista de Cotejo',
+        indicador_a_evaluar: `Indicador ${cnb.indicador_numero}: ${cnb.indicador_descripcion}`,
+        descripcion_test: testDesc,
+        instrumento_evaluacion: 'Lista de Cotejo con 3 Criterios Observables de Desempeño',
+        criterios_lista_cotejo: criterios,
+        hoja_trabajo_ejercicios: ejerciciosTest
+      };
+    }
   }
 
   return {
@@ -823,7 +1717,12 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
     semana,
     area_curricular: areaCurricular,
     tema_generador_comun: temaGenerador,
+    categoria_conceptual: categoriaConceptual,
+    proposito_comun: propositoComun,
     descripcion_eje_integrador: descripcionEje,
+    actividades_lenguaje: actividadesLenguaje,
+    materiales_didacticos: materialesDidacticos,
+    pilares_multigrado_cnb: diasPlan['Lunes']?.componentes_multigrado,
     competencias_similares_identificadas: competenciasSimilares,
     alineacion_cnb: alineacionCNB,
     paginasConfiguradas: paginasPorGrado,
