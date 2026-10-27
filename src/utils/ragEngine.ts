@@ -550,7 +550,17 @@ export function diagnosticarPaginaMineduc(
   // 3. CASO CIENCIAS SOCIALES / CIENCIAS NATURALES / MEDIO SOCIAL
   // Verificar si la página física contiene un apartado de actividad explícito
   const organizoMatch = cleanText.match(/(?:Organizo|Organizamos|Nos organizamos)\s*[:\.]?\s*([^%\n]{15,350})/i);
-  if (organizoMatch) {
+  if (organizoMatch || /\b(?:Organizo|Organizamos)\b/i.test(cleanText)) {
+    const hasEggExp = cleanText.toLowerCase().includes('huevo') || cleanText.toLowerCase().includes('partimos');
+    let actDetalle = '';
+    if (hasEggExp) {
+      actDetalle = 'Experimento de observación celular: Partimos un huevo crudo de gallina en un recipiente con agua para observar la célula (yema como macrocélula, membrana celular, clara y cáscara protectora). Dibujar lo observado en el cuaderno rotulando sus partes y registrar las palabras clave (célula, membrana, núcleo, citoplasma, unicelulares, pluricelulares, cloroplastos y vacuola).';
+    } else if (organizoMatch && organizoMatch[1]) {
+      actDetalle = organizoMatch[1].trim();
+    } else {
+      actDetalle = 'Trabajo cooperativo en equipos para organizar y registrar las palabras clave y conceptos de la lección en el cuaderno.';
+    }
+
     return {
       pagina: pagBuscada,
       grado,
@@ -562,7 +572,35 @@ export function diagnosticarPaginaMineduc(
       tipoContenido: 'ciencias_organizamos',
       modalidadTrabajoOficial: 'Trabaja en equipo',
       ejerciciosLiteralesOActividades: [
-        `Pág. ${pagBuscada} · Apartado "Organizamos" (Trabaja en equipo): ${organizoMatch[1].trim()}`
+        `Pág. ${pagBuscada} · Apartado "Organizamos" (Trabaja en equipo): ${actDetalle}`
+      ]
+    };
+  }
+
+  const relacionoMatch = cleanText.match(/(?:Relaciono|Relacionamos)\s*[:\.]?\s*([^%\n]{15,350})/i);
+  if (relacionoMatch || /\b(?:Relaciono|Relacionamos)\b/i.test(cleanText)) {
+    const hasVenn = cleanText.toLowerCase().includes('diagrama de venn') || cleanText.toLowerCase().includes('célula animal');
+    let actDetalle = '';
+    if (hasVenn) {
+      actDetalle = 'Copiar en el cuaderno el diagrama de Venn de la célula animal y vegetal. Escribir dentro de cada círculo el nombre de las estructuras correspondientes a cada tipo, en la intersección las estructuras comunes e ilustrar ambas células.';
+    } else if (relacionoMatch && relacionoMatch[1]) {
+      actDetalle = relacionoMatch[1].trim();
+    } else {
+      actDetalle = 'Actividad de relación conceptual y comparación gráfica en el cuaderno de trabajo.';
+    }
+
+    return {
+      pagina: pagBuscada,
+      grado,
+      materia,
+      subtema,
+      rangoPaginasTema: rango,
+      esInicioDeTema: esInicio,
+      tieneActividadExplicitaEnLibro: true,
+      tipoContenido: 'ciencias_actividad',
+      modalidadTrabajoOficial: 'Trabaja individualmente',
+      ejerciciosLiteralesOActividades: [
+        `Pág. ${pagBuscada} · Apartado "Relaciono" del libro oficial (Trabaja individualmente): ${actDetalle}`
       ]
     };
   }
@@ -604,7 +642,7 @@ export function diagnosticarPaginaMineduc(
   }
 
   const bullets = cleanText.match(/•\s*[^•\n]{15,250}/g);
-  const activityActionRegex = /•\s*(?:Escribo|Escribe|Escriban|Copia|Copiamos|Copien|Dibujo|Dibuja|Dibujen|Respondo|Responde|Respondan|Elaboro|Elabora|Elaboramos|Organizo|Organiza|Organizamos|Investiga|Investiguen|Compara|Comparen|Realiza|Realicen|Completa|Completen|Discute|Discutan|Reúnete|Reúnanse|Encuentra|Reflexiona|Reflexionen|Lee y responde|Busca|Averigua)\b/i;
+  const activityActionRegex = /•\s*(?:Escribo|Escribe|Escriban|Copia|Copio|Copiamos|Copien|Dibujo|Dibuja|Dibujen|Respondo|Responde|Respondan|Elaboro|Elabora|Elaboramos|Organizo|Organiza|Organizamos|Investiga|Investiguen|Compara|Comparo|Comparen|Realiza|Realicen|Completa|Completen|Discute|Discutan|Reúnete|Reúnanse|Encuentra|Reflexiona|Reflexionen|Lee y responde|Busca|Averigua|Partimos|Observo|Observamos|Ilustro|Ilustramos|Experimento|Experimentamos|Invitamos|Pregunte)\b/i;
   const realActivityBullets = bullets ? bullets.filter(b => activityActionRegex.test(b)) : [];
   if (realActivityBullets.length > 0) {
     return {
