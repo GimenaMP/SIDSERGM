@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateUnifiedRAGPlan, searchCNBCorresponding, searchMineducExercises, RAGRequestParams, getSubtemaForDay, findExercisesInMineduc } from '@/utils/ragEngine';
+import { 
+  generateUnifiedRAGPlan, 
+  searchCNBCorresponding, 
+  searchMineducExercises, 
+  RAGRequestParams, 
+  getSubtemaForDay, 
+  findExercisesInMineduc,
+  diagnosticarPaginaMineduc
+} from '@/utils/ragEngine';
 import { getMineducPageForGrade } from '@/utils/cnbDosificacionCompleta';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
@@ -65,6 +73,25 @@ REGLAS METODOLÓGICAS OBLIGATORIAS DEL CNB Y GUÍAS MINEDUC:
    - ESTÁ TERMINANTEMENTE PROHIBIDO copiar la misma redacción, consignas o plantilla entre Lunes, Martes, Miércoles y Jueves.
    - Cada día DEBE usar vocabulario didáctico exclusivo correspondiente a su fase.
    - Si los textos de las actividades entre días superan el 55% de similitud, la respuesta es nula y violatoria de la norma pedagógica MINEDUC.
+
+5. MODALIDADES DE TRABAJO E ICONOGRAFÍA DEL MINEDUC:
+   - Debes asignar explícitamente a cada actividad estudiantil una de las tres modalidades oficiales del MINEDUC:
+     * "Trabaja individualmente": Para resolución de ejercicios en cuaderno, cálculo mental y redacción individual.
+     * "Trabaja en pareja": Para revisión cruzada de respuestas, coevaluación y lectura dialogada.
+     * "Trabaja en equipo": Para apartados de "Organizamos", debates, proyectos científicos o círculos de indagación.
+   - ESTRUCTURA OBLIGATORIA DE MATEMÁTICAS (GUATEMÁTICA / MINEDUC):
+     Cada página física es 1 sesión con 4 momentos didácticos:
+     * (P) Situación / Problema: leo, pienso y propongo ideas para resolver.
+     * (S) Solución: comparto la solución con compañeros y maestro.
+     * (C) Conclusión: registro la regla, algoritmo o concepto clave.
+     * (E) Ejercitación en cuaderno: resuelvo los incisos exactos del libro (Trabaja individualmente).
+     * Autoevaluación 🙂🙂: pintar 2 caritas si todo correcto, 1 carita si aciertos parciales.
+     * (T) Tarea: actividades complementarias en casa.
+   - TRATAMIENTO DE ACTIVIDADES EN CIENCIAS SOCIALES Y NATURALES:
+     * Si la página contiene apartado explícito ("Organizamos", "Trabajamos", preguntas): CÍTALA TEXTUALMENTE (ej: 'Organizamos (Trabaja en equipo): Dialogamos acerca de...').
+     * Si la página es CONCEPTUAL/INFORMATIVA (sin ejercicios en el libro oficial): NO inventes ejercicios inexistentes. Actúa con inteligencia y sugiere la actividad pedagógica contextualizada:
+       - Sesión 1: Apertura con preguntas generadoras y modelado docente en pizarra (Trabaja en equipo).
+       - Sesión 2: Lectura atenta, extracción de 3 ideas principales en cuaderno y organizador gráfico (cuadro comparativo o mapa conceptual) con aplicación comunitaria (Trabaja en pareja o individual).
 
 GUARDRAILS DE SEGURIDAD:
 - Usa EXCLUSIVAMENTE los libros, páginas y temas del contexto RAG provisto.
@@ -231,15 +258,29 @@ export async function POST(req: NextRequest) {
         grados: items.map(item => {
           const sub = getSubtemaForDay(d, item as any);
           const pagBuscada = sub.pagina;
-          const ejerciciosTextos = findExercisesInMineduc(item.grado, item.materia, pagBuscada, pagBuscada, sub.titulo, d as any);
-          const instruccionDocente = `Explicar el contenido de ${item.materia} (Pág. ${pagBuscada}), modelar los conceptos de "${sub.titulo}" y verificar la resolución de ejercicios en el cuaderno.`;
+          const diag = diagnosticarPaginaMineduc(
+            item.grado,
+            item.materia,
+            pagBuscada,
+            item.paginaInicio,
+            item.paginaFin,
+            sub.titulo,
+            d as any
+          );
+          const instruccionDocente = `Explicar el contenido de ${item.materia} (Pág. ${pagBuscada}), modelar los conceptos de "${sub.titulo}" y orientar el trabajo en modalidad "${diag.modalidadTrabajoOficial}".`;
 
           return {
             grado: item.grado,
             materia: item.materia,
             subtemaExclusivoDelDia: sub.titulo,
             paginaFisicaExclusivaDelDia: pagBuscada,
-            ejerciciosRealesDelLibro: ejerciciosTextos.slice(0, 3),
+            rangoPaginasDelTema: diag.rangoPaginasTema,
+            esInicioDeTema: diag.esInicioDeTema,
+            tieneActividadExplicitaEnLibro: diag.tieneActividadExplicitaEnLibro,
+            tipoContenido: diag.tipoContenido,
+            modalidadTrabajoOficialMINEDUC: diag.modalidadTrabajoOficial,
+            ejerciciosRealesOActividadSugerida: diag.ejerciciosLiteralesOActividades,
+            sugerenciaInteligenteSiNoTieneActividad: diag.sugerenciaInteligente || null,
             instruccionGuiaDocente: instruccionDocente.slice(0, 300)
           };
         })
@@ -308,11 +349,19 @@ ${JSON.stringify(ragDesglosadoPorDia, null, 2)}
 ${JSON.stringify(allMineducContexto.slice(0, 10), null, 2)}
 
 INSTRUCCIÓN RIGUROSA SOBRE ACTIVIDADES Y EJERCICIOS DEL LIBRO OFICIAL (RF-06):
-- NADA DEBE SER GENÉRICO. DEBES BASARTE EN EL TEXTO REAL RECUPERADO DE LA PÁGINA:
-  1. Si la página tiene un apartado de 'Organizo', 'Instrucciones', ejercicios numerados o viñetas: CITA TEXTUALMENTE ESA ACTIVIDAD EXACTA QUE DEBEN RESOLVER (ej: 'Organizo: Realizo un cuadro comparativo...', '1. Copio el mapa...').
-  2. Si la página es conceptual y no contiene apartado explícito de ejercicios:
-     - En Sesión 1 (Lunes en Naturales, Martes en Sociales): El profesor toma la sesión para modelar y explicar los conceptos clave en la pizarra con preguntas generadoras.
-     - En Sesión 2 (Miércoles en Naturales, Jueves en Sociales): Los alumnos leen en su libro, extraen las 3 ideas principales del tema en su cuaderno y elaboran un organizador gráfico (cuadro sinóptico o mapa conceptual ilustrado).
+- NADA DEBE SER GENÉRICO. DEBES BASARTE EN EL TEXTO REAL RECUPERADO DE LA PÁGINA EN "ragDesglosadoPorDia":
+  1. MATEMÁTICAS (Guatemática / MINEDUC): Siempre contiene ejercitación. Articula la sesión con los 4 momentos didácticos:
+     - (P) Situación Problema inicial, (S) Solución compartida, (C) Conclusión y regla, (E) Ejercitación literal en cuaderno (Trabaja individualmente), autoevaluación con caritas (🙂🙂) y (T) Tarea para casa.
+     - En "ejerciciosLiterales" cita los incisos reales de la página (ej: "1) ¿Cuáles son los múltiplos de 6? 2) ¿Cuáles son los múltiplos comunes...").
+  2. COMUNICACIÓN Y LENGUAJE: Cita las actividades reales del texto de esa página física, especificando la modalidad ("Trabaja individualmente" para redacción/gramática o "Trabaja en pareja" para lectura/coevaluación).
+  3. CIENCIAS SOCIALES Y CIENCIAS NATURALES:
+     - Revisa el campo "tieneActividadExplicitaEnLibro" de cada grado en "ragDesglosadoPorDia":
+     - SI TIENE ACTIVIDAD EXPLÍCITA ("Organizamos", "Trabajamos", preguntas del texto): Cita textualmente la consigna en "ejerciciosLiterales" indicando la modalidad ("Trabaja en equipo" si es Organizamos, o "Trabaja en pareja").
+     - SI NO TIENE ACTIVIDAD EXPLÍCITA (Página de lectura conceptual, mapas o fuentes):
+       ESTÁ PROHIBIDO inventar ejercicios ficticios en el libro.
+       DEBES ser inteligente y sugerir una actividad didáctica adaptada basada en "sugerenciaInteligenteSiNoTieneActividad":
+       * Sesión 1: Apertura reflexiva con preguntas generadoras del profesor en pizarra y diálogo de presaberes en equipo (Trabaja en equipo).
+       * Sesión 2: Lectura analítica del texto de la página; los alumnos extraen en el cuaderno las 3 ideas principales y elaboran un organizador gráfico (cuadro comparativo, mapa conceptual o dibujo rotulado) con aplicación comunitaria (Trabaja en pareja o individual).
 
 INSTRUCCIONES CLAVE DE GENERACIÓN Y PRIORIZACIÓN CNB (RF-01 AL RF-09):
 1. TEMA EJE TRANSVERSAL Y ANÁLISIS DE RELACIÓN POR ASIGNATURA:
