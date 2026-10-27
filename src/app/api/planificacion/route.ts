@@ -10,6 +10,7 @@ import {
 } from '@/utils/ragEngine';
 import { getMineducPageForGrade } from '@/utils/cnbDosificacionCompleta';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import cnbDatabaseRaw from '../../../../data/cnb_processed.json';
 import mineducDatabaseRaw from '../../../../data/mineduc_ejercicios.json';
@@ -87,14 +88,15 @@ REGLAS METODOLÓGICAS OBLIGATORIAS DEL CNB Y GUÍAS MINEDUC:
      * (E) Ejercitación en cuaderno: resuelvo los incisos exactos del libro (Trabaja individualmente).
      * Autoevaluación 🙂🙂: pintar 2 caritas si todo correcto, 1 carita si aciertos parciales.
      * (T) Tarea: actividades complementarias en casa.
-   - TRATAMIENTO INTELIGENTE DE PÁGINAS CONCEPTUALES EN CIENCIAS SOCIALES Y NATURALES:
-     * Si la página contiene apartado explícito ("Organizamos", "Trabajamos", preguntas): CÍTALA TEXTUALMENTE (ej: 'Organizamos (Trabaja en equipo): Dialogamos acerca de...').
-     * Si la página es CONCEPTUAL/INFORMATIVA (sin ejercicios en el libro oficial, ej: Pág. 13 de Ciencias Naturales sobre "La célula" y sus organelos):
-       ESTÁ ESTRICTAMENTE PROHIBIDO inventar enunciados de temas ajenos (como desastres naturales o deterioro ambiental) o inventar ejercicios ficticios en el libro.
-       Actúa con inteligencia pedagógica y sugiere al docente la actividad de aula y tarea basada en el tema real:
-       - Sesión 1: Apertura reflexiva y modelado docente del tema real; en equipos analizan las ilustraciones del libro y elaboran en sus cuadernos un cuadro comparativo, diagrama de Venn o dibujo rotulado de organelos (núcleo, membrana celular, citoplasma, mitocondrias, cloroplastos, vacuolas) (Trabaja en equipo).
-       - Sesión 2: Lectura analítica del glosario científico del texto oficial; en parejas extraen las funciones clave y redactan conclusiones en el cuaderno (Trabaja en pareja).
-       - En "ejerciciosLiterales" incluye explícitamente: '💡 Actividad Pedagógica Sugerida por la IA (Lectura conceptual del libro oficial)' y '💡 Tarea para Casa Sugerida'.
+   - TRATAMIENTO DIRECTO Y PRÁCTICO DE EJERCICIOS Y ACTIVIDADES:
+     * SI LA PÁGINA TIENE EJERCICIOS O APARTADOS EN EL LIBRO OFICIAL:
+       Sé conciso, directo y práctico para el docente: simplemente indica "Pág. X: Realizar los ejercicios de la página X del libro oficial en el cuaderno." (o cita el apartado si aplica). No transcribas párrafos largos innecesarios.
+     * SI LA PÁGINA ES CONCEPTUAL O INFORMATIVA (SIN EJERCICIOS IMPRESOS EN EL LIBRO, ej: Pág. 13 de Ciencias Naturales sobre "La célula"):
+       Actúa con inteligencia pedagógica y sugiere al docente una actividad guiada de aula y tarea para la casa basada en el tema del texto:
+       - En "ejerciciosLiterales" incluye:
+         "Pág. X (Lectura conceptual) · 💡 Actividad sugerida por la IA: [Actividad pedagógica guiada de aula referente al tema del libro]"
+         "🏠 Tarea sugerida: [Tarea para la casa referente al tema]"
+       ESTÁ ESTRICTAMENTE PROHIBIDO inventar enunciados de temas ajenos o decir que el libro tiene ejercicios cuando es teórica.
 
 GUARDRAILS DE SEGURIDAD:
 - Usa EXCLUSIVAMENTE los libros, páginas y temas del contexto RAG provisto.
@@ -473,7 +475,44 @@ Devuelve la respuesta en formato JSON con las claves:
         let result: any = null;
         let successfulModel = '';
 
-        for (const mName of candidateModels) {
+        // 4.A Integración nativa con Gemini File Search (Google GenAI RAG Gestionado)
+        const fileSearchStore = process.env.GEMINI_FILE_SEARCH_STORE;
+        if (fileSearchStore) {
+          try {
+            const aiClient = new GoogleGenAI({ apiKey });
+            for (const mName of ['gemini-3.5-flash-lite', 'gemini-3.8-flash']) {
+              try {
+                const res = await aiClient.models.generateContent({
+                  model: mName,
+                  contents: prompt,
+                  config: {
+                    systemInstruction: SYSTEM_PROMPT,
+                    temperature: 0.1,
+                    responseMimeType: 'application/json',
+                    tools: [{
+                      fileSearch: {
+                        fileSearchStoreNames: [fileSearchStore]
+                      }
+                    }]
+                  }
+                });
+                if (res && res.text) {
+                  result = { response: { text: () => res.text } };
+                  successfulModel = `${mName} (Gemini File Search Native Tool)`;
+                  break;
+                }
+              } catch (fsErr: any) {
+                console.warn(`Aviso Gemini File Search con ${mName}: ${fsErr.message?.slice(0, 80)}`);
+              }
+            }
+          } catch (fsStoreErr: any) {
+            console.warn('File Search Store no disponible, continuando con RAG híbrido:', fsStoreErr.message);
+          }
+        }
+
+        // 4.B Failover estándar si File Search no está configurado o no arrojó respuesta
+        if (!result) {
+          for (const mName of candidateModels) {
           try {
             const m = genAI.getGenerativeModel({
               model: mName,
@@ -496,6 +535,7 @@ Devuelve la respuesta en formato JSON con las claves:
             console.warn(`Aviso modelo ${mName} no disponible (${mErr.message?.slice(0, 80)}), probando siguiente...`);
           }
         }
+      }
 
         if (!result || !result.response) {
           throw new Error('Todos los modelos de Gemini fallaron o excedieron cuota (activando RAG local)');

@@ -525,9 +525,8 @@ export function diagnosticarPaginaMineduc(
     }
 
     const itemsRes = [
-      `Pág. ${pagBuscada} · Momento (E) Ejercitación (Trabaja individualmente): ${ejercitacionStr}`,
-      `Autoevaluación 🙂🙂: Pintar dos caritas si resolvió todos los ejercicios correctamente; pintar una carita si hubo aciertos parciales.`,
-      `Momento (T) Tarea: Actividades de refuerzo en casa sobre ${subtema}.`
+      `Pág. ${pagBuscada}: Realizar los ejercicios de la página ${pagBuscada} del libro oficial en el cuaderno (Momento E - Ejercitación).`,
+      `Momento (T) Tarea: Resolver ejercicios complementarios en el cuaderno.`
     ];
 
     return {
@@ -551,24 +550,14 @@ export function diagnosticarPaginaMineduc(
     const bullets = cleanText.match(/•\s*[^•\n]{15,250}/g);
     const questions = cleanText.match(/¿[^?]{10,250}\?/g);
 
-    let itemsRes: string[] = [];
+    let itemsRes: string[] = [
+      `Pág. ${pagBuscada}: Realizar los ejercicios de la página ${pagBuscada} del libro oficial en el cuaderno.`
+    ];
     let mod: 'Trabaja individualmente' | 'Trabaja en pareja' | 'Trabaja en equipo' = 'Trabaja individualmente';
 
-    if (numbered && numbered.length > 0) {
-      itemsRes.push(`Pág. ${pagBuscada} · Ejercicios del Libro Oficial (Trabaja individualmente): ${numbered.slice(0, 2).map(n => n.trim()).join(' | ')}`);
-    } else if (phonemeMatch) {
-      itemsRes.push(`Pág. ${pagBuscada} · Taller Lingüístico y Fonético (Trabaja en pareja): ${phonemeMatch[0].trim()}`);
+    if (phonemeMatch) {
       mod = 'Trabaja en pareja';
-    } else if (bullets && bullets.length > 0) {
-      itemsRes.push(`Pág. ${pagBuscada} · Taller Lingüístico y Producción (Trabaja individualmente): ${bullets.slice(0, 2).map(b => b.trim()).join(' | ')}`);
     } else if (questions && questions.length > 0) {
-      mod = 'Trabaja en pareja';
-      itemsRes.push(`Pág. ${pagBuscada} · Comprensión Lectora (Trabaja en pareja): ${questions.slice(0, 2).join(' ')}`);
-    } else if (cleanText.length > 25) {
-      itemsRes.push(`Pág. ${pagBuscada} · Lectura analítica del texto oficial MINEDUC (Trabaja en pareja): "${cleanText.slice(0, 160)}...". Extracción de ideas clave y redacción en cuaderno.`);
-      mod = 'Trabaja en pareja';
-    } else {
-      itemsRes.push(`Pág. ${pagBuscada} · Lectura guiada y vocabulario (Trabaja en pareja): Identificación de ideas clave y redacción en cuaderno.`);
       mod = 'Trabaja en pareja';
     }
 
@@ -611,23 +600,13 @@ export function diagnosticarPaginaMineduc(
       tipoContenido: 'ciencias_organizamos',
       modalidadTrabajoOficial: 'Trabaja en equipo',
       ejerciciosLiteralesOActividades: [
-        `Pág. ${pagBuscada} · Apartado "Organizamos" (Trabaja en equipo): ${actDetalle}`
+        `Pág. ${pagBuscada}: Realizar las actividades de la página ${pagBuscada} del libro oficial en el cuaderno (Apartado "Organizamos").`
       ]
     };
   }
 
   const relacionoMatch = cleanText.match(/(?:Relaciono|Relacionamos)\s*[:\.]?\s*([^%\n]{15,350})/i);
   if (relacionoMatch || /\b(?:Relaciono|Relacionamos)\b/i.test(cleanText)) {
-    const hasVenn = cleanText.toLowerCase().includes('diagrama de venn') || cleanText.toLowerCase().includes('célula animal');
-    let actDetalle = '';
-    if (hasVenn) {
-      actDetalle = 'Copiar en el cuaderno el diagrama de Venn de la célula animal y vegetal. Escribir dentro de cada círculo el nombre de las estructuras correspondientes a cada tipo, en la intersección las estructuras comunes e ilustrar ambas células.';
-    } else if (relacionoMatch && relacionoMatch[1]) {
-      actDetalle = relacionoMatch[1].trim();
-    } else {
-      actDetalle = 'Actividad de relación conceptual y comparación gráfica en el cuaderno de trabajo.';
-    }
-
     return {
       pagina: pagBuscada,
       grado,
@@ -639,7 +618,7 @@ export function diagnosticarPaginaMineduc(
       tipoContenido: 'ciencias_actividad',
       modalidadTrabajoOficial: 'Trabaja individualmente',
       ejerciciosLiteralesOActividades: [
-        `Pág. ${pagBuscada} · Apartado "Relaciono" del libro oficial (Trabaja individualmente): ${actDetalle}`
+        `Pág. ${pagBuscada}: Realizar los ejercicios de la página ${pagBuscada} del libro oficial en el cuaderno (Apartado "Relaciono").`
       ]
     };
   }
@@ -657,7 +636,7 @@ export function diagnosticarPaginaMineduc(
       tipoContenido: 'ciencias_actividad',
       modalidadTrabajoOficial: 'Trabaja individualmente',
       ejerciciosLiteralesOActividades: [
-        `Pág. ${pagBuscada} · Actividad del libro oficial (Trabaja individualmente): ${instrucMatch[0].trim()}`
+        `Pág. ${pagBuscada}: Realizar las actividades de la página ${pagBuscada} del libro oficial en el cuaderno.`
       ]
     };
   }
@@ -675,7 +654,7 @@ export function diagnosticarPaginaMineduc(
       tipoContenido: 'ciencias_actividad',
       modalidadTrabajoOficial: 'Trabaja en pareja',
       ejerciciosLiteralesOActividades: [
-        `Pág. ${pagBuscada} · Preguntas de indagación del libro (Trabaja en pareja): ${questions.slice(0, 2).join(' ')}`
+        `Pág. ${pagBuscada}: Responder las preguntas de indagación de la página ${pagBuscada} del libro oficial en el cuaderno.`
       ]
     };
   }
@@ -741,8 +720,8 @@ export function diagnosticarPaginaMineduc(
     tareaSugeridaCasa = `Fijación en casa: Repasar las ideas principales de la Pág. ${pagBuscada} y anotar 2 ejemplos en el cuaderno.`;
   }
 
-  const actFinal = `Pág. ${pagBuscada} (Página conceptual sin ejercicios impresos) · 💡 Actividad Pedagógica redactada por la IA (${modalidadSugerida}): ${actividadSugeridaClase}`;
-  const tarFinal = `💡 Tarea para Casa redactada por la IA: ${tareaSugeridaCasa}`;
+  const actFinal = `Pág. ${pagBuscada} (Lectura conceptual) · 💡 Actividad sugerida por la IA (${modalidadSugerida}): ${actividadSugeridaClase}`;
+  const tarFinal = `🏠 Tarea sugerida: ${tareaSugeridaCasa}`;
 
   return {
     pagina: pagBuscada,
