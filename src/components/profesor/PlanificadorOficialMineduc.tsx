@@ -236,12 +236,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     ];
   };
 
-    const [activeTab, setActiveTab] = useState<'plan_semanal' | 'evaluacion_viernes' | 'asignaturas_cnb'>('plan_semanal');
+  const [activeTab, setActiveTab] = useState<'plan_semanal' | 'evaluacion_viernes' | 'asignaturas_cnb'>('plan_semanal');
   const [selectedDiaVista, setSelectedDiaVista] = useState<DiaSemana | 'Viernes' | 'todos'>('todos');
   const [isLoading, setIsLoading] = useState(false);
   const [plan, setPlan] = useState<UnifiedWeeklyPlan | null>(null);
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
   const [checkinSaved, setCheckinSaved] = useState(false);
+  const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
 
   const handleCheckinDocente = async () => {
     if (!plan) return;
@@ -343,54 +344,101 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     });
   };
 
-  // Toggle de un tema específico (permite seleccionar múltiples simultáneamente)
+  // Toggle de un tema específico con validación estricta de cuota semanal CNB
   const toggleTema = (grado: number, idBase: string, temaNum: number) => {
-    setConfigMatrix(prev => {
-      const gradoConfig = prev[grado] || {};
-      const current = gradoConfig[idBase] || getConfig(grado, idBase);
-      let nextTemas = [...current.selectedTemaNums];
+    const mat = getMateriaForGradoAndBase(grado, idBase);
+    const numGrados = Math.max(selectedGrados.length, 1);
+    const quota = mat ? calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados) : 4;
 
-      if (nextTemas.includes(temaNum)) {
-        if (nextTemas.length > 1) {
-          nextTemas = nextTemas.filter(t => t !== temaNum);
-        }
-      } else {
-        nextTemas.push(temaNum);
-        nextTemas.sort((a, b) => a - b);
+    const gradoConfig = configMatrix[grado] || {};
+    const current = gradoConfig[idBase] || getConfig(grado, idBase);
+    let nextTemas = [...current.selectedTemaNums];
+
+    if (nextTemas.includes(temaNum)) {
+      if (nextTemas.length > 1) {
+        nextTemas = nextTemas.filter(t => t !== temaNum);
+        setQuotaWarning(null);
+      }
+    } else {
+      // 1. Validar límite de cuota semanal de temas
+      if (nextTemas.length >= quota) {
+        const modalText = numGrados > 1 ? 'Multigrado' : 'Monogrado';
+        setQuotaWarning(
+          `⚠️ Límite de dosificación alcanzado: Para ${mat?.nombre || 'esta asignatura'} en modalidad ${modalText}, la cuota oficial es de máximo ${quota} tema(s) por semana según el CNB. Desmarca uno para seleccionar este.`
+        );
+        setTimeout(() => setQuotaWarning(null), 5000);
+        return;
       }
 
-      return {
-        ...prev,
-        [grado]: {
-          ...gradoConfig,
-          [idBase]: {
-            ...current,
-            selectedTemaNums: nextTemas
-          }
+      // 2. Validar que la suma total de páginas físicas no sobrecargue la semana lectiva
+      const uni = mat?.unidades.find(u => u.unidad === current.unidadNum) || mat?.unidades[0];
+      const selectedObjs = (uni?.temas || []).filter(item => nextTemas.includes(item.numero));
+      const targetObj = (uni?.temas || []).find(item => item.numero === temaNum);
+      const targetPages = targetObj ? Math.max((targetObj.paginaFin || targetObj.paginaInicio) - targetObj.paginaInicio + 1, 1) : 1;
+      const currentPages = selectedObjs.reduce((acc, item) => acc + Math.max((item.paginaFin || item.paginaInicio) - item.paginaInicio + 1, 1), 0);
+      const maxWeeklyPages = (mat?.periodosSemanales || 5) >= 4 ? 6 : 3;
+
+      if (currentPages + targetPages > maxWeeklyPages && nextTemas.length >= 1) {
+        const modalText = numGrados > 1 ? 'Multigrado' : 'Monogrado';
+        setQuotaWarning(
+          `⚠️ Límite semanal de páginas: "${targetObj?.titulo}" abarca ${targetPages} página(s). Con los temas ya seleccionados sumarían ${currentPages + targetPages} páginas, superando la capacidad semanal de ${maxWeeklyPages} páginas lectivas para ${mat?.nombre} (${modalText}). Desmarca un tema previo para incluirlo.`
+        );
+        setTimeout(() => setQuotaWarning(null), 5500);
+        return;
+      }
+
+      nextTemas.push(temaNum);
+      nextTemas.sort((a, b) => a - b);
+      setQuotaWarning(null);
+    }
+
+    setConfigMatrix(prev => ({
+      ...prev,
+      [grado]: {
+        ...gradoConfig,
+        [idBase]: {
+          ...current,
+          selectedTemaNums: nextTemas
         }
-      };
-    });
+      }
+    }));
   };
 
-  // Seleccionar / Deseleccionar todos los temas de la unidad actual
+  // Seleccionar / Deseleccionar la cuota recomendada para la semana
   const toggleAllTemas = (grado: number, idBase: string, temas: TemaIndice[]) => {
-    setConfigMatrix(prev => {
-      const gradoConfig = prev[grado] || {};
-      const current = gradoConfig[idBase] || getConfig(grado, idBase);
-      const allNums = temas.map(t => t.numero);
-      const allSelected = allNums.every(n => current.selectedTemaNums.includes(n));
+    const mat = getMateriaForGradoAndBase(grado, idBase);
+    const numGrados = Math.max(selectedGrados.length, 1);
+    const quota = mat ? calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados) : 4;
+    const maxWeeklyPages = (mat?.periodosSemanales || 5) >= 4 ? 6 : 3;
 
-      return {
-        ...prev,
-        [grado]: {
-          ...gradoConfig,
-          [idBase]: {
-            ...current,
-            selectedTemaNums: allSelected ? [allNums[0]] : allNums
-          }
+    const gradoConfig = configMatrix[grado] || {};
+    const current = gradoConfig[idBase] || getConfig(grado, idBase);
+
+    // Calcular selección recomendada respetando temas y páginas
+    const recommendedTemas: number[] = [];
+    let accPages = 0;
+    for (const t of temas) {
+      if (recommendedTemas.length >= quota) break;
+      const span = Math.max((t.paginaFin || t.paginaInicio) - t.paginaInicio + 1, 1);
+      if (recommendedTemas.length > 0 && accPages + span > maxWeeklyPages) break;
+      recommendedTemas.push(t.numero);
+      accPages += span;
+    }
+    const finalSelection = recommendedTemas.length > 0 ? recommendedTemas : [temas[0]?.numero || 1];
+
+    const isQuotaSelected = finalSelection.length === current.selectedTemaNums.length &&
+      finalSelection.every(n => current.selectedTemaNums.includes(n));
+
+    setConfigMatrix(prev => ({
+      ...prev,
+      [grado]: {
+        ...gradoConfig,
+        [idBase]: {
+          ...current,
+          selectedTemaNums: isQuotaSelected ? [temas[0]?.numero || 1] : finalSelection
         }
-      };
-    });
+      }
+    }));
   };
 
   // Toggle grados con dosificación inteligente automática
@@ -695,9 +743,26 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                 <span>4. Tabla de Cotejo: Temas y Subtemas Seleccionados (Ajuste Personalizado de Checkboxes)</span>
               </label>
               <span className="text-[10px] text-slate-500 italic">
-                * Haz clic en los temas para seleccionarlos simultáneamente
+                * Haz clic en los temas para seleccionarlos simultáneamente (respetando la cuota semanal del CNB)
               </span>
             </div>
+
+            {/* Alerta interactiva de límite de cuota semanal */}
+            {quotaWarning && (
+              <div className="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl text-xs text-amber-900 font-semibold flex items-center justify-between shadow-xs transition-all">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{quotaWarning}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuotaWarning(null)}
+                  className="text-amber-700 hover:text-amber-900 font-bold ml-2 text-sm px-1.5"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             <div className="overflow-x-auto rounded-2xl border border-sky-300 shadow-sm">
               <table className="w-full text-xs border-collapse">
@@ -789,56 +854,78 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                             {/* Temas y Subtemas - SELECCIÓN SIMULTÁNEA POR CHECKBOX / BOTONES */}
                             <td className="p-2.5 border border-slate-200 align-top space-y-2">
                               {/* Barra superior del selector de temas */}
-                              <div className="flex items-center justify-between text-[11px] border-b pb-1.5">
-                                <span className="font-bold text-slate-700">
-                                  {cfg.selectedTemaNums.length} de {uni.temas.length} tema(s) seleccionado(s)
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleAllTemas(g, mMeta.idBase, uni.temas)}
-                                  className="text-[10px] font-bold text-[#005B94] hover:underline"
-                                >
-                                  {allSelected ? 'Dejar solo uno' : 'Seleccionar todos'}
-                                </button>
-                              </div>
+                              {(() => {
+                                const numGrados = Math.max(selectedGrados.length, 1);
+                                const quota = calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados);
+                                const isQuotaReached = cfg.selectedTemaNums.length >= quota;
 
-                              {/* Contenedor de temas con scroll cómodo y selección simultánea */}
-                              <div className="max-h-48 overflow-y-auto pr-1 space-y-1 scrollbar-thin">
-                                {uni.temas.map(t => {
-                                  const isSelected = cfg.selectedTemaNums.includes(t.numero);
-                                  return (
-                                    <button
-                                      key={t.numero}
-                                      type="button"
-                                      onClick={() => toggleTema(g, mMeta.idBase, t.numero)}
-                                      className={`w-full text-left p-1.5 rounded-lg text-xs transition-all flex items-start gap-2 border ${
-                                        isSelected
-                                          ? 'bg-sky-100 text-sky-950 border-sky-300 font-bold shadow-2xs'
-                                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 font-medium'
-                                      }`}
-                                    >
-                                      {/* Checkbox visual */}
-                                      <div className={`w-4 h-4 rounded mt-0.5 shrink-0 flex items-center justify-center border ${
-                                        isSelected ? 'bg-[#00A3E0] text-white border-[#00A3E0]' : 'border-slate-300 bg-white'
-                                      }`}>
-                                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                                      </div>
-
-                                      {/* Título del tema y su página */}
-                                      <div className="flex-1 min-w-0 flex items-baseline justify-between gap-2">
-                                        <span className="truncate">{t.titulo}</span>
-                                        <span className={`text-[10px] shrink-0 font-bold px-1.5 py-0.2 rounded ${
-                                          isSelected ? 'bg-sky-200/80 text-[#005B94]' : 'bg-slate-200/60 text-slate-600'
-                                        }`}>
-                                          {t.paginaFin && t.paginaFin > t.paginaInicio
-                                            ? `p.${t.paginaInicio} - ${t.paginaFin}`
-                                            : `p.${t.paginaInicio}`}
+                                return (
+                                  <>
+                                    <div className="flex items-center justify-between text-[11px] border-b pb-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-bold text-slate-700">
+                                          {cfg.selectedTemaNums.length} de máx. {quota} tema(s)
                                         </span>
+                                        {isQuotaReached && (
+                                          <span className="bg-amber-100 text-amber-800 text-[9px] font-extrabold px-1.5 py-0.2 rounded border border-amber-300">
+                                            Cuota semanal completa
+                                          </span>
+                                        )}
                                       </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleAllTemas(g, mMeta.idBase, uni.temas)}
+                                        className="text-[10px] font-bold text-[#005B94] hover:underline"
+                                      >
+                                        {cfg.selectedTemaNums.length > 1 ? 'Dejar solo uno' : `Cuota semanal (${quota})`}
+                                      </button>
+                                    </div>
+
+                                    {/* Contenedor de temas con scroll cómodo y selección simultánea */}
+                                    <div className="max-h-48 overflow-y-auto pr-1 space-y-1 scrollbar-thin">
+                                      {uni.temas.map(t => {
+                                        const isSelected = cfg.selectedTemaNums.includes(t.numero);
+                                        const isDisabledByQuota = !isSelected && isQuotaReached;
+
+                                        return (
+                                          <button
+                                            key={t.numero}
+                                            type="button"
+                                            onClick={() => toggleTema(g, mMeta.idBase, t.numero)}
+                                            title={isDisabledByQuota ? `Límite semanal alcanzado (máx. ${quota} temas). Desmarca otro tema para seleccionar este.` : undefined}
+                                            className={`w-full text-left p-1.5 rounded-lg text-xs transition-all flex items-start gap-2 border ${
+                                              isSelected
+                                                ? 'bg-sky-100 text-sky-950 border-sky-300 font-bold shadow-2xs'
+                                                : isDisabledByQuota
+                                                  ? 'bg-slate-100/70 text-slate-400 border-slate-200 hover:bg-slate-200/50 cursor-pointer'
+                                                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 font-medium'
+                                            }`}
+                                          >
+                                            {/* Checkbox visual */}
+                                            <div className={`w-4 h-4 rounded mt-0.5 shrink-0 flex items-center justify-center border ${
+                                              isSelected ? 'bg-[#00A3E0] text-white border-[#00A3E0]' : 'border-slate-300 bg-white'
+                                            }`}>
+                                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                            </div>
+
+                                            {/* Título del tema y su página */}
+                                            <div className="flex-1 min-w-0 flex items-baseline justify-between gap-2">
+                                              <span className="truncate">{t.titulo}</span>
+                                              <span className={`text-[10px] shrink-0 font-bold px-1.5 py-0.2 rounded ${
+                                                isSelected ? 'bg-sky-200/80 text-[#005B94]' : 'bg-slate-200/60 text-slate-600'
+                                              }`}>
+                                                {t.paginaFin && t.paginaFin > t.paginaInicio
+                                                  ? `p.${t.paginaInicio} - ${t.paginaFin}`
+                                                  : `p.${t.paginaInicio}`}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </td>
 
                             {/* Páginas Reales */}
