@@ -371,6 +371,59 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     }
   };
 
+  // Determinar ciclo según los grados seleccionados
+  const cicloActual = selectedGrados.some(g => g <= 3) ? 'primer_ciclo' : 'segundo_ciclo';
+  const asignaturasComplementarias = getAsignaturasComplementarias(
+    selectedGrados.length > 0 ? cicloActual : 'segundo_ciclo'
+  );
+
+  // Obtener lista consolidada de todas las materias disponibles en los grados seleccionados
+  const todasLasMaterias = React.useMemo(() => {
+    if (selectedGrados.length === 0) return [];
+    const matMap = new Map<string, { idBase: string; nombre: string; prioridad: string }>();
+    
+    selectedGrados.forEach(g => {
+      const mats = getMateriasPorGrado(g);
+      mats.forEach(m => {
+        const idBase = m.id.replace(/_\d+$/, '');
+        if (!matMap.has(idBase)) {
+          matMap.set(idBase, {
+            idBase,
+            nombre: m.nombre,
+            prioridad: m.prioridad
+          });
+        }
+      });
+    });
+
+    return Array.from(matMap.values());
+  }, [selectedGrados]);
+
+  // Helper para obtener el objeto MateriaPlanificable de un grado y un idBase
+  const getMateriaForGradoAndBase = (grado: number, idBase: string): MateriaPlanificable | undefined => {
+    const mats = getMateriasPorGrado(grado);
+    return mats.find(m => m.id === idBase || m.id.startsWith(idBase + '_'));
+  };
+
+  // Helper para obtener la configuración (unidad, temas seleccionados)
+  const getConfig = (grado: number, idBase: string): MateriaConfig => {
+    const mat = getMateriaForGradoAndBase(grado, idBase);
+    const defaultUnidad = mat?.unidades[0]?.unidad || 1;
+    const uni = mat?.unidades.find(u => u.unidad === defaultUnidad) || mat?.unidades[0];
+    const safeTemas = (uni?.temas || []).filter(Boolean);
+    const numGrados = Math.max(selectedGrados.length, 1);
+    const quota = mat ? calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados) : 4;
+    const defaultTemas = safeTemas.slice(0, quota).map(t => t.numero);
+
+    if (!configMatrix[grado] || !configMatrix[grado][idBase]) {
+      return { 
+        unidadNum: defaultUnidad, 
+        selectedTemaNums: defaultTemas.length > 0 ? defaultTemas : [1] 
+      };
+    }
+    return configMatrix[grado][idBase];
+  };
+
   // 3. Extraer lista plana de sesiones impartidas en la planificación actual (compatible con Array y Object)
   const sesionesPlanificadas = useMemo(() => {
     if (!plan || !plan.dias) return [];
@@ -731,59 +784,6 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     } finally {
       setIsSavingCheckin(false);
     }
-  };
-
-  // Determinar ciclo según los grados seleccionados
-  const cicloActual = selectedGrados.some(g => g <= 3) ? 'primer_ciclo' : 'segundo_ciclo';
-  const asignaturasComplementarias = getAsignaturasComplementarias(
-    selectedGrados.length > 0 ? cicloActual : 'segundo_ciclo'
-  );
-
-  // Obtener lista consolidada de todas las materias disponibles en los grados seleccionados
-  const todasLasMaterias = React.useMemo(() => {
-    if (selectedGrados.length === 0) return [];
-    const matMap = new Map<string, { idBase: string; nombre: string; prioridad: string }>();
-    
-    selectedGrados.forEach(g => {
-      const mats = getMateriasPorGrado(g);
-      mats.forEach(m => {
-        const idBase = m.id.replace(/_\d+$/, '');
-        if (!matMap.has(idBase)) {
-          matMap.set(idBase, {
-            idBase,
-            nombre: m.nombre,
-            prioridad: m.prioridad
-          });
-        }
-      });
-    });
-
-    return Array.from(matMap.values());
-  }, [selectedGrados]);
-
-  // Helper para obtener el objeto MateriaPlanificable de un grado y un idBase
-  const getMateriaForGradoAndBase = (grado: number, idBase: string): MateriaPlanificable | undefined => {
-    const mats = getMateriasPorGrado(grado);
-    return mats.find(m => m.id === idBase || m.id.startsWith(idBase + '_'));
-  };
-
-  // Helper para obtener la configuración (unidad, temas seleccionados)
-  const getConfig = (grado: number, idBase: string): MateriaConfig => {
-    const mat = getMateriaForGradoAndBase(grado, idBase);
-    const defaultUnidad = mat?.unidades[0]?.unidad || 1;
-    const uni = mat?.unidades.find(u => u.unidad === defaultUnidad) || mat?.unidades[0];
-    const safeTemas = (uni?.temas || []).filter(Boolean);
-    const numGrados = Math.max(selectedGrados.length, 1);
-    const quota = mat ? calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados) : 4;
-    const defaultTemas = safeTemas.slice(0, quota).map(t => t.numero);
-
-    if (!configMatrix[grado] || !configMatrix[grado][idBase]) {
-      return { 
-        unidadNum: defaultUnidad, 
-        selectedTemaNums: defaultTemas.length > 0 ? defaultTemas : [1] 
-      };
-    }
-    return configMatrix[grado][idBase];
   };
 
   // Cambiar de Unidad para una materia específica (aplica cuota inteligente para esa unidad)
