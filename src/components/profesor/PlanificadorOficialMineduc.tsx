@@ -252,15 +252,24 @@ export const PlanificadorOficialMineduc: React.FC = () => {
 
   const CACHE_KEY_PLAN = 'sidser_cached_latest_plan_v3';
   const CACHE_KEY_REZAGADOS = 'sidser_cached_temas_rezagados_v3';
+  const CACHE_KEY_MATRIX = 'sidser_cached_config_matrix_v3';
+  const CACHE_KEY_GRADOS = 'sidser_cached_selected_grados_v3';
+  const CACHE_KEY_MATERIAS = 'sidser_cached_selected_materias_v3';
 
-  // 1. Restaurar dosificación y temas rezagados desde caché al cargar la vista
+  // 1. Restaurar dosificación, matriz de selección y temas rezagados desde caché o servidor
   React.useEffect(() => {
+    let restored = false;
     try {
       const cachedPlan = localStorage.getItem(CACHE_KEY_PLAN);
       if (cachedPlan) {
         const parsed = JSON.parse(cachedPlan);
-        if (parsed && parsed.dias && parsed.dias.length > 0) {
+        const hasDias = parsed && parsed.dias && (
+          (Array.isArray(parsed.dias) && parsed.dias.length > 0) ||
+          (typeof parsed.dias === 'object' && Object.keys(parsed.dias).length > 0)
+        );
+        if (hasDias) {
           setPlan(parsed);
+          restored = true;
         }
       }
       const cachedRezagados = localStorage.getItem(CACHE_KEY_REZAGADOS);
@@ -270,18 +279,93 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           setTemasRezagadosList(parsedRezagados);
         }
       }
+      const cachedMatrix = localStorage.getItem(CACHE_KEY_MATRIX);
+      if (cachedMatrix) {
+        const parsedMatrix = JSON.parse(cachedMatrix);
+        if (parsedMatrix && typeof parsedMatrix === 'object') {
+          setConfigMatrix(parsedMatrix);
+        }
+      }
+      const cachedGrados = localStorage.getItem(CACHE_KEY_GRADOS);
+      if (cachedGrados) {
+        const parsedGrados = JSON.parse(cachedGrados);
+        if (Array.isArray(parsedGrados) && parsedGrados.length > 0) {
+          setSelectedGrados(parsedGrados);
+        }
+      }
+      const cachedMaterias = localStorage.getItem(CACHE_KEY_MATERIAS);
+      if (cachedMaterias) {
+        const parsedMaterias = JSON.parse(cachedMaterias);
+        if (Array.isArray(parsedMaterias) && parsedMaterias.length > 0) {
+          setSelectedMateriaIds(parsedMaterias);
+        }
+      }
     } catch (e) {
-      console.warn('Error leyendo dosificación desde caché:', e);
+      console.warn('Error leyendo dosificación desde caché local:', e);
+    }
+
+    // Si no había plan en localStorage (o tras cerrar sesión / nuevo dispositivo), consultar servidor
+    if (!restored) {
+      fetch('/api/docente/checkin')
+        .then(res => res.json())
+        .then(data => {
+          if (data?.success && data?.registro?.datos_plan) {
+            const serverPlan = data.registro.datos_plan;
+            const hasDias = serverPlan && serverPlan.dias && (
+              (Array.isArray(serverPlan.dias) && serverPlan.dias.length > 0) ||
+              (typeof serverPlan.dias === 'object' && Object.keys(serverPlan.dias).length > 0)
+            );
+            if (hasDias) {
+              setPlan(serverPlan);
+              try {
+                localStorage.setItem(CACHE_KEY_PLAN, JSON.stringify(serverPlan));
+              } catch (e) {}
+            }
+            if (Array.isArray(data.registro.temas_rezagados) && data.registro.temas_rezagados.length > 0) {
+              setTemasRezagadosList(data.registro.temas_rezagados);
+              try {
+                localStorage.setItem(CACHE_KEY_REZAGADOS, JSON.stringify(data.registro.temas_rezagados));
+              } catch (e) {}
+            }
+            if (data.registro.config_matrix && typeof data.registro.config_matrix === 'object') {
+              setConfigMatrix(data.registro.config_matrix);
+              try {
+                localStorage.setItem(CACHE_KEY_MATRIX, JSON.stringify(data.registro.config_matrix));
+              } catch (e) {}
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Aviso recuperando plan del servidor:', err);
+        });
     }
   }, []);
 
-  // 2. Guardar plan y rezagos en caché persistente
-  const savePlanToCache = (newPlan: UnifiedWeeklyPlan, rezagados?: string[]) => {
+  // 2. Guardar plan y rezagos en caché persistente y servidor
+  const savePlanToCache = (newPlan: UnifiedWeeklyPlan, rezagados?: string[], matrixToSave?: Record<number, Record<string, MateriaConfig>>) => {
     try {
       localStorage.setItem(CACHE_KEY_PLAN, JSON.stringify(newPlan));
       if (rezagados !== undefined) {
         localStorage.setItem(CACHE_KEY_REZAGADOS, JSON.stringify(rezagados));
       }
+      const activeMatrix = matrixToSave || configMatrix;
+      localStorage.setItem(CACHE_KEY_MATRIX, JSON.stringify(activeMatrix));
+      localStorage.setItem(CACHE_KEY_GRADOS, JSON.stringify(selectedGrados));
+      localStorage.setItem(CACHE_KEY_MATERIAS, JSON.stringify(selectedMateriaIds));
+
+      // Guardar también en el servidor para persistencia absoluta entre cierres de sesión
+      fetch('/api/docente/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grados: selectedGrados,
+          materias: selectedMateriaIds,
+          plan: newPlan,
+          estado: 'planificado_activo',
+          temasRezagados: rezagados !== undefined ? rezagados : temasRezagadosList,
+          configMatrix: activeMatrix
+        })
+      }).catch(() => {});
     } catch (e) {
       console.warn('Error guardando dosificación en caché:', e);
     }
@@ -300,7 +384,11 @@ export const PlanificadorOficialMineduc: React.FC = () => {
         }));
 
     diasList.forEach(d => {
-      const gList = Array.isArray(d.grados) ? d.grados : Object.values(d.grados || {});
+      // Soporta tanto d.gradosSincronizados como d.grados
+      const gList = Array.isArray(d.gradosSincronizados) 
+        ? d.gradosSincronizados 
+        : (Array.isArray(d.grados) ? d.grados : Object.values(d.gradosSincronizados || d.grados || {}));
+
       gList.forEach((g: any) => {
         const pNum = g.numeroPagina || g.pagina || 1;
         const key = `${d.dia}_${g.grado || g.gradoNumero}_${g.materia}_${g.tema}_${pNum}`;
@@ -324,24 +412,16 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     if (!plan) return;
     setIsSavingCheckin(true);
     try {
-      await fetch('/api/docente/checkin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grados: selectedGrados,
-          materias: selectedMateriaIds,
-          plan: plan,
-          estado: 'completado_100',
-          temasRezagados: []
-        })
-      });
-
       // Limpiar rezagados de memoria y caché
       setTemasRezagadosList([]);
-      localStorage.removeItem(CACHE_KEY_REZAGADOS);
+      try {
+        localStorage.removeItem(CACHE_KEY_REZAGADOS);
+      } catch (e) {}
 
       // Avanzar automáticamente la selección a los temas siguientes del libro
       const numGrados = Math.max(selectedGrados.length, 1);
+      let updatedMatrix: Record<number, Record<string, MateriaConfig>> = {};
+
       setConfigMatrix(prev => {
         const nextMatrix: Record<number, Record<string, MateriaConfig>> = { ...prev };
 
@@ -384,7 +464,25 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           });
         });
 
+        updatedMatrix = nextMatrix;
+        try {
+          localStorage.setItem(CACHE_KEY_MATRIX, JSON.stringify(nextMatrix));
+        } catch (e) {}
+
         return nextMatrix;
+      });
+
+      await fetch('/api/docente/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grados: selectedGrados,
+          materias: selectedMateriaIds,
+          plan: plan,
+          estado: 'completado_100',
+          temasRezagados: [],
+          configMatrix: updatedMatrix
+        })
       });
 
       setCheckinSaved(true);
@@ -400,11 +498,10 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     }
   };
 
-  // Acción B: Confirmar temas rezagados que no se lograron impartir y reprogramarlos
+  // Acción B: Confirmar temas rezagados que no se lograron impartir y reprogramarlos en la siguiente dosificación
   const handleConfirmarRezagados = async () => {
-    const pendientes = sesionesPlanificadas
-      .filter(s => uncompletedSelection[s.id])
-      .map(s => `${s.grado} · ${s.materia}: ${s.tema} (Pág. ${s.pagina})`);
+    const uncompletedSessions = sesionesPlanificadas.filter(s => uncompletedSelection[s.id]);
+    const pendientes = uncompletedSessions.map(s => `${s.grado} · ${s.materia}: ${s.tema} (Pág. ${s.pagina})`);
 
     if (pendientes.length === 0) {
       setShowModalRezagados(false);
@@ -413,6 +510,95 @@ export const PlanificadorOficialMineduc: React.FC = () => {
 
     setIsSavingCheckin(true);
     try {
+      // Avanzar dosificación manteniendo y priorizando los temas no alcanzados
+      const numGrados = Math.max(selectedGrados.length, 1);
+      let updatedMatrix: Record<number, Record<string, MateriaConfig>> = {};
+
+      setConfigMatrix(prev => {
+        const nextMatrix: Record<number, Record<string, MateriaConfig>> = { ...prev };
+
+        selectedGrados.forEach(g => {
+          const mats = getMateriasPorGrado(g);
+          if (!nextMatrix[g]) nextMatrix[g] = {};
+
+          mats.forEach(mat => {
+            const idBase = mat.id.replace(/_\d+$/, '');
+            if (!selectedMateriaIds.includes(idBase)) return;
+
+            const currentCfg = nextMatrix[g][idBase] || getConfig(g, idBase);
+            const uni = mat.unidades.find(u => u.unidad === currentCfg.unidadNum) || mat.unidades[0];
+            const safeTemas = (uni?.temas || []).filter(Boolean);
+            const quota = calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados);
+
+            // Verificar si este grado y materia tienen sesiones marcadas como no alcanzadas
+            const rezagosDeMateria = uncompletedSessions.filter(s => {
+              const gNum = parseInt(s.grado.replace(/\D/g, ''), 10);
+              const mName = s.materia.toLowerCase();
+              return gNum === g && (mName.includes(mat.nombre.toLowerCase()) || mat.nombre.toLowerCase().includes(mName) || mName.includes(idBase));
+            });
+
+            if (rezagosDeMateria.length > 0) {
+              // Identificar los números de tema correspondientes a estos rezagos
+              const temaNumsRezagados: number[] = [];
+              rezagosDeMateria.forEach(rz => {
+                const found = safeTemas.find(t => 
+                  t.titulo.toLowerCase().includes(rz.tema.toLowerCase()) || 
+                  rz.tema.toLowerCase().includes(t.titulo.toLowerCase()) ||
+                  (rz.pagina >= t.paginaInicio && rz.pagina <= t.paginaFin)
+                );
+                if (found && !temaNumsRezagados.includes(found.numero)) {
+                  temaNumsRezagados.push(found.numero);
+                }
+              });
+
+              // Mantener los temas rezagados y rellenar con el siguiente si queda cuota semanal
+              const baseNums = temaNumsRezagados.length > 0 ? temaNumsRezagados : currentCfg.selectedTemaNums;
+              const maxNum = Math.max(...baseNums);
+              const siguientes = safeTemas.filter(t => t.numero > maxNum);
+              const needed = Math.max(0, quota - baseNums.length);
+              const toAdd = siguientes.slice(0, needed).map(t => t.numero);
+              const finalNums = Array.from(new Set([...baseNums, ...toAdd]));
+
+              nextMatrix[g][idBase] = {
+                unidadNum: currentCfg.unidadNum,
+                selectedTemaNums: finalNums
+              };
+            } else {
+              // Para materias donde TODO se completó, avanzar normalmente
+              const maxTemaActual = currentCfg.selectedTemaNums.length > 0
+                ? Math.max(...currentCfg.selectedTemaNums)
+                : 1;
+              const siguientesTemas = safeTemas.filter(t => t.numero > maxTemaActual);
+
+              if (siguientesTemas.length > 0) {
+                const autoNums = siguientesTemas.slice(0, quota).map(t => t.numero);
+                nextMatrix[g][idBase] = {
+                  unidadNum: currentCfg.unidadNum,
+                  selectedTemaNums: autoNums.length > 0 ? autoNums : [siguientesTemas[0].numero]
+                };
+              } else {
+                const nextUnidadNum = currentCfg.unidadNum < 4 ? currentCfg.unidadNum + 1 : 1;
+                const nextUni = mat.unidades.find(u => u.unidad === nextUnidadNum) || mat.unidades[0];
+                const nextSafeTemas = (nextUni?.temas || []).filter(Boolean);
+                const autoNums = nextSafeTemas.slice(0, quota).map(t => t.numero);
+
+                nextMatrix[g][idBase] = {
+                  unidadNum: nextUnidadNum,
+                  selectedTemaNums: autoNums.length > 0 ? autoNums : [1]
+                };
+              }
+            }
+          });
+        });
+
+        updatedMatrix = nextMatrix;
+        try {
+          localStorage.setItem(CACHE_KEY_MATRIX, JSON.stringify(nextMatrix));
+        } catch (e) {}
+
+        return nextMatrix;
+      });
+
       await fetch('/api/docente/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -421,7 +607,8 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           materias: selectedMateriaIds,
           plan: plan,
           estado: 'parcial_con_rezagos',
-          temasRezagados: pendientes
+          temasRezagados: pendientes,
+          configMatrix: updatedMatrix
         })
       });
 
@@ -432,7 +619,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
       } catch (e) {}
 
       setShowModalRezagados(false);
-      setCheckinMessage(`📋 Se registraron ${pendientes.length} tema(s) pendientes. Han sido priorizados para la siguiente dosificación semanal.`);
+      setCheckinMessage(`📋 Se registraron ${pendientes.length} tema(s) pendientes. Han sido cargados automáticamente en la lista de cotejo para la próxima planificación.`);
       setTimeout(() => setCheckinMessage(null), 6500);
     } catch (err) {
       console.warn('Error guardando temas rezagados:', err);

@@ -57,6 +57,7 @@ contenido_visual/
 *.dump
 *.backup
 *.bak
+data/cached_latest_plan.json
 .supabase/
 supabase/.temp/
 supabase/.branches/
