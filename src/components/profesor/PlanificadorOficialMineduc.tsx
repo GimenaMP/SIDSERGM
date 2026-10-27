@@ -407,6 +407,97 @@ export const PlanificadorOficialMineduc: React.FC = () => {
     return list;
   }, [plan]);
 
+  // 3.B. Lista de temas y unidades planificadas (Estructura idéntica a la lista de cotejo principal)
+  const temasPlanificadosParaChecklist = useMemo((): {
+    id: string;
+    grado: number;
+    materiaNombre: string;
+    materiaIdBase: string;
+    unidadNum: number;
+    unidadTitulo: string;
+    temaNumero: number;
+    temaTitulo: string;
+    paginaInicio: number;
+    paginaFin: number;
+  }[] => {
+    // Si el plan activo tiene itemsPlanificados guardados, extraerlos directamente
+    if (plan && (plan as any).itemsPlanificados && Array.isArray((plan as any).itemsPlanificados)) {
+      const list: any[] = [];
+      (plan as any).itemsPlanificados.forEach((it: any) => {
+        if (Array.isArray(it.temasSeleccionados) && it.temasSeleccionados.length > 0) {
+          it.temasSeleccionados.forEach((t: any) => {
+            const key = `${it.grado}_${it.materiaBase || it.materiaId}_${t.numero}`;
+            if (!list.some(x => x.id === key)) {
+              list.push({
+                id: key,
+                grado: it.grado,
+                materiaNombre: it.materia,
+                materiaIdBase: it.materiaBase || it.materiaId.replace(/_\d+$/, ''),
+                unidadNum: it.unidad,
+                unidadTitulo: it.unidadTitulo || `Unidad ${it.unidad}`,
+                temaNumero: t.numero,
+                temaTitulo: t.titulo,
+                paginaInicio: t.paginaInicio,
+                paginaFin: t.paginaFin
+              });
+            }
+          });
+        } else {
+          const key = `${it.grado}_${it.materiaBase || it.materiaId}_${it.temaNumero || 1}`;
+          if (!list.some(x => x.id === key)) {
+            list.push({
+              id: key,
+              grado: it.grado,
+              materiaNombre: it.materia,
+              materiaIdBase: it.materiaBase || it.materiaId.replace(/_\d+$/, ''),
+              unidadNum: it.unidad,
+              unidadTitulo: it.unidadTitulo || `Unidad ${it.unidad}`,
+              temaNumero: it.temaNumero || 1,
+              temaTitulo: it.tema,
+              paginaInicio: it.paginaInicio,
+              paginaFin: it.paginaFin
+            });
+          }
+        }
+      });
+      return list;
+    }
+
+    // Fallback: Si no tiene itemsPlanificados, extraer de la configuración activa del profesor
+    const list: any[] = [];
+    selectedGrados.forEach(g => {
+      todasLasMaterias.forEach(mMeta => {
+        if (!selectedMateriaIds.includes(mMeta.idBase)) return;
+        const mat = getMateriaForGradoAndBase(g, mMeta.idBase);
+        if (!mat) return;
+        const cfg = getConfig(g, mMeta.idBase);
+        const uni = mat.unidades.find(u => u.unidad === cfg.unidadNum) || mat.unidades[0];
+        const safeTemas = (uni?.temas || []).filter(Boolean);
+        const selected = safeTemas.filter(t => cfg.selectedTemaNums.includes(t.numero));
+        const active = selected.length > 0 ? selected : (safeTemas.length > 0 ? [safeTemas[0]] : []);
+
+        active.forEach(t => {
+          const key = `${g}_${mMeta.idBase}_${t.numero}`;
+          if (!list.some(x => x.id === key)) {
+            list.push({
+              id: key,
+              grado: g,
+              materiaNombre: mat.nombre,
+              materiaIdBase: mMeta.idBase,
+              unidadNum: uni.unidad,
+              unidadTitulo: uni.titulo,
+              temaNumero: t.numero,
+              temaTitulo: t.titulo,
+              paginaInicio: t.paginaInicio,
+              paginaFin: t.paginaFin
+            });
+          }
+        });
+      });
+    });
+    return list;
+  }, [plan, selectedGrados, selectedMateriaIds, configMatrix]);
+
   // Acción A: El profesor completó todos los temas con éxito (Avanza dosificación automáticamente)
   const handleCompletarTodo = async () => {
     if (!plan) return;
@@ -500,17 +591,19 @@ export const PlanificadorOficialMineduc: React.FC = () => {
 
   // Acción B: Confirmar temas rezagados que no se lograron impartir y reprogramarlos en la siguiente dosificación
   const handleConfirmarRezagados = async () => {
-    const uncompletedSessions = sesionesPlanificadas.filter(s => uncompletedSelection[s.id]);
-    const pendientes = uncompletedSessions.map(s => `${s.grado} · ${s.materia}: ${s.tema} (Pág. ${s.pagina})`);
-
-    if (pendientes.length === 0) {
+    const temasMarcadosNoAbarcados = temasPlanificadosParaChecklist.filter(t => uncompletedSelection[t.id]);
+    
+    if (temasMarcadosNoAbarcados.length === 0) {
       setShowModalRezagados(false);
       return;
     }
 
+    const pendientesStrings = temasMarcadosNoAbarcados.map(
+      t => `${t.grado}.° Primaria · ${t.materiaNombre}: Tema ${t.temaNumero} "${t.temaTitulo}" (Pág. ${t.paginaInicio})`
+    );
+
     setIsSavingCheckin(true);
     try {
-      // Avanzar dosificación manteniendo y priorizando los temas no alcanzados
       const numGrados = Math.max(selectedGrados.length, 1);
       let updatedMatrix: Record<number, Record<string, MateriaConfig>> = {};
 
@@ -530,41 +623,28 @@ export const PlanificadorOficialMineduc: React.FC = () => {
             const safeTemas = (uni?.temas || []).filter(Boolean);
             const quota = calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados);
 
-            // Verificar si este grado y materia tienen sesiones marcadas como no alcanzadas
-            const rezagosDeMateria = uncompletedSessions.filter(s => {
-              const gNum = parseInt(s.grado.replace(/\D/g, ''), 10);
-              const mName = s.materia.toLowerCase();
-              return gNum === g && (mName.includes(mat.nombre.toLowerCase()) || mat.nombre.toLowerCase().includes(mName) || mName.includes(idBase));
-            });
+            // Verificar si este grado y materia tienen temas no abarcados
+            const rezagosDeMateria = temasMarcadosNoAbarcados.filter(
+              t => t.grado === g && t.materiaIdBase === idBase
+            );
 
             if (rezagosDeMateria.length > 0) {
-              // Identificar los números de tema correspondientes a estos rezagos
-              const temaNumsRezagados: number[] = [];
-              rezagosDeMateria.forEach(rz => {
-                const found = safeTemas.find(t => 
-                  t.titulo.toLowerCase().includes(rz.tema.toLowerCase()) || 
-                  rz.tema.toLowerCase().includes(t.titulo.toLowerCase()) ||
-                  (rz.pagina >= t.paginaInicio && rz.pagina <= t.paginaFin)
-                );
-                if (found && !temaNumsRezagados.includes(found.numero)) {
-                  temaNumsRezagados.push(found.numero);
-                }
-              });
-
-              // Mantener los temas rezagados y rellenar con el siguiente si queda cuota semanal
-              const baseNums = temaNumsRezagados.length > 0 ? temaNumsRezagados : currentCfg.selectedTemaNums;
-              const maxNum = Math.max(...baseNums);
-              const siguientes = safeTemas.filter(t => t.numero > maxNum);
-              const needed = Math.max(0, quota - baseNums.length);
-              const toAdd = siguientes.slice(0, needed).map(t => t.numero);
-              const finalNums = Array.from(new Set([...baseNums, ...toAdd]));
+              // 1. Mantener los temas no abarcados
+              const temaNumsNoAbarcados = rezagosDeMateria.map(r => r.temaNumero);
+              
+              // 2. Si la cuota semanal permite más temas, añadir los temas consecutivos del libro
+              const maxNumNoAbarcado = Math.max(...temaNumsNoAbarcados);
+              const siguientesTemas = safeTemas.filter(t => t.numero > maxNumNoAbarcado);
+              const needed = Math.max(0, quota - temaNumsNoAbarcados.length);
+              const toAdd = siguientesTemas.slice(0, needed).map(t => t.numero);
+              const finalNums = Array.from(new Set([...temaNumsNoAbarcados, ...toAdd]));
 
               nextMatrix[g][idBase] = {
                 unidadNum: currentCfg.unidadNum,
                 selectedTemaNums: finalNums
               };
             } else {
-              // Para materias donde TODO se completó, avanzar normalmente
+              // Si TODOS los temas de esta materia fueron alcanzados, avanzar a los siguientes temas del libro
               const maxTemaActual = currentCfg.selectedTemaNums.length > 0
                 ? Math.max(...currentCfg.selectedTemaNums)
                 : 1;
@@ -577,6 +657,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                   selectedTemaNums: autoNums.length > 0 ? autoNums : [siguientesTemas[0].numero]
                 };
               } else {
+                // Pasar a la siguiente unidad
                 const nextUnidadNum = currentCfg.unidadNum < 4 ? currentCfg.unidadNum + 1 : 1;
                 const nextUni = mat.unidades.find(u => u.unidad === nextUnidadNum) || mat.unidades[0];
                 const nextSafeTemas = (nextUni?.temas || []).filter(Boolean);
@@ -599,6 +680,12 @@ export const PlanificadorOficialMineduc: React.FC = () => {
         return nextMatrix;
       });
 
+      // Guardar lista de rezagos en estado y caché
+      setTemasRezagadosList(pendientesStrings);
+      try {
+        localStorage.setItem(CACHE_KEY_REZAGADOS, JSON.stringify(pendientesStrings));
+      } catch (e) {}
+
       await fetch('/api/docente/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -607,19 +694,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           materias: selectedMateriaIds,
           plan: plan,
           estado: 'parcial_con_rezagos',
-          temasRezagados: pendientes,
+          temasRezagados: pendientesStrings,
           configMatrix: updatedMatrix
         })
       });
 
-      // Guardar lista de rezagos en estado y caché
-      setTemasRezagadosList(pendientes);
-      try {
-        localStorage.setItem(CACHE_KEY_REZAGADOS, JSON.stringify(pendientes));
-      } catch (e) {}
-
       setShowModalRezagados(false);
-      setCheckinMessage(`📋 Se registraron ${pendientes.length} tema(s) pendientes. Han sido cargados automáticamente en la lista de cotejo para la próxima planificación.`);
+      setCheckinMessage(`📋 Se cargaron en la lista de cotejo principal los ${temasMarcadosNoAbarcados.length} tema(s) pendientes junto con los temas siguientes según la cuota de clases.`);
       setTimeout(() => setCheckinMessage(null), 6500);
     } catch (err) {
       console.warn('Error guardando temas rezagados:', err);
@@ -966,8 +1047,9 @@ export const PlanificadorOficialMineduc: React.FC = () => {
 
       const data = await res.json();
       if (data?.success && data?.plan) {
-        setPlan(data.plan);
-        savePlanToCache(data.plan, temasRezagadosList);
+        const planWithItems = { ...data.plan, itemsPlanificados: items };
+        setPlan(planWithItems);
+        savePlanToCache(planWithItems, temasRezagadosList, configMatrix);
       } else {
         const local = generateUnifiedRAGPlan({
           grados: selectedGrados,
@@ -977,8 +1059,9 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           temasRezagados: temasRezagadosList,
           items: items
         });
-        setPlan(local);
-        savePlanToCache(local, temasRezagadosList);
+        const planWithItems = { ...local, itemsPlanificados: items };
+        setPlan(planWithItems);
+        savePlanToCache(planWithItems, temasRezagadosList, configMatrix);
       }
     } catch {
       const local = generateUnifiedRAGPlan({
@@ -2534,7 +2617,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
       {/* =================================================================== */}
       {showModalRezagados && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 print:hidden animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col space-y-4">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col space-y-4">
             {/* Header del Modal */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">
@@ -2557,51 +2640,105 @@ export const PlanificadorOficialMineduc: React.FC = () => {
               </button>
             </div>
 
-            {/* Lista de cotejo de sesiones que estaban en el plan */}
-            <div className="overflow-y-auto py-2 flex-1 space-y-2 pr-1 scrollbar-thin">
-              {sesionesPlanificadas.length === 0 ? (
+            {/* Lista de cotejo de temas planificados (Estructura idéntica a la Matriz Principal) */}
+            <div className="overflow-y-auto py-2 flex-1 pr-1 scrollbar-thin">
+              {temasPlanificadosParaChecklist.length === 0 ? (
                 <p className="text-xs text-slate-500 text-center py-8">
-                  No hay sesiones registradas en la dosificación actual.
+                  No hay temas registrados en la dosificación actual.
                 </p>
               ) : (
-                sesionesPlanificadas.map(s => {
-                  const isChecked = !!uncompletedSelection[s.id];
-                  return (
-                    <label
-                      key={s.id}
-                      className={`p-3 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
-                        isChecked
-                          ? 'bg-amber-50/90 border-amber-400 shadow-2xs'
-                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          setUncompletedSelection(prev => ({
-                            ...prev,
-                            [s.id]: e.target.checked
-                          }));
-                        }}
-                        className="mt-1 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300"
-                      />
-                      <div className="flex-1 text-xs">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-extrabold text-slate-900">
-                            {s.dia} · {s.materia}
-                          </span>
-                          <span className="bg-sky-100 text-[#005B94] font-black px-2 py-0.5 rounded-md text-[10px]">
-                            {s.grado} · Pág. {s.pagina}
-                          </span>
-                        </div>
-                        <p className="text-slate-700 font-medium mt-1">
-                          {s.tema}
-                        </p>
-                      </div>
-                    </label>
-                  );
-                })
+                <div className="overflow-x-auto rounded-2xl border border-sky-300 shadow-sm">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[#00A3E0] text-white text-center font-bold">
+                        <th className="p-2.5 border border-sky-400 w-16">Grado</th>
+                        <th className="p-2.5 border border-sky-400 w-44 text-left">Asignatura</th>
+                        <th className="p-2.5 border border-sky-400 w-48 text-left">Unidad Oficial</th>
+                        <th className="p-2.5 border border-sky-400 text-left">Tema Planificado en el Libro</th>
+                        <th className="p-2.5 border border-sky-400 w-28 text-center">Páginas Reales</th>
+                        <th className="p-2.5 border border-sky-400 w-36 text-center">¿No se abarcó?</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {temasPlanificadosParaChecklist.map(t => {
+                        const isChecked = !!uncompletedSelection[t.id];
+                        return (
+                          <tr
+                            key={t.id}
+                            onClick={() => {
+                              setUncompletedSelection(prev => ({
+                                ...prev,
+                                [t.id]: !prev[t.id]
+                              }));
+                            }}
+                            className={`cursor-pointer transition-colors ${
+                              isChecked
+                                ? 'bg-amber-50/90 font-bold border-l-4 border-l-amber-500'
+                                : 'hover:bg-sky-50/30'
+                            }`}
+                          >
+                            {/* Grado */}
+                            <td className="p-2.5 border border-slate-200 text-center font-black align-middle">
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#005B94] text-white text-xs font-black shadow-sm">
+                                {t.grado}.°
+                              </span>
+                            </td>
+
+                            {/* Asignatura */}
+                            <td className="p-2.5 border border-slate-200 align-middle">
+                              <span className="font-extrabold text-slate-900 block">{t.materiaNombre}</span>
+                              <span className="text-[10px] text-slate-500 font-medium">Libro oficial MINEDUC</span>
+                            </td>
+
+                            {/* Unidad */}
+                            <td className="p-2.5 border border-slate-200 align-middle text-slate-700">
+                              <span className="font-bold text-[#005B94]">Unidad {t.unidadNum}</span>
+                              <div className="text-[10px] text-slate-500 truncate max-w-[170px]">{t.unidadTitulo}</div>
+                            </td>
+
+                            {/* Tema */}
+                            <td className="p-2.5 border border-slate-200 align-middle">
+                              <div className="flex items-center gap-1.5">
+                                <span className="bg-sky-100 text-[#005B94] font-black px-1.5 py-0.5 rounded text-[10px] shrink-0">
+                                  Tema {t.temaNumero}
+                                </span>
+                                <span className="text-slate-900 font-semibold">{t.temaTitulo}</span>
+                              </div>
+                            </td>
+
+                            {/* Páginas */}
+                            <td className="p-2.5 border border-slate-200 text-center align-middle font-bold text-slate-700">
+                              p.{t.paginaInicio}{t.paginaFin && t.paginaFin !== t.paginaInicio ? `-${t.paginaFin}` : ''}
+                            </td>
+
+                            {/* Checkbox No Abarcado */}
+                            <td className="p-2.5 border border-slate-200 text-center align-middle">
+                              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all cursor-pointer bg-white">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    setUncompletedSelection(prev => ({
+                                      ...prev,
+                                      [t.id]: e.target.checked
+                                    }));
+                                  }}
+                                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300"
+                                />
+                                <span className={`text-[10px] font-black uppercase ${
+                                  isChecked ? 'text-amber-800' : 'text-slate-400'
+                                }`}>
+                                  {isChecked ? '⚠️ No Abarcado' : 'Completado'}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
