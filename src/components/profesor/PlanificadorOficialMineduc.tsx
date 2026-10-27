@@ -859,81 +859,112 @@ export const PlanificadorOficialMineduc: React.FC = () => {
         {/* =================================================================== */}
         {/* 5. ANÁLISIS EN VIVO: TEMAS EN COMÚN Y EJES TRANSVERSALES TRAZADOS   */}
         {/* =================================================================== */}
-        {selectedGrados.length > 1 && (temasEjeEnComunDetectados as any[]).length > 0 && (
-          <div className="space-y-3 pt-3 border-t border-slate-200">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="text-[11px] font-black uppercase text-indigo-900 tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                <span>5. Detección Inteligente de Temas Eje en Común (Trazado Automático Multigrado)</span>
-              </label>
-              <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
-                {selectedGrados.map(g => `${g}.°`).join(' y ')} Primaria · Similitud Curricular Activa
-              </span>
-            </div>
+        {selectedGrados.length > 1 && (temasEjeEnComunDetectados as any[]).length > 0 && (() => {
+          const materiasConEje = (temasEjeEnComunDetectados as ResultadoRelacionTemasMateria[]).filter(
+            eje => eje.tieneRelacion && Boolean(eje.temaEjeTrazado)
+          );
+          const materiasSinEje = (temasEjeEnComunDetectados as ResultadoRelacionTemasMateria[]).filter(
+            eje => !eje.tieneRelacion || !eje.temaEjeTrazado
+          );
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(temasEjeEnComunDetectados as ResultadoRelacionTemasMateria[]).map((eje) => (
-                <div
-                  key={eje.idBase}
-                  className={`rounded-2xl border-2 p-3.5 shadow-2xs space-y-2.5 transition-all ${
-                    eje.tieneRelacion
-                      ? 'border-indigo-300 bg-linear-to-br from-indigo-50/70 via-white to-sky-50/50 hover:border-indigo-400'
-                      : 'border-slate-300 bg-linear-to-br from-slate-50/80 via-white to-amber-50/40 hover:border-slate-400'
-                  }`}
-                >
-                  {/* Encabezado Asignatura */}
-                  <div className="flex items-center justify-between border-b pb-2 border-slate-200">
-                    <span className="font-black text-slate-900 text-xs flex items-center gap-1.5">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${eje.tieneRelacion ? 'bg-indigo-600' : 'bg-slate-500'}`}></span>
-                      <span>{eje.materiaNombre}</span>
-                    </span>
-                    <span
-                      className={`text-[9px] font-black px-2 py-0.5 rounded shadow-2xs ${
-                        eje.tieneRelacion
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-200 text-slate-700 border border-slate-300'
-                      }`}
-                    >
-                      {eje.tieneRelacion ? '🎯 Tema Eje Trazado' : '📚 Dosificación Normal'}
-                    </span>
+          if (materiasConEje.length === 0) {
+            return (
+              <div className="space-y-3 pt-3 border-t border-slate-200">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-[11px] font-black uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-[#00A3E0]" />
+                    <span>5. Análisis Curricular Multigrado: Dosificación Regular por Grado</span>
+                  </label>
+                  <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                    {selectedGrados.map(g => `${g}.°`).join(' y ')} Primaria · Temas Independientes
+                  </span>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-linear-to-r from-slate-50 via-white to-sky-50/30 p-3.5 flex items-start gap-3 shadow-2xs">
+                  <div className="p-2 bg-sky-50 border border-sky-100 rounded-xl text-[#00A3E0] mt-0.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   </div>
-
-                  {/* Temas seleccionados por grado */}
-                  <div className="space-y-1 text-[11px] bg-white/80 p-2 rounded-xl border border-slate-200">
-                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Temas Seleccionados en los Libros Oficiales:
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-900">
+                        Dosificación Regular por Grado (Sin temas eje artificiales)
+                      </span>
+                      <span className="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                        Atención Alternada
+                      </span>
                     </div>
-                    {eje.temasPorGrado.map((tg) => (
-                      <div key={tg.grado} className="text-slate-800 flex items-start gap-1.5">
-                        <strong className="text-slate-900 shrink-0">{tg.grado}.° Primaria:</strong>
-                        <span className="truncate text-slate-700">
-                          {tg.temas.map((t) => t.titulo).join(', ')}
-                        </span>
-                      </div>
-                    ))}
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Los temas seleccionados para {selectedGrados.map(g => `${g}.°`).join(' y ')} Primaria corresponden a unidades o ramas temáticas independientes. Cada grado avanzará directamente en las lecciones y páginas de su libro oficial del MINEDUC.
+                    </p>
                   </div>
+                </div>
+              </div>
+            );
+          }
 
-                  {/* Palabras y Conceptos en Común (Solo si tiene relación) */}
-                  {eje.tieneRelacion && eje.palabrasClaveComunes && eje.palabrasClaveComunes.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold text-indigo-900">
-                        Conceptos y Palabras Clave en Común Detectados:
+          return (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-[11px] font-black uppercase text-indigo-900 tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>5. Detección Inteligente de Temas Eje en Común (Trazado Automático Multigrado)</span>
+                </label>
+                <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
+                  {selectedGrados.map(g => `${g}.°`).join(' y ')} Primaria · {materiasConEje.length} {materiasConEje.length === 1 ? 'Eje Articulador' : 'Ejes Articuladores'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {materiasConEje.map((eje) => (
+                  <div
+                    key={eje.idBase}
+                    className="rounded-2xl border-2 p-3.5 shadow-2xs space-y-2.5 transition-all border-indigo-300 bg-linear-to-br from-indigo-50/70 via-white to-sky-50/50 hover:border-indigo-400"
+                  >
+                    {/* Encabezado Asignatura */}
+                    <div className="flex items-center justify-between border-b pb-2 border-slate-200">
+                      <span className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-indigo-600"></span>
+                        <span>{eje.materiaNombre}</span>
+                      </span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded shadow-2xs bg-indigo-600 text-white">
+                        🎯 Tema Eje Trazado
+                      </span>
+                    </div>
+
+                    {/* Temas seleccionados por grado */}
+                    <div className="space-y-1 text-[11px] bg-white/80 p-2 rounded-xl border border-slate-200">
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Temas Seleccionados en los Libros Oficiales:
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {eje.palabrasClaveComunes.map((kw: string) => (
-                          <span
-                            key={kw}
-                            className="bg-indigo-100/90 text-indigo-900 border border-indigo-200 text-[10px] font-black px-2 py-0.5 rounded-md"
-                          >
-                            ✓ {kw}
+                      {eje.temasPorGrado.map((tg) => (
+                        <div key={tg.grado} className="text-slate-800 flex items-start gap-1.5">
+                          <strong className="text-slate-900 shrink-0">{tg.grado}.° Primaria:</strong>
+                          <span className="truncate text-slate-700">
+                            {tg.temas.map((t) => t.titulo).join(', ')}
                           </span>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
 
-                  {/* BLOQUE CENTRAL: TEMA EJE (SI TIENE RELACIÓN) O DOSIFICACIÓN REGULAR (SI NO) */}
-                  {eje.tieneRelacion ? (
+                    {/* Palabras y Conceptos en Común */}
+                    {eje.palabrasClaveComunes && eje.palabrasClaveComunes.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-indigo-900">
+                          Conceptos y Palabras Clave en Común Detectados:
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {eje.palabrasClaveComunes.map((kw: string) => (
+                            <span
+                              key={kw}
+                              className="bg-indigo-100/90 text-indigo-900 border border-indigo-200 text-[10px] font-black px-2 py-0.5 rounded-md"
+                            >
+                              ✓ {kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* BLOQUE CENTRAL: TEMA EJE UNIFICADOR */}
                     <div className="bg-indigo-600 text-white p-2.5 rounded-xl shadow-xs space-y-1">
                       <div className="text-[9px] font-black uppercase tracking-wider text-indigo-200">
                         🎯 Tema Eje Unificador para Explicación en Pizarra:
@@ -942,29 +973,30 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                         {eje.temaEjeTrazado}
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-slate-100 border border-slate-300 text-slate-700 p-2.5 rounded-xl space-y-0.5">
-                      <div className="text-[9px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                        <span>ℹ️ Temas Independientes:</span>
-                      </div>
-                      <div className="text-[11px] font-semibold text-slate-800 leading-snug">
-                        No se fuerza tema eje artificial. Cada grado avanza en su propio tema y libro oficial.
-                      </div>
-                    </div>
-                  )}
 
-                  {/* Estrategia Pedagógica para el Docente */}
-                  <p className="text-[11px] text-slate-700 leading-relaxed bg-white/60 p-2 rounded-lg border border-slate-200">
-                    <strong className={eje.tieneRelacion ? 'text-indigo-900' : 'text-slate-800'}>
-                      Orientación Didáctica:
-                    </strong>{' '}
-                    {eje.estrategiaDidactica}
-                  </p>
+                    {/* Estrategia Pedagógica para el Docente */}
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-white/60 p-2 rounded-lg border border-slate-200">
+                      <strong className="text-indigo-900">
+                        Orientación Didáctica:
+                      </strong>{' '}
+                      {eje.estrategiaDidactica}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Si hay asignaturas sin tema eje simultáneas */}
+              {materiasSinEje.length > 0 && (
+                <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center gap-2">
+                  <span className="font-bold text-slate-700 shrink-0">📚 Dosificación regular independiente:</span>
+                  <span className="text-slate-600 truncate">
+                    {materiasSinEje.map(m => m.materiaNombre).join(', ')} (temas sin convergencia mutua, avanzan en su respectivo libro oficial).
+                  </span>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* BOTÓN GENERAR PLANIFICACIÓN */}
         <div className="flex justify-end pt-2">

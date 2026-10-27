@@ -241,7 +241,14 @@ const TAXONOMIA_ASIGNATURAS: Record<string, SubDominioCluster[]> = {
       nombre: 'Geometría y Medición',
       temaEje: 'Geometría, Medición de Figuras y Exploración Espacial',
       estrategia: 'Construcción de figuras y medición geométrica en pizarra antes del trazo individual en cuaderno.',
-      keywords: ['geometria', 'angulo', 'angulos', 'triangulo', 'triangulos', 'poligono', 'poligonos', 'perimetro', 'area', 'volumen', 'figura', 'cuerpo geometrico']
+      keywords: ['geometria', 'angulo', 'angulos', 'triangulo', 'triangulos', 'poligono', 'poligonos', 'perimetro', 'area', 'volumen', 'figura', 'mosaico', 'mosaicos', 'teselado', 'teselados', 'cuerpo geometrico']
+    },
+    {
+      id: 'series_patrones',
+      nombre: 'Series, Patrones y Regularidades',
+      temaEje: 'Descubrimiento de Patrones, Series Numéricas y Regularidades Matemáticas',
+      estrategia: 'El docente modela la regla de formación del patrón en pizarra antes de que cada grado complete sus sucesiones numéricas en el libro oficial.',
+      keywords: ['serie', 'series', 'patron', 'patrones', 'sucesion', 'sucesiones', 'secuencia', 'secuencias', 'regularidad', 'regularidades']
     }
   ],
   comunicacion_lenguaje: [
@@ -284,14 +291,58 @@ const TAXONOMIA_ASIGNATURAS: Record<string, SubDominioCluster[]> = {
 };
 
 const STOPWORDS_ES = new Set([
-  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al', 'a',
-  'en', 'para', 'por', 'con', 'sin', 'sobre', 'entre', 'y', 'e', 'o', 'u', 'sus',
-  'su', 'mi', 'mis', 'tu', 'tus', 'que', 'como', 'se', 'es', 'son', 'tema', 'leccion',
-  'unidad', 'bloque', 'parte', 'partes', 'pagina', 'paginas', 'libro', 'grado', 'primaria'
+  // Artículos y pronombres
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
+  'yo', 'tu', 'el', 'ella', 'ello', 'nosotros', 'nosotras', 'vosotros', 'ellos', 'ellas',
+  'me', 'te', 'se', 'nos', 'os', 'le', 'les', 'mi', 'mis', 'tu', 'tus', 'su', 'sus',
+  'nuestro', 'nuestra', 'nuestros', 'nuestras', 'este', 'esta', 'estos', 'estas',
+  'ese', 'esa', 'esos', 'esas', 'aquel', 'aquella', 'aquellos', 'aquellas',
+  'que', 'quien', 'quienes', 'cual', 'cuales', 'donde', 'como', 'cuando', 'cuanto',
+
+  // Preposiciones y conjunciones
+  'de', 'del', 'a', 'en', 'para', 'por', 'con', 'sin', 'sobre', 'entre', 'hacia', 'desde', 'hasta',
+  'durante', 'mediante', 'contra', 'bajo', 'segun', 'tras', 'y', 'e', 'o', 'u', 'ni', 'pero', 'mas',
+
+  // Verbos auxiliares / copulativos / generales de consignas
+  'es', 'son', 'ser', 'era', 'fue', 'sido', 'esta', 'estan', 'estar', 'estado',
+  'hay', 'haber', 'hacer', 'hago', 'hace', 'hacen', 'hizo',
+  'aprendo', 'aprende', 'aprender', 'aprendemos',
+  'conozco', 'conoce', 'conocer', 'conocemos',
+  'elaboro', 'elabora', 'elaborar', 'elaboramos', 'elaboracion',
+  'resuelvo', 'resuelve', 'resolver', 'resolvemos', 'resolucion',
+  'practico', 'practica', 'practicar', 'practicamos',
+  'exploro', 'explora', 'explorar', 'exploramos',
+  'identifico', 'identifica', 'identificar',
+  'utilizo', 'utiliza', 'utilizar',
+  'repaso', 'repasar',
+
+  // Metadatos escolares y del libro (ELIMINAR ABSOLUTAMENTE 'PAG', 'PAGS', etc.)
+  'pag', 'pags', 'pagina', 'paginas', 'página', 'páginas',
+  'sesion', 'sesiones', 'leccion', 'lecciones', 'tema', 'temas',
+  'subtema', 'subtemas', 'unidad', 'unidades', 'bloque', 'bloques',
+  'parte', 'partes', 'libro', 'libros', 'cuaderno', 'cuadernos',
+  'grado', 'grados', 'primaria', 'semana', 'semanas',
+  'ejercicio', 'ejercicios', 'actividad', 'actividades',
+  'inciso', 'incisos', 'orientacion', 'orientaciones', 'guia', 'guias',
+  'repaso', 'evaluacion', 'autoevaluacion', 'diagnostica', 'formativa'
 ]);
 
-function normalizarTexto(txt: string): string {
-  return (txt || '')
+/**
+ * Elimina referencias editoriales como (Pág. 9), Pág. 8-10, números aislados, etc.
+ */
+export function limpiarMetadatosTexto(txt: string): string {
+  if (!txt) return '';
+  return txt
+    .replace(/\([^\)]*p[aá]g[^\)]*\)/gi, ' ')
+    .replace(/\bp[aá]gs?\.?\s*\d+(?:\s*-\s*\d+)?\b/gi, ' ')
+    .replace(/\bp[aá]ginas?\.?\s*\d+(?:\s*-\s*\d+)?\b/gi, ' ')
+    .replace(/\b\d+\b/g, ' ')
+    .trim();
+}
+
+export function normalizarTexto(txt: string): string {
+  const sinMetadatos = limpiarMetadatosTexto(txt || '');
+  return sinMetadatos
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
@@ -299,11 +350,11 @@ function normalizarTexto(txt: string): string {
     .trim();
 }
 
-function extraerTokensSignificativos(txt: string): string[] {
+export function extraerTokensSignificativos(txt: string): string[] {
   const norm = normalizarTexto(txt);
   return norm
     .split(/\s+/)
-    .filter(t => t.length > 2 && !STOPWORDS_ES.has(t));
+    .filter(t => t.length >= 4 && !STOPWORDS_ES.has(t));
 }
 
 /**
@@ -350,9 +401,9 @@ export function analizarRelacionTemasMismaMateria(
   const palabrasComunesDirectas: string[] = [];
   for (const t1 of g1Tokens) {
     for (const t2 of g2Tokens) {
-      if (t1 === t2 || (t1.length >= 4 && t2.startsWith(t1)) || (t2.length >= 4 && t1.startsWith(t2))) {
+      if (t1 === t2 || (t1.length >= 5 && t2.startsWith(t1)) || (t2.length >= 5 && t1.startsWith(t2))) {
         const palabraBase = t1.length <= t2.length ? t1 : t2;
-        if (!palabrasComunesDirectas.includes(palabraBase)) {
+        if (palabraBase.length >= 4 && !STOPWORDS_ES.has(palabraBase) && !palabrasComunesDirectas.includes(palabraBase)) {
           palabrasComunesDirectas.push(palabraBase);
         }
       }
@@ -413,7 +464,10 @@ export function analizarRelacionTemasMismaMateria(
   }
 
   // 3. Regla de Decisión Factual: ¿Existe relación genuina comprobable?
-  const tieneRelacion = Boolean(clusterComun || palabrasComunesDirectas.length >= 1);
+  const tienePalabraSustantiva = palabrasComunesDirectas.some(
+    w => w.length >= 4 && !STOPWORDS_ES.has(w)
+  );
+  const tieneRelacion = Boolean(clusterComun || tienePalabraSustantiva);
 
   if (tieneRelacion) {
     const temaEje = clusterComun
