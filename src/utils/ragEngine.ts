@@ -1650,7 +1650,9 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
         const matchingRezagado = temasRezagados.find(tr => {
           const trL = tr.toLowerCase();
           const subL = subtemaDia.titulo.toLowerCase();
-          return trL.includes(subL) || subL.includes(trL) || trL.includes(`${g}°`) || trL.includes(`grado ${g}`);
+          const matchesGrade = trL.includes(`${g}.°`) || trL.includes(`${g}°`) || trL.includes(`${g}to`) || trL.includes(`${g}mo`) || trL.includes(`${g}ro`) || trL.includes(`grado ${g}`);
+          const matchesTopic = trL.includes(subL) || subL.includes(trL) || itemsG.some(it => trL.includes(it.tema.toLowerCase()) || trL.includes(it.materia.toLowerCase()));
+          return (matchesGrade && matchesTopic) || trL.includes(subL) || (temasRezagados.length === 1 && matchesGrade);
         });
         const isRezagadoParaDia = Boolean(matchingRezagado && (dia === 'Lunes' || dia === 'Martes'));
 

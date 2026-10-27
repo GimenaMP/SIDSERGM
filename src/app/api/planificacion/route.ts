@@ -588,12 +588,17 @@ Devuelve la respuesta en formato JSON con las claves:
                     String(it.grado || '').includes(String(baseItem.gradoNumero))
                   ) || aiDia.gradosSincronizados?.[idx] || {};
 
+                  const docActivity = sanitizeActivity(aiItem.actividadDocente, baseItem.actividadDocente, baseItem.gradoNumero, 0, d);
+                  const isRezagado = Boolean(baseItem.esTemaRezagado);
+
                   return {
                     ...baseItem,
                     gradoNumero: baseItem.gradoNumero,
                     grado: baseItem.grado,
                     materia: baseItem.materia,
-                    tema: baseItem.tema,
+                    tema: isRezagado && !baseItem.tema.includes('[NIVELACIÓN PRIORITARIA]')
+                      ? `${baseItem.tema} [NIVELACIÓN PRIORITARIA]`
+                      : baseItem.tema,
                     libroTitulo: baseItem.libroTitulo,
                     numeroPagina: baseItem.numeroPagina,
                     paginaFin: baseItem.paginaFin,
@@ -604,7 +609,9 @@ Devuelve la respuesta en formato JSON con las claves:
                     periodo2_actividad: sanitizeActivity(aiItem.periodo2_actividad, baseItem.periodo2_actividad, baseItem.gradoNumero, 2, d),
                     periodo3_actividad: sanitizeActivity(aiItem.periodo3_actividad, baseItem.periodo3_actividad, baseItem.gradoNumero, 3, d),
                     periodo4_actividad: sanitizeActivity(aiItem.periodo4_actividad, baseItem.periodo4_actividad, baseItem.gradoNumero, 4, d),
-                    actividadDocente: sanitizeActivity(aiItem.actividadDocente, baseItem.actividadDocente, baseItem.gradoNumero, 0, d),
+                    actividadDocente: isRezagado && !docActivity.includes('NIVELACIÓN')
+                      ? `[NIVELACIÓN PRIORITARIA] ${docActivity}`
+                      : docActivity,
                     actividadEstudiante: sanitizeActivity(aiItem.actividadEstudiante, baseItem.actividadEstudiante, baseItem.gradoNumero, 0, d),
                     tareaCasa: sanitizeActivity(aiItem.tareaCasa, baseItem.tareaCasa, baseItem.gradoNumero, 0, d),
                     ejerciciosLiterales: Array.isArray(baseItem.ejerciciosLiterales) && baseItem.ejerciciosLiterales.length > 0
