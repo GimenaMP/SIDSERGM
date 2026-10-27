@@ -474,6 +474,8 @@ export function diagnosticarPaginaMineduc(
   cleanText = cleanText.replace(/^(?:\d+\s+)?(?:Ciencias|Matemáticas|Comunicación|Medio|Formación|Vivamos)[^.]*?\.\s*/i, '');
   cleanText = cleanText.replace(/Autoridades Ministeriales[\s\S]*/i, '');
   cleanText = cleanText.replace(/^(?:¿Cómo es mi libro\?|Competencias y estándares)[^.]*?\.\s*/i, '');
+  // Filtrar viñetas de competencias introductorias (ej: "• Establezco la relación...", "• Explico la importancia...")
+  cleanText = cleanText.replace(/•\s*(?:Establezco|Explico|Describo|Identifico|Reconozco|Valoro|Participo|Demuestro|Aplico|Analizo|Distingo|Clasifico)\b[^•\n]*/gi, '');
 
   // 1. CASO MATEMÁTICAS (Guatemática / MINEDUC: Cada página = 1 sesión con momentos P, S, C, E, T)
   if (isMate) {
@@ -602,7 +604,9 @@ export function diagnosticarPaginaMineduc(
   }
 
   const bullets = cleanText.match(/•\s*[^•\n]{15,250}/g);
-  if (bullets && bullets.length > 0) {
+  const activityActionRegex = /•\s*(?:Escribo|Escribe|Escriban|Copia|Copiamos|Copien|Dibujo|Dibuja|Dibujen|Respondo|Responde|Respondan|Elaboro|Elabora|Elaboramos|Organizo|Organiza|Organizamos|Investiga|Investiguen|Compara|Comparen|Realiza|Realicen|Completa|Completen|Discute|Discutan|Reúnete|Reúnanse|Encuentra|Reflexiona|Reflexionen|Lee y responde|Busca|Averigua)\b/i;
+  const realActivityBullets = bullets ? bullets.filter(b => activityActionRegex.test(b)) : [];
+  if (realActivityBullets.length > 0) {
     return {
       pagina: pagBuscada,
       grado,
@@ -614,50 +618,68 @@ export function diagnosticarPaginaMineduc(
       tipoContenido: 'ciencias_actividad',
       modalidadTrabajoOficial: 'Trabaja individualmente',
       ejerciciosLiteralesOActividades: [
-        `Pág. ${pagBuscada} · Actividades del libro oficial (Trabaja individualmente): ${bullets.slice(0, 2).map(b => b.trim()).join(' | ')}`
+        `Pág. ${pagBuscada} · Actividades del libro oficial (Trabaja individualmente): ${realActivityBullets.slice(0, 2).map(b => b.trim()).join(' | ')}`
       ]
     };
   }
 
   // 4. SI LA PÁGINA ES CONCEPTUAL (NO TIENE ACTIVIDAD EXPLÍCITA EN EL LIBRO OFICIAL):
-  // El sistema y Gemini sugieren una actividad pedagógica inteligente adaptada según la sesión y el tema
+  // Generar actividades didácticas concretas e inteligentes sugeridas por la IA adaptadas al tema y conceptos reales
+  const textLower = cleanText.toLowerCase();
+  const subLower = subtema.toLowerCase();
   const esSesion1 = (isNat && (dia === 'Lunes' || !dia)) || 
                     (isSoc && (dia === 'Martes' || !dia)) ||
                     esInicio;
 
-  const excerpt = cleanText.length > 20 ? cleanText.slice(0, 160).trim() : subtema;
+  let actividadSugeridaClase = '';
+  let tareaSugeridaCasa = '';
+  const modalidadSugerida: 'Trabaja en equipo' | 'Trabaja en pareja' | 'Trabaja individualmente' = esSesion1 ? 'Trabaja en equipo' : 'Trabaja en pareja';
 
-  if (esSesion1) {
-    const sug = `Pág. ${pagBuscada} (Página conceptual sin sección de ejercicios) · Trabaja en equipo: "${excerpt}...". Actividad pedagógica sugerida: Apertura guiada por el docente sobre "${subtema}"; en equipos de trabajo observan las ilustraciones y mapas, dialogan sobre preguntas generadoras y construyen un mapa de ideas previas en la pizarra.`;
-    return {
-      pagina: pagBuscada,
-      grado,
-      materia,
-      subtema,
-      rangoPaginasTema: rango,
-      esInicioDeTema: esInicio,
-      tieneActividadExplicitaEnLibro: false,
-      tipoContenido: 'ciencias_conceptual_sin_ejercicios',
-      modalidadTrabajoOficial: 'Trabaja en equipo',
-      ejerciciosLiteralesOActividades: [sug],
-      sugerenciaInteligente: sug
-    };
+  if (textLower.includes('célula') || subLower.includes('célula') || textLower.includes('organelo') || textLower.includes('citoplasma')) {
+    if (esSesion1) {
+      actividadSugeridaClase = `Apertura y modelado docente sobre "La célula y sus organelos" (Pág. ${pagBuscada}). En equipos de trabajo, los estudiantes analizan las ilustraciones del libro oficial, identifican las diferencias entre la célula animal y vegetal, y elaboran en sus cuadernos un cuadro comparativo o diagrama de Venn rotulando los organelos (núcleo, membrana celular, citoplasma, mitocondrias, cloroplastos y vacuolas).`;
+      tareaSugeridaCasa = `Ilustrar en el cuaderno la célula animal y vegetal con colores o recortes, señalando con flechas y nombres el núcleo, membrana y mitocondria.`;
+    } else {
+      actividadSugeridaClase = `Lectura analítica del glosario celular de la Pág. ${pagBuscada}. En parejas, construyen una tabla de funciones de los organelos (mitocondrias, lisosomas, plastidios, cloroplastos) y redactan en el cuaderno qué organelos son exclusivos de plantas y cuáles de animales.`;
+      tareaSugeridaCasa = `Redactar en el cuaderno un mini-glosario ilustrado con las funciones de 4 organelos celulares vistos en la Pág. ${pagBuscada}.`;
+    }
+  } else if (isNat) {
+    if (esSesion1) {
+      actividadSugeridaClase = `Apertura reflexiva y diálogo de presaberes guiado por el docente sobre "${subtema}" (Pág. ${pagBuscada}). En equipos de trabajo observan las ilustraciones de la lección, discuten preguntas generadoras y construyen un mapa de ideas previas en el cuaderno y pizarra.`;
+      tareaSugeridaCasa = `Anotar en el cuaderno dos preguntas o curiosidades sobre "${subtema}" para investigar con la familia.`;
+    } else {
+      actividadSugeridaClase = `Lectura analítica guiada del texto oficial de la Pág. ${pagBuscada}. En parejas extraen las 3 ideas principales de "${subtema}", construyen un organizador gráfico (mapa conceptual o esquema de llaves ilustrado) en el cuaderno y formulan una conclusión científica.`;
+      tareaSugeridaCasa = `Identificar y redactar en el cuaderno un ejemplo práctico de "${subtema}" aplicado a la vida diaria o a la comunidad.`;
+    }
+  } else if (isSoc) {
+    if (esSesion1) {
+      actividadSugeridaClase = `Apertura temática guiada por el docente sobre "${subtema}" (Pág. ${pagBuscada}). En equipos de trabajo analizan las fuentes e imágenes del texto oficial, dialogan sobre el contexto histórico o geográfico y registran una lluvia de ideas en la pizarra.`;
+      tareaSugeridaCasa = `Preguntar a sus familiares o mayores de la comunidad qué conocen sobre "${subtema}" y registrar una anécdota en el cuaderno.`;
+    } else {
+      actividadSugeridaClase = `Lectura comprensiva de la Pág. ${pagBuscada}. En parejas elaboran una línea de tiempo o cuadro de causas y consecuencias sobre "${subtema}" en sus cuadernos, redactando un compromiso comunitario.`;
+      tareaSugeridaCasa = `Escribir un resumen breve de 5 líneas en el cuaderno sobre la importancia de "${subtema}" para Guatemala.`;
+    }
   } else {
-    const sug = `Pág. ${pagBuscada} (Página conceptual sin sección de ejercicios) · Trabaja en pareja: "${excerpt}...". Actividad pedagógica sugerida: Lectura analítica del texto oficial; en parejas extraen las 3 ideas principales en el cuaderno, elaboran un organizador gráfico (cuadro comparativo o mapa conceptual ilustrado) y redactan una conclusión aplicada a su comunidad.`;
-    return {
-      pagina: pagBuscada,
-      grado,
-      materia,
-      subtema,
-      rangoPaginasTema: rango,
-      esInicioDeTema: esInicio,
-      tieneActividadExplicitaEnLibro: false,
-      tipoContenido: 'ciencias_conceptual_sin_ejercicios',
-      modalidadTrabajoOficial: 'Trabaja en pareja',
-      ejerciciosLiteralesOActividades: [sug],
-      sugerenciaInteligente: sug
-    };
+    actividadSugeridaClase = `Lectura analítica del contenido oficial de la Pág. ${pagBuscada} sobre "${subtema}". En el cuaderno de trabajo elaboran un resumen visual o mapa conceptual con las ideas centrales.`;
+    tareaSugeridaCasa = `Fijación en casa: Repasar las ideas principales de la Pág. ${pagBuscada} y anotar 2 ejemplos en el cuaderno.`;
   }
+
+  const actFinal = `Pág. ${pagBuscada} (Página conceptual sin ejercicios impresos) · 💡 Actividad Pedagógica Sugerida por la IA (${modalidadSugerida}): ${actividadSugeridaClase}`;
+  const tarFinal = `💡 Tarea para Casa Sugerida: ${tareaSugeridaCasa}`;
+
+  return {
+    pagina: pagBuscada,
+    grado,
+    materia,
+    subtema,
+    rangoPaginasTema: rango,
+    esInicioDeTema: esInicio,
+    tieneActividadExplicitaEnLibro: false,
+    tipoContenido: 'ciencias_conceptual_sin_ejercicios',
+    modalidadTrabajoOficial: modalidadSugerida,
+    ejerciciosLiteralesOActividades: [actFinal, tarFinal],
+    sugerenciaInteligente: `${actFinal} | ${tarFinal}`
+  };
 }
 
 // Búsqueda y extracción inteligente de ejercicios e instrucciones literales en libros MINEDUC

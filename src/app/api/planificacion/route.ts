@@ -87,11 +87,14 @@ REGLAS METODOLÓGICAS OBLIGATORIAS DEL CNB Y GUÍAS MINEDUC:
      * (E) Ejercitación en cuaderno: resuelvo los incisos exactos del libro (Trabaja individualmente).
      * Autoevaluación 🙂🙂: pintar 2 caritas si todo correcto, 1 carita si aciertos parciales.
      * (T) Tarea: actividades complementarias en casa.
-   - TRATAMIENTO DE ACTIVIDADES EN CIENCIAS SOCIALES Y NATURALES:
+   - TRATAMIENTO INTELIGENTE DE PÁGINAS CONCEPTUALES EN CIENCIAS SOCIALES Y NATURALES:
      * Si la página contiene apartado explícito ("Organizamos", "Trabajamos", preguntas): CÍTALA TEXTUALMENTE (ej: 'Organizamos (Trabaja en equipo): Dialogamos acerca de...').
-     * Si la página es CONCEPTUAL/INFORMATIVA (sin ejercicios en el libro oficial): NO inventes ejercicios inexistentes. Actúa con inteligencia y sugiere la actividad pedagógica contextualizada:
-       - Sesión 1: Apertura con preguntas generadoras y modelado docente en pizarra (Trabaja en equipo).
-       - Sesión 2: Lectura atenta, extracción de 3 ideas principales en cuaderno y organizador gráfico (cuadro comparativo o mapa conceptual) con aplicación comunitaria (Trabaja en pareja o individual).
+     * Si la página es CONCEPTUAL/INFORMATIVA (sin ejercicios en el libro oficial, ej: Pág. 13 de Ciencias Naturales sobre "La célula" y sus organelos):
+       ESTÁ ESTRICTAMENTE PROHIBIDO inventar enunciados de temas ajenos (como desastres naturales o deterioro ambiental) o inventar ejercicios ficticios en el libro.
+       Actúa con inteligencia pedagógica y sugiere al docente la actividad de aula y tarea basada en el tema real:
+       - Sesión 1: Apertura reflexiva y modelado docente del tema real; en equipos analizan las ilustraciones del libro y elaboran en sus cuadernos un cuadro comparativo, diagrama de Venn o dibujo rotulado de organelos (núcleo, membrana celular, citoplasma, mitocondrias, cloroplastos, vacuolas) (Trabaja en equipo).
+       - Sesión 2: Lectura analítica del glosario científico del texto oficial; en parejas extraen las funciones clave y redactan conclusiones en el cuaderno (Trabaja en pareja).
+       - En "ejerciciosLiterales" incluye explícitamente: '💡 Actividad Pedagógica Sugerida por la IA (Lectura conceptual del libro oficial)' y '💡 Tarea para Casa Sugerida'.
 
 GUARDRAILS DE SEGURIDAD:
 - Usa EXCLUSIVAMENTE los libros, páginas y temas del contexto RAG provisto.
@@ -363,11 +366,15 @@ INSTRUCCIÓN RIGUROSA SOBRE ACTIVIDADES Y EJERCICIOS DEL LIBRO OFICIAL (RF-06):
   3. CIENCIAS SOCIALES Y CIENCIAS NATURALES:
      - Revisa el campo "tieneActividadExplicitaEnLibro" de cada grado en "ragDesglosadoPorDia":
      - SI TIENE ACTIVIDAD EXPLÍCITA ("Organizamos", "Trabajamos", preguntas del texto): Cita textualmente la consigna en "ejerciciosLiterales" indicando la modalidad ("Trabaja en equipo" si es Organizamos, o "Trabaja en pareja").
-     - SI NO TIENE ACTIVIDAD EXPLÍCITA (Página de lectura conceptual, mapas o fuentes):
-       ESTÁ PROHIBIDO inventar ejercicios ficticios en el libro.
-       DEBES ser inteligente y sugerir una actividad didáctica adaptada basada en "sugerenciaInteligenteSiNoTieneActividad":
-       * Sesión 1: Apertura reflexiva con preguntas generadoras del profesor en pizarra y diálogo de presaberes en equipo (Trabaja en equipo).
-       * Sesión 2: Lectura analítica del texto de la página; los alumnos extraen en el cuaderno las 3 ideas principales y elaboran un organizador gráfico (cuadro comparativo, mapa conceptual o dibujo rotulado) con aplicación comunitaria (Trabaja en pareja o individual).
+     - SI NO TIENE ACTIVIDAD EXPLÍCITA (Página de lectura conceptual, mapas o fuentes, ej: Pág. 13 de Ciencias Naturales sobre "La célula" y organelos):
+       ESTÁ ESTRICTAMENTE PROHIBIDO inventar ejercicios ficticios en el libro o viñetas de temas ajenos (prohibido hablar de desastres o deterioro ambiental si el tema es la célula).
+       DEBES basarte directamente en "sugerenciaInteligenteSiNoTieneActividad" y "ejerciciosRealesOActividadSugerida":
+       * Sesión 1: Apertura reflexiva y modelado docente sobre los conceptos reales de la página (ej: la célula, membrana, mitocondrias, cloroplastos). Los alumnos elaboran en su cuaderno un organizador gráfico (diagrama de Venn entre célula animal y vegetal o cuadro comparativo) rotulando sus partes.
+       * Sesión 2: Lectura analítica del glosario científico oficial; en parejas extraen funciones de los organelos y redactan conclusiones en su cuaderno.
+       * En "ejerciciosLiterales" incluye obligatoriamente:
+         1) "💡 Actividad Pedagógica Sugerida por la IA (Lectura conceptual del libro oficial): [descripción detallada adaptada al tema real]"
+         2) "💡 Tarea para Casa Sugerida: [tarea específica de fijación en el hogar]"
+       * Las acciones docentes y de los estudiantes ("actividadDocente", "actividadEstudiante", "periodo3_actividad") deben orientar paso a paso esta actividad sugerida.
 
 INSTRUCCIONES CLAVE DE GENERACIÓN Y PRIORIZACIÓN CNB (RF-01 AL RF-09):
 1. TEMA EJE TRANSVERSAL Y ANÁLISIS DE RELACIÓN POR ASIGNATURA:
