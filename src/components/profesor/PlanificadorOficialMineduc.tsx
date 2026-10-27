@@ -2098,13 +2098,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                       const dia = diaItem as DiaSemana;
                       const diaData = plan.dias[dia];
 
-                      // Obtener nombres de materias para cada período
+                      // Obtener nombres de materias para cada período según la selección real
                       const gData0 = diaData?.gradosSincronizados?.[0];
                       const mats0 = gData0?.materiasSeleccionadas || [];
-                      const mat1Nombre = mats0[0]?.materia || gData0?.materia?.split('+')?.[0]?.trim() || 'Matemáticas';
-                      const mat2Nombre = mats0[1]?.materia || (mats0.length >= 2 ? mats0[1].materia : 'Comunicación y Lenguaje L1');
-                      const mat3Nombre = mats0[2]?.materia || 'Ciencias / Medio Social';
-                      const mat4Nombre = mats0[3]?.materia || 'Expresión Artística / Práctica CNB';
+                      const mat1Nombre = mats0[0]?.materia || gData0?.materia?.split('+')?.[0]?.trim() || 'Área Principal';
+                      const mat2Nombre = (mats0.length >= 2) ? mats0[1]?.materia : (mats0.length === 1 ? mats0[0]?.materia : 'Segunda Asignatura');
+                      const mat3Nombre = (mats0.length >= 3) ? mats0[2]?.materia : (mats0.length === 2 ? mats0[1]?.materia : mats0[0]?.materia || 'Ciencias / Medio Social');
+                      const mat4Nombre = (mats0.length >= 4) ? mats0[3]?.materia : 'Expresión Artística / Práctica CNB';
 
                       return (
                         <div key={dia} className="rounded-2xl border-2 border-slate-400 overflow-hidden shadow-sm bg-white print:break-inside-avoid print:mb-8">
@@ -2170,7 +2170,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                       const actText1 = gData?.periodo1_actividad?.replace(/^08:15\s*-\s*09:05\s*\|\s*/i, '') || gData?.actividadDocente || 'Modelado del algoritmo en pizarra y activación de presaberes.';
                                       const ejs1 = (mat1?.ejerciciosLiterales && mat1.ejerciciosLiterales.length > 0)
                                         ? mat1.ejerciciosLiterales
-                                        : (gData?.ejerciciosLiterales || [`Pág. ${pag1}: Resolver ejercicios del libro oficial en el cuaderno.`]);
+                                        : (gData?.ejerciciosLiterales || [`Pág. ${pag1}: Lectura analítica del texto oficial MINEDUC y resolución en cuaderno.`]);
 
                                       return (
                                         <div key={g} className="space-y-1.5 pb-2 border-b border-slate-200 last:border-none last:pb-0">
@@ -2189,8 +2189,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                             {actText1}
                                           </p>
                                           {ejs1.length > 0 && (
-                                            <div className="ml-3.5 mt-1 bg-sky-50 border border-sky-200 rounded-lg p-2 text-[11px] text-sky-950">
-                                              <strong className="text-[#005B94]">📖 Libro Oficial MINEDUC:</strong> {ejs1[0]}
+                                            <div className="ml-3.5 mt-1 bg-sky-50 border border-sky-200 rounded-lg p-2 text-[11px] text-sky-950 space-y-1">
+                                              <div className="font-bold text-[#005B94]">📖 Libro Oficial MINEDUC:</div>
+                                              {ejs1.slice(0, 2).map((ejItem: string, eIdx: number) => (
+                                                <div key={eIdx} className="leading-snug">
+                                                  {ejItem}
+                                                </div>
+                                              ))}
                                             </div>
                                           )}
                                         </div>
@@ -2228,7 +2233,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                       const actText2 = gData?.periodo2_actividad?.replace(/^09:05\s*-\s*09:55\s*\|\s*/i, '') || gData?.actividadEstudiante || 'Lectura comprensiva, redacción y ejercitación en libro oficial.';
                                       const ejs2 = (mat2?.ejerciciosLiterales && mat2.ejerciciosLiterales.length > 0)
                                         ? mat2.ejerciciosLiterales
-                                        : [`Pág. ${pag2}: Resolver actividades de comprensión lectora en el cuaderno.`];
+                                        : (gData?.materiasSeleccionadas?.[1]?.ejerciciosLiterales || [`Pág. ${pag2}: Trabajo analítico y ejercitación guiada del libro oficial.`]);
 
                                       return (
                                         <div key={g} className="space-y-1.5 pb-2 border-b border-slate-200 last:border-none last:pb-0">
@@ -2247,8 +2252,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                             {actText2}
                                           </p>
                                           {ejs2.length > 0 && (
-                                            <div className="ml-3.5 mt-1 bg-teal-50 border border-teal-200 rounded-lg p-2 text-[11px] text-teal-950">
-                                              <strong className="text-teal-900">📖 Libro Oficial MINEDUC:</strong> {ejs2[0]}
+                                            <div className="ml-3.5 mt-1 bg-teal-50 border border-teal-200 rounded-lg p-2 text-[11px] text-teal-950 space-y-1">
+                                              <div className="font-bold text-teal-900">📖 Libro Oficial MINEDUC:</div>
+                                              {ejs2.slice(0, 2).map((ejItem: string, eIdx: number) => (
+                                                <div key={eIdx} className="leading-snug">
+                                                  {ejItem}
+                                                </div>
+                                              ))}
                                             </div>
                                           )}
                                         </div>
@@ -2315,7 +2325,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                       const actText3 = gData?.periodo3_actividad?.replace(/^10:30\s*-\s*11:15\s*\|\s*/i, '') || 'Indagación guiada, experimentación y vinculación comunitaria del tema eje.';
                                       const ejs3 = (mat3?.ejerciciosLiterales && mat3.ejerciciosLiterales.length > 0)
                                         ? mat3.ejerciciosLiterales
-                                        : [`Pág. ${pag3}: Responder preguntas de indagación y dibujo reflexivo en el cuaderno.`];
+                                        : (gData?.materiasSeleccionadas?.[2]?.ejerciciosLiterales || [`Pág. ${pag3}: Análisis de conceptos y actividades prácticas del libro oficial.`]);
 
                                       return (
                                         <div key={g} className="space-y-1.5 pb-2 border-b border-slate-200 last:border-none last:pb-0">
@@ -2332,8 +2342,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                             {actText3}
                                           </p>
                                           {ejs3.length > 0 && (
-                                            <div className="ml-3.5 mt-1 bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-[11px] text-indigo-950">
-                                              <strong className="text-indigo-900">📖 Libro Oficial MINEDUC ({g}.° Primaria):</strong> {ejs3[0]}
+                                            <div className="ml-3.5 mt-1 bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-[11px] text-indigo-950 space-y-1">
+                                              <div className="font-bold text-indigo-900">📖 Libro Oficial MINEDUC ({g}.° Primaria):</div>
+                                              {ejs3.slice(0, 2).map((ejItem: string, eIdx: number) => (
+                                                <div key={eIdx} className="leading-snug">
+                                                  {ejItem}
+                                                </div>
+                                              ))}
                                             </div>
                                           )}
                                         </div>
@@ -2370,7 +2385,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                       const actText4 = gData?.periodo4_actividad?.replace(/^11:15\s*-\s*11:50\s*\|\s*/i, '') || diaData?.componentes_multigrado?.rincones_aprendizaje || 'Tutoría entre pares y manipulación de material didáctico concreto en rincones de aprendizaje.';
                                       const ejs4 = (mat4?.ejerciciosLiterales && mat4.ejerciciosLiterales.length > 0)
                                         ? mat4.ejerciciosLiterales
-                                        : [`Pág. ${pag4}: Realizar lectura del tema y resolver ejercicios analíticos en el cuaderno según el libro oficial.`];
+                                        : (gData?.materiasSeleccionadas?.[3]?.ejerciciosLiterales || [`Pág. ${pag4}: Rincones de aprendizaje y aplicación práctica del libro oficial.`]);
 
                                       return (
                                         <div key={g} className="space-y-1.5 pb-2 border-b border-slate-200 last:border-none last:pb-0">
@@ -2387,8 +2402,13 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                             {actText4}
                                           </p>
                                           {ejs4.length > 0 && (
-                                            <div className="ml-3.5 mt-1 bg-amber-50 border border-amber-200 rounded-lg p-2 text-[11px] text-amber-950">
-                                              <strong className="text-amber-900">📖 Libro Oficial MINEDUC:</strong> {ejs4[0]}
+                                            <div className="ml-3.5 mt-1 bg-amber-50 border border-amber-200 rounded-lg p-2 text-[11px] text-amber-950 space-y-1">
+                                              <div className="font-bold text-amber-900">📖 Libro Oficial MINEDUC:</div>
+                                              {ejs4.slice(0, 2).map((ejItem: string, eIdx: number) => (
+                                                <div key={eIdx} className="leading-snug">
+                                                  {ejItem}
+                                                </div>
+                                              ))}
                                             </div>
                                           )}
                                         </div>
@@ -2423,12 +2443,16 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                       <strong className="text-slate-800">🏛️ Gobierno Escolar:</strong>{' '}
                                       <span className="text-slate-700">{diaData?.componentes_multigrado?.gobierno_escolar || 'Comisiones estudiantiles organizan el aula, verifican entrega de cuadernos y limpian rincones.'}</span>
                                     </div>
-                                    {diaData?.gradosSincronizados?.[0]?.tareaCasa && (
-                                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs">
-                                        <strong className="text-emerald-950">🏠 Tarea en Casa (Refuerzo Familiar):</strong>{' '}
-                                        <span className="text-emerald-900 font-medium">{diaData.gradosSincronizados[0].tareaCasa}</span>
-                                      </div>
-                                    )}
+                                    {selectedGrados.map((g, gIdx) => {
+                                      const gData = diaData?.gradosSincronizados?.find((gs: any) => gs.gradoNumero === g) || diaData?.gradosSincronizados?.[gIdx];
+                                      if (!gData?.tareaCasa) return null;
+                                      return (
+                                        <div key={g} className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs">
+                                          <strong className="text-emerald-950">🏠 Tarea en Casa ({g}.° Primaria):</strong>{' '}
+                                          <span className="text-emerald-900 font-medium">{gData.tareaCasa}</span>
+                                        </div>
+                                      );
+                                    })}
                                   </td>
                                 </tr>
 

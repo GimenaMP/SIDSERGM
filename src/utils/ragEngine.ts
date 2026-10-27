@@ -421,6 +421,7 @@ export interface DiagnosticoPaginaMineduc {
   rangoPaginasTema: string;
   esInicioDeTema: boolean;
   tieneActividadExplicitaEnLibro: boolean;
+  textoConceptualDelLibro?: string;
   tipoContenido: 'matematicas_momentos' | 'comunicacion_comprension' | 'ciencias_organizamos' | 'ciencias_actividad' | 'ciencias_conceptual_sin_ejercicios';
   modalidadTrabajoOficial: 'Trabaja individualmente' | 'Trabaja en pareja' | 'Trabaja en equipo';
   ejerciciosLiteralesOActividades: string[];
@@ -452,7 +453,7 @@ export function diagnosticarPaginaMineduc(
   const rango = `${pagInicioTema} a ${pagFinTema}`;
 
   // Buscar registros de la página en la base de datos oficial
-  const matches = mineducDatabase.filter(m => {
+  let matches = mineducDatabase.filter(m => {
     const gMatch = m.grado_especifico === grado;
     const pMatch = m.numero_pagina === pagBuscada;
     if (!gMatch || !pMatch) return false;
@@ -463,6 +464,39 @@ export function diagnosticarPaginaMineduc(
     if (isMate) return itemMat.includes('mate');
     return true;
   });
+
+  // Si no hay match exacto en la página buscada, buscar en el rango del tema seleccionado
+  if (matches.length === 0) {
+    matches = mineducDatabase.filter(m => {
+      const gMatch = m.grado_especifico === grado;
+      const pMatch = m.numero_pagina >= pagInicioTema && m.numero_pagina <= pagFinTema;
+      if (!gMatch || !pMatch) return false;
+      const itemMat = (m.materia || '').toLowerCase();
+      if (isSoc) return itemMat.includes('social') || itemMat.includes('ciudad') || itemMat.includes('historia') || itemMat.includes('cs');
+      if (isNat) return (itemMat.includes('ciencia') || itemMat.includes('natural') || itemMat.includes('medio')) && !itemMat.includes('social');
+      if (isLeng) return itemMat.includes('lengua') || itemMat.includes('comunic');
+      if (isMate) return itemMat.includes('mate');
+      return true;
+    });
+  }
+
+  // Ordenar registros priorizando los que coincidan con las palabras clave del subtema (ej: letra m, trazo, números, organelos)
+  if (matches.length > 1 && subtema) {
+    const subWords = subtema.toLowerCase().split(/\W+/).filter(w => w.length > 2);
+    matches.sort((a, b) => {
+      const textA = (a.enunciado_ejercicio || '').toLowerCase();
+      const textB = (b.enunciado_ejercicio || '').toLowerCase();
+      let scoreA = 0;
+      let scoreB = 0;
+      for (const w of subWords) {
+        if (textA.includes(w)) scoreA += 2;
+        if (textB.includes(w)) scoreB += 2;
+      }
+      if (/\b\d+[\.\)]\s*/.test(textA)) scoreA += 1;
+      if (/\b\d+[\.\)]\s*/.test(textB)) scoreB += 1;
+      return scoreB - scoreA;
+    });
+  }
 
   let rawText = '';
   if (matches.length > 0) {
@@ -479,7 +513,8 @@ export function diagnosticarPaginaMineduc(
 
   // 1. CASO MATEMÁTICAS (Guatemática / MINEDUC: Cada página = 1 sesión con momentos P, S, C, E, T)
   if (isMate) {
-    const incisos = cleanText.match(/(?:[a-d]\.\s*¿[^?]{10,200}\?|\b\d+\)\s*¿[^?]{10,200}\?|\b\d+\.\s*[^.\n]{15,200})/g);
+    // Captura incisos y ejercicios completos incluyendo sub-incisos (a., b., etc.) sin truncar en el primer punto
+    const incisos = cleanText.match(/(?:[a-d]\.\s*¿[^?]{10,250}\?|\b\d+[\.\)]\s*[^0-9\n]{15,350}(?:\s*[a-d]\.\s*[^0-9\n]{10,200})*|\b\d+\.\s*[^.\n]{15,250})/g);
     let ejercitacionStr = '';
     if (incisos && incisos.length > 0) {
       ejercitacionStr = incisos.slice(0, 3).map(i => i.trim()).join(' | ');
@@ -511,20 +546,24 @@ export function diagnosticarPaginaMineduc(
 
   // 2. CASO COMUNICACIÓN Y LENGUAJE (Siempre tiene lectura y actividades)
   if (isLeng) {
-    const questions = cleanText.match(/¿[^?]{10,250}\?/g);
+    const numbered = cleanText.match(/\b\d+[\.\)]\s*[^0-9\n]{15,350}/g);
+    const phonemeMatch = cleanText.match(/(?:(?:sonido|trazo|letra|sílaba|escribe|identifica)[^.\n]{15,300}\.?)/i);
     const bullets = cleanText.match(/•\s*[^•\n]{15,250}/g);
-    const numbered = cleanText.match(/\b\d+\.\s*[^0-9\n]{15,250}/g);
+    const questions = cleanText.match(/¿[^?]{10,250}\?/g);
 
     let itemsRes: string[] = [];
     let mod: 'Trabaja individualmente' | 'Trabaja en pareja' | 'Trabaja en equipo' = 'Trabaja individualmente';
 
-    if (questions && questions.length > 0) {
+    if (numbered && numbered.length > 0) {
+      itemsRes.push(`Pág. ${pagBuscada} · Ejercicios del Libro Oficial (Trabaja individualmente): ${numbered.slice(0, 2).map(n => n.trim()).join(' | ')}`);
+    } else if (phonemeMatch) {
+      itemsRes.push(`Pág. ${pagBuscada} · Taller Lingüístico y Fonético (Trabaja en pareja): ${phonemeMatch[0].trim()}`);
       mod = 'Trabaja en pareja';
-      itemsRes.push(`Pág. ${pagBuscada} · Comprensión Lectora (Trabaja en pareja): ${questions.slice(0, 2).join(' ')}`);
     } else if (bullets && bullets.length > 0) {
       itemsRes.push(`Pág. ${pagBuscada} · Taller Lingüístico y Producción (Trabaja individualmente): ${bullets.slice(0, 2).map(b => b.trim()).join(' | ')}`);
-    } else if (numbered && numbered.length > 0) {
-      itemsRes.push(`Pág. ${pagBuscada} · Ejercicios Gramaticales (Trabaja individualmente): ${numbered.slice(0, 2).map(n => n.trim()).join(' | ')}`);
+    } else if (questions && questions.length > 0) {
+      mod = 'Trabaja en pareja';
+      itemsRes.push(`Pág. ${pagBuscada} · Comprensión Lectora (Trabaja en pareja): ${questions.slice(0, 2).join(' ')}`);
     } else if (cleanText.length > 25) {
       itemsRes.push(`Pág. ${pagBuscada} · Lectura analítica del texto oficial MINEDUC (Trabaja en pareja): "${cleanText.slice(0, 160)}...". Extracción de ideas clave y redacción en cuaderno.`);
       mod = 'Trabaja en pareja';
@@ -702,8 +741,8 @@ export function diagnosticarPaginaMineduc(
     tareaSugeridaCasa = `Fijación en casa: Repasar las ideas principales de la Pág. ${pagBuscada} y anotar 2 ejemplos en el cuaderno.`;
   }
 
-  const actFinal = `Pág. ${pagBuscada} (Página conceptual sin ejercicios impresos) · 💡 Actividad Pedagógica Sugerida por la IA (${modalidadSugerida}): ${actividadSugeridaClase}`;
-  const tarFinal = `💡 Tarea para Casa Sugerida: ${tareaSugeridaCasa}`;
+  const actFinal = `Pág. ${pagBuscada} (Página conceptual sin ejercicios impresos) · 💡 Actividad Pedagógica redactada por la IA (${modalidadSugerida}): ${actividadSugeridaClase}`;
+  const tarFinal = `💡 Tarea para Casa redactada por la IA: ${tareaSugeridaCasa}`;
 
   return {
     pagina: pagBuscada,
@@ -713,6 +752,7 @@ export function diagnosticarPaginaMineduc(
     rangoPaginasTema: rango,
     esInicioDeTema: esInicio,
     tieneActividadExplicitaEnLibro: false,
+    textoConceptualDelLibro: cleanText.slice(0, 800),
     tipoContenido: 'ciencias_conceptual_sin_ejercicios',
     modalidadTrabajoOficial: modalidadSugerida,
     ejerciciosLiteralesOActividades: [actFinal, tarFinal],

@@ -283,6 +283,7 @@ export async function POST(req: NextRequest) {
             tipoContenido: diag.tipoContenido,
             modalidadTrabajoOficialMINEDUC: diag.modalidadTrabajoOficial,
             ejerciciosRealesOActividadSugerida: diag.ejerciciosLiteralesOActividades,
+            textoConceptualDelLibro: diag.textoConceptualDelLibro || null,
             sugerenciaInteligenteSiNoTieneActividad: diag.sugerenciaInteligente || null,
             instruccionGuiaDocente: instruccionDocente.slice(0, 300)
           };
@@ -307,6 +308,10 @@ export async function POST(req: NextRequest) {
 
       const isMonogrado = gradosNums.length === 1;
       const materiasUnicas = items.map(it => it.materia).filter((v, i, a) => a.indexOf(v) === i);
+      const matP1 = materiasUnicas[0] || 'Matemáticas';
+      const matP2 = materiasUnicas[1] || materiasUnicas[0] || 'Comunicación y Lenguaje L1';
+      const matP3 = materiasUnicas[2] || (materiasUnicas.length === 2 ? materiasUnicas[1] : materiasUnicas[0]);
+
       const prompt = `Actúa como especialista pedagógico CNB de Guatemala y genera la planificación curricular oficial para ${isMonogrado ? 'AULA MONOGRADO (1 solo grado)' : 'AULA MULTIGRADO (' + gradosNums.length + ' grados)'} siguiendo estrictamente las clases seleccionadas por el docente y la SECUENCIACIÓN PROGRESIVA EN 4 MOMENTOS.
 
 MODALIDAD DE AULA:
@@ -326,26 +331,29 @@ ${temasRezagados.map(tr => `- ${tr}`).join('\n')}
 INSTRUCCIÓN OBLIGATORIA: Debes priorizar la nivelación de estos temas rezagados durante los primeros días (Lunes y Martes) antes de avanzar con contenidos nuevos, indicando claramente en las actividades la nivelación y fijación de estos aprendizajes.
 ` : ''}
 
-INSTRUCCIÓN CRÍTICA DE DISTRIBUCIÓN HORARIA Y ASIGNATURAS SEGÚN EL CNB:
-- DEBES APLICAR LA DISTRIBUCIÓN HORARIA OFICIAL SEGÚN EL PESO Y PERIODOS DEL CNB:
-  * Período 1 (08:15 - 09:05 · 50 min): MATEMÁTICAS (Troncal diaria obligatoria de Lunes a Jueves).
-    - PROHIBIDO hablar aquí de lenguaje, fábulas, comprensión lectora, células o historia.
-  * Período 2 (09:05 - 09:55 · 50 min): COMUNICACIÓN Y LENGUAJE L1 (Troncal diaria obligatoria de Lunes a Jueves).
-    - ESTRICTAMENTE PROHIBIDO TOTALMENTE INCLUIR AQUÍ OPERACIONES MATEMÁTICAS, MÚLTIPLOS, DIVISORES, FRACCIONES, NÚMEROS O ALGORITMOS ARITMÉTICOS. Debe ser 100% comprensión lectora, redacción, análisis textual o gramática.
-  * 10:00 - 10:30: Receso Escolar y Refacción.
-  * Período 3 (10:30 - 11:15 · 45 min · Bloque Formativo Integrado):
-    - Lunes y Miércoles: CIENCIAS NATURALES Y TECNOLOGÍA (Sesión 1 el Lunes y Sesión 2 el Miércoles).
-      • PROHIBIDO hablar de historia, geografía o paleolítico en lunes y miércoles.
-    - Martes y Jueves: CIENCIAS SOCIALES (Sesión 1 el Martes y Sesión 2 el Jueves).
-      • PROHIBIDO hablar de células, mitocondrias, tejidos o biología en martes y jueves.
-  * Período 4 (11:15 - 11:50 · 35 min · Bloque Complementario CNB / Rincones de Aprendizaje):
-    - Lunes: Expresión Artística (Educación Musical y Artes Visuales).
-    - Martes: Productividad y Desarrollo / Educación Física (Huerto Escolar y Motricidad).
-    - Miércoles: Expresión Artística y Visual (Plástica y Rincones Creativos).
-    - Jueves: Formación Ciudadana y Cultura de Paz / Tutoría entre Pares.
+INSTRUCCIÓN CRÍTICA DE ASIGNATURAS POR PERÍODO SEGÚN LA SELECCIÓN DEL DOCENTE:
+- Materias seleccionadas por el docente para impartir: ${materiasUnicas.join(', ')}
+${materiasUnicas.length === 1 ? `
+- ATENCIÓN: El docente seleccionó EXCLUSIVAMENTE "${materiasUnicas[0]}".
+  * Período 1 (08:15 - 09:05): Apertura reflexiva, activación de presaberes y modelado docente en pizarra sobre "${materiasUnicas[0]}".
+  * Período 2 (09:05 - 09:55): Ejercitación guiada, lectura analítica y resolución en libro oficial de "${materiasUnicas[0]}".
+  * Período 3 (10:30 - 11:15): Aplicación práctica, trabajo en cuaderno y resolución de ejercicios de "${materiasUnicas[0]}".
+  * Período 4 (11:15 - 11:50): Rincones de aprendizaje, síntesis y fijación de "${materiasUnicas[0]}".
+  ESTÁ ESTRICTAMENTE PROHIBIDO incluir asignaturas no seleccionadas en los períodos.
+` : materiasUnicas.length === 2 ? `
+- ATENCIÓN: El docente seleccionó 2 materias: "${materiasUnicas[0]}" y "${materiasUnicas[1]}".
+  * Período 1 (08:15 - 09:05): Primera materia: "${materiasUnicas[0]}" (utilizar su libro, página y ejercicios).
+  * Período 2 (09:05 - 09:55): Segunda materia: "${materiasUnicas[1]}" (utilizar su libro, página y ejercicios).
+  * Período 3 (10:30 - 11:15): Profundización integrada de "${materiasUnicas[1]}" vinculada a "${materiasUnicas[0]}".
+  * Período 4 (11:15 - 11:50): Rincones de aprendizaje y tutoría entre pares.
+` : `
+- Período 1 (08:15 - 09:05): ${matP1} (desarrollar su contenido oficial del libro y ejercitación).
+- Período 2 (09:05 - 09:55): ${matP2} (desarrollar su contenido oficial del libro y ejercitación).
+- Período 3 (10:30 - 11:15): ${matP3} (desarrollar su contenido oficial del libro y ejercitación).
+- Período 4 (11:15 - 11:50): Rincones de aprendizaje, síntesis curricular y tutoría cooperativa.
+`}
+- 10:00 - 10:30: Receso Escolar y Refacción.
 - En cada período debes generar las actividades específicas ("periodo1_actividad", "periodo2_actividad", "periodo3_actividad", "periodo4_actividad") correspondientes a la materia de ese período para ese día, utilizando las páginas físicas y ejercicios del libro oficial MINEDUC.
-- Si el aula es MONOGRADO: La atención del docente es 100% directa y continua con ese único grado en cada período.
-- Si el aula es MULTIGRADO: Aplica Atención Alternada Rotativa (Grupo A en atención directa mientras Grupo B trabaja de forma autónoma en su libro, invirtiendo roles en el siguiente turno).
 
 CONTEXTO DOCUMENTAL RAG RECUPERADO DE LA BASE DE DATOS (CNB DIGECUR + MINEDUC):
 --- REGISTROS CNB DE LOS GRADOS SELECCIONADOS ---
@@ -354,27 +362,23 @@ ${JSON.stringify(allCnbContexto, null, 2)}
 --- CONTEXTO DIDÁCTICO RAG DESGLOSADO DÍA POR DÍA (1 PÁGINA = 1 DÍA) ---
 ${JSON.stringify(ragDesglosadoPorDia, null, 2)}
 
---- REGISTRO GENERAL MINEDUC ---
-${JSON.stringify(allMineducContexto.slice(0, 10), null, 2)}
+--- REGISTRO GENERAL MINEDUC CONTEXTUAL ---
+${JSON.stringify(allMineducContexto.slice(0, 20), null, 2)}
 
-INSTRUCCIÓN RIGUROSA SOBRE ACTIVIDADES Y EJERCICIOS DEL LIBRO OFICIAL (RF-06):
+INSTRUCCIÓN RIGUROSA SOBRE ACTIVIDADES Y EJERCICIOS DEL LIBRO OFICIAL:
 - NADA DEBE SER GENÉRICO. DEBES BASARTE EN EL TEXTO REAL RECUPERADO DE LA PÁGINA EN "ragDesglosadoPorDia":
-  1. MATEMÁTICAS (Guatemática / MINEDUC): Siempre contiene ejercitación. Articula la sesión con los 4 momentos didácticos:
-     - (P) Situación Problema inicial, (S) Solución compartida, (C) Conclusión y regla, (E) Ejercitación literal en cuaderno (Trabaja individualmente), autoevaluación con caritas (🙂🙂) y (T) Tarea para casa.
-     - En "ejerciciosLiterales" cita los incisos reales de la página (ej: "1) ¿Cuáles son los múltiplos de 6? 2) ¿Cuáles son los múltiplos comunes...").
-  2. COMUNICACIÓN Y LENGUAJE: Cita las actividades reales del texto de esa página física, especificando la modalidad ("Trabaja individualmente" para redacción/gramática o "Trabaja en pareja" para lectura/coevaluación).
-  3. CIENCIAS SOCIALES Y CIENCIAS NATURALES:
-     - Revisa el campo "tieneActividadExplicitaEnLibro" de cada grado en "ragDesglosadoPorDia":
-     - SI TIENE ACTIVIDAD EXPLÍCITA ("Organizamos", "Trabajamos", preguntas del texto): Cita textualmente la consigna en "ejerciciosLiterales" indicando la modalidad ("Trabaja en equipo" si es Organizamos, o "Trabaja en pareja").
-     - SI NO TIENE ACTIVIDAD EXPLÍCITA (Página de lectura conceptual, mapas o fuentes, ej: Pág. 13 de Ciencias Naturales sobre "La célula" y organelos):
-       ESTÁ ESTRICTAMENTE PROHIBIDO inventar ejercicios ficticios en el libro o viñetas de temas ajenos (prohibido hablar de desastres o deterioro ambiental si el tema es la célula).
-       DEBES basarte directamente en "sugerenciaInteligenteSiNoTieneActividad" y "ejerciciosRealesOActividadSugerida":
-       * Sesión 1: Apertura reflexiva y modelado docente sobre los conceptos reales de la página (ej: la célula, membrana, mitocondrias, cloroplastos). Los alumnos elaboran en su cuaderno un organizador gráfico (diagrama de Venn entre célula animal y vegetal o cuadro comparativo) rotulando sus partes.
-       * Sesión 2: Lectura analítica del glosario científico oficial; en parejas extraen funciones de los organelos y redactan conclusiones en su cuaderno.
-       * En "ejerciciosLiterales" incluye obligatoriamente:
-         1) "💡 Actividad Pedagógica Sugerida por la IA (Lectura conceptual del libro oficial): [descripción detallada adaptada al tema real]"
-         2) "💡 Tarea para Casa Sugerida: [tarea específica de fijación en el hogar]"
-       * Las acciones docentes y de los estudiantes ("actividadDocente", "actividadEstudiante", "periodo3_actividad") deben orientar paso a paso esta actividad sugerida.
+  1. SI "tieneActividadExplicitaEnLibro" ES TRUE:
+     Cita literalmente los ejercicios del libro oficial en "ejerciciosLiterales" y desarróllalos en las actividades de los alumnos.
+     En Matemáticas: aplica la secuencia (P) Problema, (S) Solución, (C) Conclusión, (E) Ejercitación en cuaderno (Trabaja individualmente), autoevaluación 🙂🙂 y (T) Tarea.
+     En Comunicación: cita las consignas reales del texto (trazo, sonido fonético, sílabas o incisos numerados).
+     En Ciencias: cita textualmente "Organizamos", "Relaciono" o las actividades impresas.
+  2. SI "tieneActividadExplicitaEnLibro" ES FALSE (PÁGINA CONCEPTUAL / SIN EJERCICIOS IMPRESOS):
+     ESTÁ PROHIBIDO inventar que el libro tiene ejercicios falsos o usar plantillas vacías.
+     DEBES LEER el "textoConceptualDelLibro" y el "subtemaExclusivoDelDia", y REDACTAR con alta inteligencia pedagógica la actividad para los estudiantes y la tarea domiciliaria:
+     - En "ejerciciosLiterales" incluye OBLIGATORIAMENTE:
+       1) "💡 Actividad Pedagógica redactada por la IA (Pág. X · Lectura conceptual del texto oficial): [instrucción pedagógica paso a paso para el cuaderno basada en los conceptos reales del texto]"
+       2) "💡 Tarea para Casa redactada por la IA: [tarea domiciliaria de fijación de los conceptos aprendidos]"
+     - Las actividades de los períodos deben orientar a los estudiantes a trabajar sobre ese contenido conceptual en sus cuadernos.
 
 INSTRUCCIONES CLAVE DE GENERACIÓN Y PRIORIZACIÓN CNB (RF-01 AL RF-09):
 1. TEMA EJE TRANSVERSAL Y ANÁLISIS DE RELACIÓN POR ASIGNATURA:
@@ -591,6 +595,34 @@ Devuelve la respuesta en formato JSON con las claves:
                   const docActivity = sanitizeActivity(aiItem.actividadDocente, baseItem.actividadDocente, baseItem.gradoNumero, 0, d);
                   const isRezagado = Boolean(baseItem.esTemaRezagado);
 
+                  const aiExercises = (Array.isArray(aiItem.ejerciciosLiterales) && aiItem.ejerciciosLiterales.length > 0)
+                    ? aiItem.ejerciciosLiterales
+                    : [];
+                  const aiHasPedagogicalDraft = aiExercises.some((e: string) => typeof e === 'string' && (e.includes('💡') || e.includes('Actividad Pedagógica') || e.includes('Tarea para Casa')));
+
+                  const baseExercises = Array.isArray(baseItem.ejerciciosLiterales) && baseItem.ejerciciosLiterales.length > 0
+                    ? baseItem.ejerciciosLiterales
+                    : [];
+
+                  const finalExercises = (aiHasPedagogicalDraft && (baseExercises.length === 0 || baseExercises[0]?.includes('💡')))
+                    ? aiExercises
+                    : (baseExercises.length > 0 ? baseExercises : (aiExercises.length > 0 ? aiExercises : []));
+
+                  // Actualizar también materiasSeleccionadas para que cada materia en la tabla refleje los ejercicios reales o redactados
+                  const updatedMateriasSeleccionadas = (baseItem.materiasSeleccionadas || []).map((mSel: any) => {
+                    const mExercises = Array.isArray(mSel.ejerciciosLiterales) && mSel.ejerciciosLiterales.length > 0
+                      ? mSel.ejerciciosLiterales
+                      : [];
+                    const effectiveMExercises = (aiHasPedagogicalDraft && (mExercises.length === 0 || mExercises[0]?.includes('💡')))
+                      ? aiExercises
+                      : (mExercises.length > 0 ? mExercises : finalExercises);
+
+                    return {
+                      ...mSel,
+                      ejerciciosLiterales: effectiveMExercises
+                    };
+                  });
+
                   return {
                     ...baseItem,
                     gradoNumero: baseItem.gradoNumero,
@@ -603,7 +635,7 @@ Devuelve la respuesta en formato JSON con las claves:
                     numeroPagina: baseItem.numeroPagina,
                     paginaFin: baseItem.paginaFin,
                     seccionLibro: baseItem.seccionLibro,
-                    materiasSeleccionadas: baseItem.materiasSeleccionadas,
+                    materiasSeleccionadas: updatedMateriasSeleccionadas,
                     modalidad: aiItem.modalidad || baseItem.modalidad,
                     periodo1_actividad: sanitizeActivity(aiItem.periodo1_actividad, baseItem.periodo1_actividad, baseItem.gradoNumero, 1, d),
                     periodo2_actividad: sanitizeActivity(aiItem.periodo2_actividad, baseItem.periodo2_actividad, baseItem.gradoNumero, 2, d),
@@ -614,9 +646,7 @@ Devuelve la respuesta en formato JSON con las claves:
                       : docActivity,
                     actividadEstudiante: sanitizeActivity(aiItem.actividadEstudiante, baseItem.actividadEstudiante, baseItem.gradoNumero, 0, d),
                     tareaCasa: sanitizeActivity(aiItem.tareaCasa, baseItem.tareaCasa, baseItem.gradoNumero, 0, d),
-                    ejerciciosLiterales: Array.isArray(baseItem.ejerciciosLiterales) && baseItem.ejerciciosLiterales.length > 0
-                      ? baseItem.ejerciciosLiterales
-                      : (Array.isArray(aiItem.ejerciciosLiterales) && aiItem.ejerciciosLiterales.length > 0 ? aiItem.ejerciciosLiterales : [])
+                    ejerciciosLiterales: finalExercises
                   };
                 })
               };
