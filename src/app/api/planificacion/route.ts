@@ -316,6 +316,12 @@ TEMA EJE TRANSVERSAL Y PROPÓSITO:
 
 SELECCIÓN EXACTA DE MATERIAS Y TEMAS POR GRADO:
 ${seleccionResumen}
+${temasRezagados.length > 0 ? `
+ATENCIÓN ESPECIAL - TEMAS REZAGADOS / PENDIENTES DE LA SEMANA ANTERIOR:
+El docente indicó que en la planificación previa NO se lograron abarcar los siguientes contenidos:
+${temasRezagados.map(tr => `- ${tr}`).join('\n')}
+INSTRUCCIÓN OBLIGATORIA: Debes priorizar la nivelación de estos temas rezagados durante los primeros días (Lunes y Martes) antes de avanzar con contenidos nuevos, indicando claramente en las actividades la nivelación y fijación de estos aprendizajes.
+` : ''}
 
 INSTRUCCIÓN CRÍTICA DE DISTRIBUCIÓN HORARIA Y ASIGNATURAS SEGÚN EL CNB:
 - DEBES APLICAR LA DISTRIBUCIÓN HORARIA OFICIAL SEGÚN EL PESO Y PERIODOS DEL CNB:

@@ -1586,15 +1586,25 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
           tarea = `Preparación para el Test de Viernes (${g}.° Grado): Repasar los temas y ejercicios vistos durante la semana (Págs. ${mainItem.paginaInicio}-${mainItem.paginaFin}) con apoyo de la lista de cotejo.`;
         }
 
+        // Detección de tema rezagado/pendiente para priorización
+        const matchingRezagado = temasRezagados.find(tr => {
+          const trL = tr.toLowerCase();
+          const subL = subtemaDia.titulo.toLowerCase();
+          return trL.includes(subL) || subL.includes(trL) || trL.includes(`${g}°`) || trL.includes(`grado ${g}`);
+        });
+        const isRezagadoParaDia = Boolean(matchingRezagado && (dia === 'Lunes' || dia === 'Martes'));
+
         gradosSincronizados.push({
           grado: `${g}.° Primaria`,
           gradoNumero: g,
           bloque: `Jornada Diaria (08:00 - 12:00 hrs | 210 min efectivos)`,
           duracionTotal: '210 min',
           materia: materiasDia.map(i => i.materia).join(' + '),
-          tema: subtemaDia.titulo,
+          tema: isRezagadoParaDia ? `${subtemaDia.titulo} [NIVELACIÓN PRIORITARIA]` : subtemaDia.titulo,
           modalidad: rotacion.modalidad,
-          actividadDocente: rotacion.actividadDocente,
+          actividadDocente: isRezagadoParaDia 
+            ? `(NIVELACIÓN CURRICULAR) El docente retoma el tema pendiente de la semana anterior: "${subtemaDia.titulo}". ${rotacion.actividadDocente}`
+            : rotacion.actividadDocente,
           actividadEstudiante: rotacion.actividadEstudiante,
           periodo1_actividad: rotacion.periodo1_actividad,
           periodo2_actividad: rotacion.periodo2_actividad,
@@ -1610,7 +1620,7 @@ export function generateUnifiedRAGPlan(params: RAGRequestParams): UnifiedWeeklyP
           ejerciciosLiterales: todosEjercicios,
           tareaCasa: tarea,
           completado: dia === 'Lunes',
-          esTemaRezagado: false,
+          esTemaRezagado: isRezagadoParaDia,
           materiasSeleccionadas: materiasDia
         });
 

@@ -243,6 +243,203 @@ export const PlanificadorOficialMineduc: React.FC = () => {
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
   const [checkinSaved, setCheckinSaved] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
+  const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
+
+  // Estados para Temas Rezagados y Control de Avance
+  const [temasRezagadosList, setTemasRezagadosList] = useState<string[]>([]);
+  const [showModalRezagados, setShowModalRezagados] = useState(false);
+  const [uncompletedSelection, setUncompletedSelection] = useState<Record<string, boolean>>({});
+
+  const CACHE_KEY_PLAN = 'sidser_cached_latest_plan_v3';
+  const CACHE_KEY_REZAGADOS = 'sidser_cached_temas_rezagados_v3';
+
+  // 1. Restaurar dosificación y temas rezagados desde caché al cargar la vista
+  React.useEffect(() => {
+    try {
+      const cachedPlan = localStorage.getItem(CACHE_KEY_PLAN);
+      if (cachedPlan) {
+        const parsed = JSON.parse(cachedPlan);
+        if (parsed && parsed.dias && parsed.dias.length > 0) {
+          setPlan(parsed);
+        }
+      }
+      const cachedRezagados = localStorage.getItem(CACHE_KEY_REZAGADOS);
+      if (cachedRezagados) {
+        const parsedRezagados = JSON.parse(cachedRezagados);
+        if (Array.isArray(parsedRezagados) && parsedRezagados.length > 0) {
+          setTemasRezagadosList(parsedRezagados);
+        }
+      }
+    } catch (e) {
+      console.warn('Error leyendo dosificación desde caché:', e);
+    }
+  }, []);
+
+  // 2. Guardar plan y rezagos en caché persistente
+  const savePlanToCache = (newPlan: UnifiedWeeklyPlan, rezagados?: string[]) => {
+    try {
+      localStorage.setItem(CACHE_KEY_PLAN, JSON.stringify(newPlan));
+      if (rezagados !== undefined) {
+        localStorage.setItem(CACHE_KEY_REZAGADOS, JSON.stringify(rezagados));
+      }
+    } catch (e) {
+      console.warn('Error guardando dosificación en caché:', e);
+    }
+  };
+
+  // 3. Extraer lista plana de sesiones impartidas en la planificación actual (compatible con Array y Object)
+  const sesionesPlanificadas = useMemo(() => {
+    if (!plan || !plan.dias) return [];
+    const list: { id: string; dia: string; grado: string; materia: string; tema: string; pagina: number }[] = [];
+
+    const diasList: any[] = Array.isArray(plan.dias) 
+      ? plan.dias 
+      : Object.entries(plan.dias).map(([diaNombre, diaObj]: [string, any]) => ({
+          ...(diaObj || {}),
+          dia: (diaObj && diaObj.dia) || diaNombre
+        }));
+
+    diasList.forEach(d => {
+      const gList = Array.isArray(d.grados) ? d.grados : Object.values(d.grados || {});
+      gList.forEach((g: any) => {
+        const pNum = g.numeroPagina || g.pagina || 1;
+        const key = `${d.dia}_${g.grado || g.gradoNumero}_${g.materia}_${g.tema}_${pNum}`;
+        if (!list.some(x => x.id === key)) {
+          list.push({
+            id: key,
+            dia: d.dia,
+            grado: g.grado || `${g.gradoNumero || 4}.° Primaria`,
+            materia: g.materia || 'Asignatura',
+            tema: g.tema || 'Contenido curricular',
+            pagina: pNum
+          });
+        }
+      });
+    });
+    return list;
+  }, [plan]);
+
+  // Acción A: El profesor completó todos los temas con éxito (Avanza dosificación automáticamente)
+  const handleCompletarTodo = async () => {
+    if (!plan) return;
+    setIsSavingCheckin(true);
+    try {
+      await fetch('/api/docente/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grados: selectedGrados,
+          materias: selectedMateriaIds,
+          plan: plan,
+          estado: 'completado_100',
+          temasRezagados: []
+        })
+      });
+
+      // Limpiar rezagados de memoria y caché
+      setTemasRezagadosList([]);
+      localStorage.removeItem(CACHE_KEY_REZAGADOS);
+
+      // Avanzar automáticamente la selección a los temas siguientes del libro
+      const numGrados = Math.max(selectedGrados.length, 1);
+      setConfigMatrix(prev => {
+        const nextMatrix: Record<number, Record<string, MateriaConfig>> = { ...prev };
+
+        selectedGrados.forEach(g => {
+          const mats = getMateriasPorGrado(g);
+          if (!nextMatrix[g]) nextMatrix[g] = {};
+
+          mats.forEach(mat => {
+            const idBase = mat.id.replace(/_\d+$/, '');
+            if (!selectedMateriaIds.includes(idBase)) return;
+
+            const currentCfg = nextMatrix[g][idBase] || getConfig(g, idBase);
+            const uni = mat.unidades.find(u => u.unidad === currentCfg.unidadNum) || mat.unidades[0];
+            const safeTemas = (uni?.temas || []).filter(Boolean);
+            const quota = calculateTemaQuota(mat.nombre, mat.periodosSemanales, numGrados);
+
+            const maxTemaActual = currentCfg.selectedTemaNums.length > 0
+              ? Math.max(...currentCfg.selectedTemaNums)
+              : 1;
+
+            const siguientesTemas = safeTemas.filter(t => t.numero > maxTemaActual);
+
+            if (siguientesTemas.length > 0) {
+              const autoNums = siguientesTemas.slice(0, quota).map(t => t.numero);
+              nextMatrix[g][idBase] = {
+                unidadNum: currentCfg.unidadNum,
+                selectedTemaNums: autoNums.length > 0 ? autoNums : [siguientesTemas[0].numero]
+              };
+            } else {
+              const nextUnidadNum = currentCfg.unidadNum < 4 ? currentCfg.unidadNum + 1 : 1;
+              const nextUni = mat.unidades.find(u => u.unidad === nextUnidadNum) || mat.unidades[0];
+              const nextSafeTemas = (nextUni?.temas || []).filter(Boolean);
+              const autoNums = nextSafeTemas.slice(0, quota).map(t => t.numero);
+
+              nextMatrix[g][idBase] = {
+                unidadNum: nextUnidadNum,
+                selectedTemaNums: autoNums.length > 0 ? autoNums : [1]
+              };
+            }
+          });
+        });
+
+        return nextMatrix;
+      });
+
+      setCheckinSaved(true);
+      setCheckinMessage('🎉 ¡Excelente! Se registró el cumplimiento del 100% de la planificación. La lista de cotejo se ha preparado con la siguiente dosificación de contenidos.');
+      setTimeout(() => {
+        setCheckinSaved(false);
+        setCheckinMessage(null);
+      }, 6500);
+    } catch (err) {
+      console.warn('Error al confirmar cumplimiento total:', err);
+    } finally {
+      setIsSavingCheckin(false);
+    }
+  };
+
+  // Acción B: Confirmar temas rezagados que no se lograron impartir y reprogramarlos
+  const handleConfirmarRezagados = async () => {
+    const pendientes = sesionesPlanificadas
+      .filter(s => uncompletedSelection[s.id])
+      .map(s => `${s.grado} · ${s.materia}: ${s.tema} (Pág. ${s.pagina})`);
+
+    if (pendientes.length === 0) {
+      setShowModalRezagados(false);
+      return;
+    }
+
+    setIsSavingCheckin(true);
+    try {
+      await fetch('/api/docente/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grados: selectedGrados,
+          materias: selectedMateriaIds,
+          plan: plan,
+          estado: 'parcial_con_rezagos',
+          temasRezagados: pendientes
+        })
+      });
+
+      // Guardar lista de rezagos en estado y caché
+      setTemasRezagadosList(pendientes);
+      try {
+        localStorage.setItem(CACHE_KEY_REZAGADOS, JSON.stringify(pendientes));
+      } catch (e) {}
+
+      setShowModalRezagados(false);
+      setCheckinMessage(`📋 Se registraron ${pendientes.length} tema(s) pendientes. Han sido priorizados para la siguiente dosificación semanal.`);
+      setTimeout(() => setCheckinMessage(null), 6500);
+    } catch (err) {
+      console.warn('Error guardando temas rezagados:', err);
+    } finally {
+      setIsSavingCheckin(false);
+    }
+  };
 
   const handleCheckinDocente = async () => {
     if (!plan) return;
@@ -255,7 +452,8 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           grados: selectedGrados,
           materias: selectedMateriaIds,
           plan: plan,
-          estado: 'planificado'
+          estado: 'planificado',
+          temasRezagados: temasRezagadosList
         })
       });
       setCheckinSaved(true);
@@ -573,7 +771,7 @@ export const PlanificadorOficialMineduc: React.FC = () => {
           bloque: items[0]?.unidad || 1,
           semana: items[0]?.temaNumero || 1,
           area: items.map(i => i.materia).filter((v, i, a) => a.indexOf(v) === i).join(', '),
-          temasRezagados: []
+          temasRezagados: temasRezagadosList
         })
       });
 
@@ -582,15 +780,18 @@ export const PlanificadorOficialMineduc: React.FC = () => {
       const data = await res.json();
       if (data?.success && data?.plan) {
         setPlan(data.plan);
+        savePlanToCache(data.plan, temasRezagadosList);
       } else {
         const local = generateUnifiedRAGPlan({
           grados: selectedGrados,
           area: items[0]?.materia || 'Matemáticas',
           bimestre: items[0]?.unidad || 1,
           semana: items[0]?.temaNumero || 1,
+          temasRezagados: temasRezagadosList,
           items: items
         });
         setPlan(local);
+        savePlanToCache(local, temasRezagadosList);
       }
     } catch {
       const local = generateUnifiedRAGPlan({
@@ -598,9 +799,11 @@ export const PlanificadorOficialMineduc: React.FC = () => {
         area: items[0]?.materia || 'Matemáticas',
         bimestre: items[0]?.unidad || 1,
         semana: items[0]?.temaNumero || 1,
+        temasRezagados: temasRezagadosList,
         items: items
       });
       setPlan(local);
+      savePlanToCache(local, temasRezagadosList);
     } finally {
       setIsLoading(false);
     }
@@ -761,6 +964,38 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                 >
                   ✕
                 </button>
+              </div>
+            )}
+
+            {/* Banner de Temas Rezagados Priorizados para la Dosificación */}
+            {temasRezagadosList.length > 0 && (
+              <div className="p-3.5 bg-amber-50/90 border-l-4 border-amber-500 rounded-r-xl text-xs text-amber-950 flex flex-col gap-1.5 shadow-xs transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-black text-amber-900">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Contenidos Pendientes / Rezagados Detectados ({temasRezagadosList.length})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTemasRezagadosList([]);
+                      try { localStorage.removeItem(CACHE_KEY_REZAGADOS); } catch (e) {}
+                    }}
+                    className="text-[10px] text-amber-700 hover:text-amber-950 underline font-bold"
+                  >
+                    Descartar pendientes
+                  </button>
+                </div>
+                <p className="text-[11px] text-amber-800">
+                  El algoritmo priorizará estos temas en los primeros días (Lunes y Martes) de la nueva planificación para nivelar los aprendizajes antes de avanzar:
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {temasRezagadosList.map((tr, idx) => (
+                    <span key={idx} className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-lg border border-amber-300 text-[10px] flex items-center gap-1">
+                      <span>⚠️ {tr}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1155,27 +1390,60 @@ export const PlanificadorOficialMineduc: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Opción A: Completé todos los temas (Avanza automáticamente la dosificación) */}
             <button
-              onClick={handleCheckinDocente}
+              type="button"
+              onClick={handleCompletarTodo}
               disabled={isSavingCheckin}
-              className={`font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center space-x-2 ${
-                checkinSaved
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-emerald-700 hover:bg-emerald-600 text-white'
-              }`}
+              title="Registra cumplimiento total de la semana y avanza la lista de cotejo a los siguientes temas del libro"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3.5 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center space-x-1.5"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{checkinSaved ? '¡Plan Guardado!' : 'Guardar / Check-in'}</span>
+              <span>✓ Completé todos los temas</span>
             </button>
+
+            {/* Opción B: No se abarcaron todos los temas (Abre lista de cotejo de pendientes) */}
             <button
+              type="button"
+              onClick={() => {
+                setUncompletedSelection({});
+                setShowModalRezagados(true);
+              }}
+              disabled={isSavingCheckin}
+              title="Abre la lista de cotejo de los temas planificados para marcar lo que quedó pendiente y reprogramarlo"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-black px-3.5 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center space-x-1.5"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>⚠️ No se abarcaron todos los temas</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => window.print()}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center space-x-2"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center space-x-1.5"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Imprimir Ficha (PDF)</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Alerta de confirmación de Check-in / Avance de dosificación */}
+      {checkinMessage && (
+        <div className="p-3.5 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl text-xs text-emerald-950 font-bold flex items-center justify-between shadow-xs animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{checkinMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCheckinMessage(null)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold text-sm px-1.5"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -2071,6 +2339,109 @@ export const PlanificadorOficialMineduc: React.FC = () => {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 5. MODAL DE CONTROL DE AVANCE: TEMAS NO ABARCADOS                   */}
+      {/* =================================================================== */}
+      {showModalRezagados && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 print:hidden animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col space-y-4">
+            {/* Header del Modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base">Control de Avance: Temas No Abarcados</h3>
+                  <p className="text-xs text-slate-500">
+                    Marca con un gancho las sesiones o temas que <strong>no lograste dar</strong> para que el algoritmo los priorice en la siguiente dosificación.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModalRezagados(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 font-bold flex items-center justify-center text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Lista de cotejo de sesiones que estaban en el plan */}
+            <div className="overflow-y-auto py-2 flex-1 space-y-2 pr-1 scrollbar-thin">
+              {sesionesPlanificadas.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-8">
+                  No hay sesiones registradas en la dosificación actual.
+                </p>
+              ) : (
+                sesionesPlanificadas.map(s => {
+                  const isChecked = !!uncompletedSelection[s.id];
+                  return (
+                    <label
+                      key={s.id}
+                      className={`p-3 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                        isChecked
+                          ? 'bg-amber-50/90 border-amber-400 shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          setUncompletedSelection(prev => ({
+                            ...prev,
+                            [s.id]: e.target.checked
+                          }));
+                        }}
+                        className="mt-1 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300"
+                      />
+                      <div className="flex-1 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-extrabold text-slate-900">
+                            {s.dia} · {s.materia}
+                          </span>
+                          <span className="bg-sky-100 text-[#005B94] font-black px-2 py-0.5 rounded-md text-[10px]">
+                            {s.grado} · Pág. {s.pagina}
+                          </span>
+                        </div>
+                        <p className="text-slate-700 font-medium mt-1">
+                          {s.tema}
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer con acciones */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-slate-600">
+                {Object.values(uncompletedSelection).filter(Boolean).length} tema(s) marcado(s) como pendiente(s)
+              </span>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowModalRezagados(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmarRezagados}
+                  disabled={isSavingCheckin}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2 rounded-xl text-xs transition-all shadow-sm"
+                >
+                  {isSavingCheckin ? 'Guardando...' : 'Confirmar y Reprogramar para Siguiente Dosificación'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
