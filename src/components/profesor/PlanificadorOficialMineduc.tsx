@@ -830,7 +830,9 @@ export const PlanificadorOficialMineduc: React.FC = () => {
                                         <span className={`text-[10px] shrink-0 font-bold px-1.5 py-0.2 rounded ${
                                           isSelected ? 'bg-sky-200/80 text-[#005B94]' : 'bg-slate-200/60 text-slate-600'
                                         }`}>
-                                          p.{t.paginaInicio}
+                                          {t.paginaFin && t.paginaFin > t.paginaInicio
+                                            ? `p.${t.paginaInicio} - ${t.paginaFin}`
+                                            : `p.${t.paginaInicio}`}
                                         </span>
                                       </div>
                                     </button>
